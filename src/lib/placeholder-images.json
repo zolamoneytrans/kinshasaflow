@@ -5,6 +5,30 @@
       "description": "A placeholder image of a map of Kinshasa.",
       "imageUrl": "https://images.unsplash.com/photo-1623930180584-1b14bc584169?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxLaW5zaGFzYSUyMG1hcHxlbnwwfHx8fDE3Njk4MDQ0MDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "Kinshasa map"
+    },
+    {
+      "id": "rond-point-victoire-traffic",
+      "description": "Street view of traffic at Rond-point Victoire.",
+      "imageUrl": "https://images.unsplash.com/photo-1605646325900-2c7cc1a7c5c8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxraW5zaGFzYSUyMHRyYWZmaWN8ZW58MHx8fHwxNzE4NzUyNzM3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "Kinshasa traffic"
+    },
+    {
+      "id": "boulevard-30-juin-traffic",
+      "description": "Street view of traffic at Boulevard du 30 Juin.",
+      "imageUrl": "https://images.unsplash.com/photo-1619451429910-b8eaa51b2ea2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxraW5zaGFzYSUyMGJvdWxldmFyZHxlbnwwfHx8fDE3MTg3NTI3NjB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "city boulevard"
+    },
+    {
+      "id": "pont-matete-traffic",
+      "description": "Street view of traffic at Pont Matete.",
+      "imageUrl": "https://images.unsplash.com/photo-1579952516428-6a5a3a7f8a3c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxoZWF2eSUyMHRyYWZmaWMlMjBjaXR5fGVufDB8fHx8MTcxODc1Mjc4NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "heavy traffic"
+    },
+    {
+      "id": "marche-central-traffic",
+      "description": "Street view of traffic at Marché Central.",
+      "imageUrl": "https://images.unsplash.com/photo-1544924294-099451e803c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxhZnJpY2FuJTIwbWFya2V0JTIwdHJhZmZpY3xlbnwwfHx8fDE3MTg3NTI4MTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "market traffic"
     }
   ]
 }

@@ -39,3 +39,14 @@ export const dummyReports: (TrafficReport & { id: number, time: string })[] = [
         time: "15m ago",
     },
 ];
+
+export const TrafficTipsInputSchema = z.object({
+  location: z.string().describe('The location of the traffic incident in Kinshasa.'),
+  description: z.string().describe('A description of the traffic incident.'),
+});
+export type TrafficTipsInput = z.infer<typeof TrafficTipsInputSchema>;
+
+export const TrafficTipsOutputSchema = z.object({
+  tips: z.array(z.string()).describe('A list of actionable tips to avoid the traffic.'),
+});
+export type TrafficTipsOutput = z.infer<typeof TrafficTipsOutputSchema>;

@@ -38,6 +38,34 @@ export const dummyReports: (TrafficReport & { id: number, time: string })[] = [
         severity: "medium",
         time: "15m ago",
     },
+    {
+        id: 5,
+        location: "Avenue de la Libération",
+        description: "Public event causing road closures around the Palais du Peuple.",
+        severity: "high",
+        time: "45m ago",
+    },
+    {
+        id: 6,
+        location: "Marché Central",
+        description: "Extreme congestion due to delivery trucks and high pedestrian activity.",
+        severity: "high",
+        time: "1h ago",
+    },
+    {
+        id: 7,
+        location: "Gombe, near a major embassy",
+        description: "Security checkpoint causing slow-moving traffic.",
+        severity: "medium",
+        time: "1h 30m ago",
+    },
+    {
+        id: 8,
+        location: "UPN",
+        description: "Student gathering causing local disruption.",
+        severity: "medium",
+        time: "2h ago",
+    },
 ];
 
 export const TrafficTipsInputSchema = z.object({

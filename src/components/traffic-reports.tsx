@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { TrafficReport, dummyReports } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge, badgeVariants } from '@/components/ui/badge';
-import { List, Clock, Frown, Lightbulb, Loader2 } from 'lucide-react';
+import { List, Clock, Frown, Lightbulb, Loader2, MoreHorizontal } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type VariantProps } from 'class-variance-authority';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,9 @@ import {
 import { getTrafficTipsAction } from '@/app/actions';
 
 type Report = TrafficReport & { id: number, time: string };
+
+const INITIAL_VISIBLE_COUNT = 4;
+const REPORTS_TO_LOAD = 4;
 
 const SeverityBadge = ({ severity }: { severity: TrafficReport['severity'] }) => {
     const variant: VariantProps<typeof badgeVariants>['variant'] = {
@@ -64,6 +67,7 @@ const ReportSkeleton = () => (
 export default function TrafficReports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
   
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [tips, setTips] = useState<string[]>([]);
@@ -98,6 +102,10 @@ export default function TrafficReports() {
     }
   };
 
+  const handleLoadMore = () => {
+    setVisibleCount(prev => prev + REPORTS_TO_LOAD);
+  }
+
   const onDialogClose = (open: boolean) => {
     if (!open) {
       // Give animation time to finish
@@ -108,6 +116,8 @@ export default function TrafficReports() {
     }
     setShowTipsDialog(open);
   }
+
+  const visibleReports = reports.slice(0, visibleCount);
 
   return (
     <>
@@ -124,6 +134,7 @@ export default function TrafficReports() {
                   <ReportSkeleton />
                   <ReportSkeleton />
                   <ReportSkeleton />
+                  <ReportSkeleton />
               </>
           )}
           {!loading && reports.length === 0 && (
@@ -133,10 +144,19 @@ export default function TrafficReports() {
                   <p className="text-sm">Looks like the roads are clear!</p>
               </div>
           )}
-          {!loading && reports.length > 0 && reports.map((report) => (
+          {!loading && visibleReports.length > 0 && visibleReports.map((report) => (
             <ReportItem key={report.id} report={report} onGetTips={handleGetTips} />
           ))}
         </CardContent>
+        
+        {!loading && visibleCount < reports.length && (
+            <CardFooter className="p-4 pt-2 border-t">
+                <Button onClick={handleLoadMore} variant="outline" className="w-full">
+                    <MoreHorizontal className="mr-2" />
+                    Load More
+                </Button>
+            </CardFooter>
+        )}
       </Card>
 
       <AlertDialog open={showTipsDialog} onOpenChange={onDialogClose}>

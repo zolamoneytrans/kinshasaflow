@@ -5,12 +5,6 @@ import Image from 'next/image';
 import { PlaceHolderImages, type ImagePlaceholder } from '@/lib/placeholder-images';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -48,66 +42,67 @@ export default function TrafficMap() {
 
   return (
     <>
-    <Card className="h-full w-full">
-      <CardContent className="p-0 h-full">
-        <div className="relative h-full w-full rounded-lg overflow-hidden">
-            {mapPlaceholder && (
-              <Image
-                src={mapPlaceholder.imageUrl}
-                alt="Carte de Kinshasa"
-                fill
-                className="object-cover"
-                data-ai-hint={mapPlaceholder.imageHint}
-                priority
-              />
-            )}
+      <Card className="h-full w-full">
+        <CardContent className="p-0 h-full">
+          <div className="relative h-full w-full rounded-lg overflow-hidden">
+              {mapPlaceholder && (
+                <Image
+                  src={mapPlaceholder.imageUrl}
+                  alt="Carte de Kinshasa"
+                  fill
+                  className="object-cover"
+                  data-ai-hint={mapPlaceholder.imageHint}
+                  priority
+                />
+              )}
 
-            <TooltipProvider>
+              <div className="absolute inset-0">
                 {trafficHotspots.map((spot, index) => (
-                    <Tooltip key={index}>
-                        <TooltipTrigger asChild>
-                            <div
-                                onClick={() => handleHotspotClick(spot)}
-                                className="absolute w-4 h-4 rounded-full bg-destructive border-2 border-white cursor-pointer transform -translate-x-1/2 -translate-y-1/2 animate-pulse"
-                                style={{ top: spot.top, left: spot.left }}
-                            >
-                                <span className="sr-only">{spot.name}</span>
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p className="font-bold">{spot.name}</p>
-                            <p className="text-sm">Cliquez pour voir la vue de la rue</p>
-                        </TooltipContent>
-                    </Tooltip>
+                    <div
+                        key={index}
+                        className="absolute flex flex-col items-center cursor-pointer group"
+                        style={{ top: spot.top, left: spot.left, transform: 'translate(-50%, -50%)' }}
+                        onClick={() => handleHotspotClick(spot)}
+                    >
+                        <div className="w-max mb-1 rounded-md bg-black/70 px-2 py-0.5 text-xs font-semibold text-white shadow-md transition-all group-hover:scale-110">
+                            {spot.name}
+                        </div>
+                        <div className="w-4 h-4 rounded-full bg-destructive border-2 border-white animate-pulse transition-all group-hover:scale-125">
+                            <span className="sr-only">{spot.name}</span>
+                        </div>
+                    </div>
                 ))}
-            </TooltipProvider>
-        </div>
-      </CardContent>
-    </Card>
+              </div>
+          </div>
+        </CardContent>
+      </Card>
 
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl">
-            <DialogHeader>
-                <DialogTitle>Vue de la rue : {selectedHotspot?.name}</DialogTitle>
-                <DialogDescription>
-                    Image représentative du trafic à cet endroit.
-                </DialogDescription>
-            </DialogHeader>
-            {selectedHotspot?.image ? (
-                <div className="mt-4 rounded-lg overflow-hidden aspect-video relative">
-                    <Image
-                        src={selectedHotspot.image.imageUrl}
-                        alt={`Vue de la rue de ${selectedHotspot.name}`}
-                        fill
-                        className="object-cover"
-                        data-ai-hint={selectedHotspot.image.imageHint}
-                    />
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                  <DialogTitle>Vue de la rue : {selectedHotspot?.name}</DialogTitle>
+                  <DialogDescription>
+                      Image représentative du trafic à cet endroit.
+                  </DialogDescription>
+              </DialogHeader>
+              {selectedHotspot?.image ? (
+                  <div className="mt-4 rounded-lg overflow-hidden aspect-video relative">
+                      <Image
+                          src={selectedHotspot.image.imageUrl}
+                          alt={`Vue de la rue de ${selectedHotspot.name}`}
+                          fill
+                          className="object-cover"
+                          data-ai-hint={selectedHotspot.image.imageHint}
+                      />
+                  </div>
+              ) : selectedHotspot ? (
+                <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-center">
+                  <p className="font-medium">Image non disponible pour {selectedHotspot.name}.</p>
+                  <p className="text-sm">Il y a peut-être un problème avec la configuration de l'image.</p>
                 </div>
-            ) : selectedHotspot ? (
-                <p>Image non disponible.</p>
-            ) : null}
-        </DialogContent>
-    </Dialog>
+              ) : null}
+          </DialogContent>
+      </Dialog>
     </>
   );
 }

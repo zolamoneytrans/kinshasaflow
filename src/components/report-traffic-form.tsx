@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { trafficReportSchema, TrafficReport } from '@/lib/types';
@@ -9,11 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { type VariantProps } from 'class-variance-authority';
 
 export default function ReportTrafficForm() {
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
     const form = useForm<TrafficReport>({
         resolver: zodResolver(trafficReportSchema),
@@ -24,14 +25,19 @@ export default function ReportTrafficForm() {
         },
     });
 
-    function onSubmit(values: TrafficReport) {
+    async function onSubmit(values: TrafficReport) {
+        setIsSubmitting(true);
         console.log(values);
-        // Here you would typically call a server action to save the report
+        
+        // Simulate an async action like saving to a database
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         toast({
             title: "Report Sent!",
             description: "Thank you for helping improve traffic flow.",
         });
         form.reset();
+        setIsSubmitting(false);
     }
 
     return (
@@ -52,7 +58,7 @@ export default function ReportTrafficForm() {
                                 <FormItem>
                                     <FormLabel>Location</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g. Rond-point Victoire" {...field} />
+                                        <Input placeholder="e.g. Rond-point Victoire" {...field} disabled={isSubmitting} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -65,7 +71,7 @@ export default function ReportTrafficForm() {
                                 <FormItem>
                                     <FormLabel>Description</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="e.g. Accident blocking one lane" {...field} />
+                                        <Textarea placeholder="e.g. Accident blocking one lane" {...field} disabled={isSubmitting} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -77,7 +83,7 @@ export default function ReportTrafficForm() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Severity</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select severity" />
@@ -93,8 +99,9 @@ export default function ReportTrafficForm() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full">
-                            Submit Report
+                        <Button type="submit" className="w-full" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isSubmitting ? 'Submitting...' : 'Submit Report'}
                         </Button>
                     </form>
                 </Form>

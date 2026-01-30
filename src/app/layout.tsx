@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'IDGenius',
-  description: 'Generate your professional ID cards in seconds.',
+  title: 'Kinshasa Flow',
+  description: 'Navigate Kinshasa\'s traffic with ease.',
 };
 
 export default function RootLayout({

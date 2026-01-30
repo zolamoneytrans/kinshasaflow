@@ -1,27 +1,41 @@
 import { z } from "zod";
 
-export const idCardSchema = z.object({
-  template: z.string().default("student"),
-  name: z.string().min(2, "Name must be at least 2 characters."),
-  idNumber: z.string().min(4, "ID must be at least 4 characters."),
-  dob: z.string().optional(),
-  title: z.string().optional(),
-  department: z.string().optional(),
-  validUntil: z.string().optional(),
-  photo: z.string().optional(),
+export const trafficReportSchema = z.object({
+  location: z.string().min(3, "Location is too short."),
+  description: z.string().min(10, "Description is too short."),
+  severity: z.enum(["low", "medium", "high"]),
 });
 
-export type IDCardData = z.infer<typeof idCardSchema>;
+export type TrafficReport = z.infer<typeof trafficReportSchema>;
 
-export interface TemplateField {
-  name: keyof Omit<IDCardData, "template" | "photo">;
-  label: string;
-  placeholder: string;
-  type: "text" | "date";
-}
-
-export interface Template {
-  id: string;
-  name: string;
-  fields: TemplateField[];
-}
+// Dummy data for now
+export const dummyReports: (TrafficReport & { id: number, time: string })[] = [
+    {
+        id: 1,
+        location: "Rond-point Victoire",
+        description: "Heavy congestion due to market day.",
+        severity: "high",
+        time: "10m ago",
+    },
+    {
+        id: 2,
+        location: "Boulevard du 30 Juin",
+        description: "Accident involving a truck. Road partially blocked.",
+        severity: "high",
+        time: "25m ago",
+    },
+    {
+        id: 3,
+        location: "Avenue Kasa-Vubu",
+        description: "Fluid traffic, moving well.",
+        severity: "low",
+        time: "5m ago",
+    },
+    {
+        id: 4,
+        location: "Pont Matete",
+        description: "Moderate slowdown, usual rush hour traffic.",
+        severity: "medium",
+        time: "15m ago",
+    },
+];

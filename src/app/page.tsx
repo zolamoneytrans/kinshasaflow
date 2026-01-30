@@ -1,6 +1,5 @@
 import TrafficMap from "@/components/traffic-map";
 import TrafficReports from "@/components/traffic-reports";
-import ReportTrafficForm from "@/components/report-traffic-form";
 
 export default function Home() {
   return (
@@ -14,8 +13,7 @@ export default function Home() {
           <div className="lg:col-span-2 h-full">
             <TrafficMap />
           </div>
-          <div className="flex flex-col gap-4 h-[calc(100vh-100px)]">
-            <ReportTrafficForm />
+          <div className="flex flex-col h-[calc(100vh-100px)]">
             <TrafficReports />
           </div>
         </div>

@@ -14,7 +14,7 @@ export default function TrafficMap() {
           {mapPlaceholder && (
              <Image
                 src={mapPlaceholder.imageUrl}
-                alt="Map of Kinshasa"
+                alt="Carte de Kinshasa"
                 fill
                 className="object-cover"
                 data-ai-hint={mapPlaceholder.imageHint}
@@ -22,8 +22,8 @@ export default function TrafficMap() {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
           <div className="absolute bottom-4 left-4 text-white">
-            <h2 className="text-2xl font-bold">Kinshasa Traffic Map</h2>
-            <p>Live hotspots will be shown here</p>
+            <h2 className="text-2xl font-bold">Carte du trafic de Kinshasa</h2>
+            <p>Les points chauds en direct seront affichés ici</p>
           </div>
         </div>
       </CardContent>

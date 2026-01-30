@@ -30,8 +30,14 @@ const SeverityBadge = ({ severity }: { severity: TrafficReport['severity'] }) =>
         medium: 'secondary',
         high: 'destructive',
     }[severity];
+    
+    const severityText = {
+        low: 'Faible',
+        medium: 'Moyen',
+        high: 'Élevé'
+    }[severity];
 
-    return <Badge variant={variant} className="capitalize">{severity}</Badge>;
+    return <Badge variant={variant}>{severityText}</Badge>;
 }
 
 const ReportItem = ({ report, onGetTips }: { report: Report, onGetTips: (report: Report) => void }) => (
@@ -48,7 +54,7 @@ const ReportItem = ({ report, onGetTips }: { report: Report, onGetTips: (report:
             </div>
             <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => onGetTips(report)}>
                 <Lightbulb className="w-4 h-4 mr-1" />
-                Get Tips
+                Obtenir des conseils
             </Button>
         </div>
     </div>
@@ -111,7 +117,7 @@ export default function TrafficReports() {
         setTips(result.tips);
     } catch (error) {
         console.error("Failed to get tips:", error);
-        setTips(["Sorry, we couldn't generate tips at this time. Please try again later."]);
+        setTips(["Désolé, nous n'avons pas pu générer de conseils pour le moment. Veuillez réessayer plus tard."]);
     } finally {
         setIsTipsLoading(false);
     }
@@ -154,17 +160,17 @@ export default function TrafficReports() {
           <CardTitle className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <List />
-              Live Traffic Reports
+              Rapports de trafic en direct
             </div>
             <Button size="icon" variant="outline" onClick={handleUpdate} disabled={isRefreshing}>
               {isRefreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-              <span className="sr-only">Update Reports</span>
+              <span className="sr-only">Mettre à jour les rapports</span>
             </Button>
           </CardTitle>
           <div className="relative pt-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search by place..."
+              placeholder="Rechercher par lieu..."
               className="pl-9"
               value={searchQuery}
               onChange={handleSearchChange}
@@ -181,8 +187,8 @@ export default function TrafficReports() {
           ) : (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-center">
                   <Frown className="w-12 h-12 mb-4" />
-                  <p className="font-medium">{searchQuery ? "No reports found." : "No traffic reports right now."}</p>
-                  <p className="text-sm">{searchQuery ? "Try a different search term." : "Looks like the roads are clear!"}</p>
+                  <p className="font-medium">{searchQuery ? "Aucun rapport trouvé." : "Aucun rapport de trafic pour le moment."}</p>
+                  <p className="text-sm">{searchQuery ? "Essayez un autre terme de recherche." : "On dirait que les routes sont dégagées !"}</p>
               </div>
           )}
         </CardContent>
@@ -191,7 +197,7 @@ export default function TrafficReports() {
             <CardFooter className="p-4 pt-2 border-t">
                 <Button onClick={handleLoadMore} variant="outline" className="w-full">
                     <MoreHorizontal className="mr-2" />
-                    Load More
+                    Charger plus
                 </Button>
             </CardFooter>
         )}
@@ -202,7 +208,7 @@ export default function TrafficReports() {
               <AlertDialogHeader>
                   <AlertDialogTitle className="flex items-center gap-2">
                       <Lightbulb />
-                      Traffic Tips for {selectedReport?.location}
+                      Conseils de circulation pour {selectedReport?.location}
                   </AlertDialogTitle>
                   <div className="min-h-[100px] text-sm text-muted-foreground pt-2">
                     {isTipsLoading ? (
@@ -217,7 +223,7 @@ export default function TrafficReports() {
                   </div>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                  <AlertDialogAction>Close</AlertDialogAction>
+                  <AlertDialogAction>Fermer</AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>

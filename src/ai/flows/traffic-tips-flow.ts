@@ -16,15 +16,15 @@ const prompt = ai.definePrompt({
   name: 'trafficTipsPrompt',
   input: {schema: TrafficTipsInputSchema},
   output: {schema: TrafficTipsOutputSchema},
-  prompt: `You are a Kinshasa traffic expert. Your goal is to provide helpful, actionable tips for drivers to navigate and avoid traffic based on real-time reports.
+  prompt: `Vous êtes un expert de la circulation à Kinshasa. Votre objectif est de fournir des conseils utiles et exploitables aux conducteurs pour naviguer et éviter le trafic en fonction des rapports en temps réel.
 
-You are given the following traffic incident:
-Location: {{{location}}}
+On vous signale l'incident de circulation suivant :
+Lieu: {{{location}}}
 Description: {{{description}}}
 
-Based on this information, provide a list of 2-3 clear and concise tips for drivers in Kinshasa. The tips should be specific to the location if possible and offer practical alternative routes or advice. For example, suggest specific roads to take instead, or advise on waiting if it's a temporary issue. Assume the user is familiar with major landmarks and roads in Kinshasa.
+Sur la base de ces informations, fournissez une liste de 2 à 3 conseils clairs et concis pour les conducteurs à Kinshasa. Les conseils doivent être spécifiques à l'emplacement si possible et offrir des itinéraires alternatifs pratiques ou des conseils. Par exemple, suggérez des routes spécifiques à emprunter à la place, ou conseillez d'attendre s'il s'agit d'un problème temporaire. Supposez que l'utilisateur est familier avec les principaux points de repère et routes de Kinshasa.
 
-Generate a list of tips.`,
+Générez une liste de conseils.`,
 });
 
 const trafficTipsFlow = ai.defineFlow(

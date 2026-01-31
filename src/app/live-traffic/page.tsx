@@ -1,10 +1,10 @@
-import TrafficReports from "@/components/traffic-reports";
+import LiveTrafficFeed from "@/components/live-traffic-feed";
 import { AppShell } from "@/components/app-shell";
 
 export default function LiveTrafficPage() {
   return (
     <AppShell>
-      <TrafficReports />
+      <LiveTrafficFeed />
     </AppShell>
   );
 }

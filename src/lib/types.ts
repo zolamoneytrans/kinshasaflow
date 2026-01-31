@@ -62,6 +62,25 @@ export const dummyReports: (TrafficReport & { id: number, time: string })[] = [
     { id: 50, location: "Triangle de la Cité", description: "Circulation fluide, mieux que prévu.", severity: "low", time: "il y a 19m" },
 ];
 
+export const policeReportSchema = z.object({
+  location: z.string(),
+  note: z.string(),
+  type: z.enum(['control', 'traffic_management', 'incident']),
+});
+
+export type PoliceReport = z.infer<typeof policeReportSchema>;
+
+export const dummyPoliceReports: (PoliceReport & { id: number, time: string })[] = [
+    { id: 1, location: "Rond-point Victoire", note: "Contrôle de routine des documents.", type: "control", time: "il y a 15m" },
+    { id: 2, location: "Boulevard du 30 Juin", note: "Gestion du trafic suite à un événement.", type: "traffic_management", time: "il y a 30m" },
+    { id: 3, location: "Pont Matete", note: "Présence renforcée pour la sécurité.", type: "control", time: "il y a 5m" },
+    { id: 4, location: "Avenue Kasa-Vubu", note: "Intervention suite à un petit accrochage.", type: "incident", time: "il y a 45m" },
+    { id: 5, location: "Gombe, près de l'Hôtel de Ville", note: "Escorte d'un convoi officiel.", type: "traffic_management", time: "il y a 1h" },
+    { id: 6, location: "Limete, 7ème Rue", note: "Contrôle de vitesse.", type: "control", time: "il y a 20m" },
+    { id: 7, location: "UPN", note: "Présence préventive.", type: "control", time: "il y a 2h" },
+    { id: 8, location: "Marché Central", note: "Patrouille pour la sécurité des commerçants.", type: "control", time: "il y a 1h 15m" },
+];
+
 export const TrafficTipsInputSchema = z.object({
   location: z.string().describe("Le lieu de l'incident de la circulation à Kinshasa."),
   description: z.string().describe("Une description de l'incident de la circulation."),

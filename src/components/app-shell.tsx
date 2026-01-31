@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Map as MapIcon, TrafficCone } from 'lucide-react';
+import { Home, TrafficCone } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -20,13 +20,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   
   const getPageTitle = () => {
     if (pathname === '/') return 'Rapports de trafic';
-    if (pathname === '/map') return 'Carte du trafic';
     return 'Kinshasa Flow';
   }
 
   const getPageDescription = () => {
     if (pathname === '/') return 'Mises à jour en temps réel pour Kinshasa';
-    if (pathname === '/map') return 'Points chauds de la circulation à Kinshasa';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -48,16 +46,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <a>
                       <Home />
                       <span>Rapports</span>
-                    </a>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <Link href="/map" legacyBehavior passHref>
-                  <SidebarMenuButton asChild isActive={pathname === '/map'} tooltip={{children: "Carte"}}>
-                    <a>
-                      <MapIcon />
-                      <span>Carte</span>
                     </a>
                   </SidebarMenuButton>
                 </Link>

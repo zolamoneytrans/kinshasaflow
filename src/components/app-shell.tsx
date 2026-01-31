@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, TrafficCone } from 'lucide-react';
+import { Home, TrafficCone, Activity } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -20,11 +20,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   
   const getPageTitle = () => {
     if (pathname === '/') return 'Rapports de trafic';
+    if (pathname === '/live-traffic') return 'Embouteillage en Temps Réel';
     return 'Kinshasa Flow';
   }
 
   const getPageDescription = () => {
     if (pathname === '/') return 'Mises à jour en temps réel pour Kinshasa';
+    if (pathname === '/live-traffic') return 'Un flux en direct du trafic dans la ville de Kinshasa';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -46,6 +48,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <a>
                       <Home />
                       <span>Rapports</span>
+                    </a>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <Link href="/live-traffic" legacyBehavior passHref>
+                  <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} tooltip={{children: "Embouteillage en Temps Réel"}}>
+                    <a>
+                      <Activity />
+                      <span>Temps Réel</span>
                     </a>
                   </SidebarMenuButton>
                 </Link>

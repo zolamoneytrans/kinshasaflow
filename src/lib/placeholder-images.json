@@ -3,8 +3,8 @@
     {
       "id": "kinshasa-map-placeholder",
       "description": "A placeholder image of a map of Kinshasa.",
-      "imageUrl": "https://images.unsplash.com/photo-1623930180584-1b14bc584169?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxLaW5zaGFzYSUyMG1hcHxlbnwwfHx8fDE3Njk4MDQ0MDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "Kinshasa map"
+      "imageUrl": "https://images.unsplash.com/photo-1593339809854-4a749c68396f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzdHJlZXQlMjBtYXB8ZW58MHx8fHwxNzE4NzU0MDI4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "street map"
     },
     {
       "id": "rond-point-victoire-traffic",

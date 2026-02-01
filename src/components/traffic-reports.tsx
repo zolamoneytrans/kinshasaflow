@@ -21,8 +21,8 @@ import { getTrafficTipsAction } from '@/app/actions';
 
 type Report = TrafficReport & { id: number, time: string };
 
-const INITIAL_VISIBLE_COUNT = 5;
-const REPORTS_TO_LOAD = 5;
+const INITIAL_VISIBLE_COUNT = 20;
+const REPORTS_TO_LOAD = 10;
 
 const SeverityBadge = ({ severity }: { severity: TrafficReport['severity'] }) => {
     const variant: VariantProps<typeof badgeVariants>['variant'] = {

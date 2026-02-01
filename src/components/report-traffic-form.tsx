@@ -25,28 +25,26 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Send } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { reportFormSchema, ReportFormValues } from '@/lib/types';
+import { useFirebase, useUser, initiateAnonymousSignIn, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp } from 'firebase/firestore';
 
-const reportFormSchema = z.object({
-  location: z.string().min(5, {
-    message: 'Le lieu doit comporter au moins 5 caractères.',
-  }),
-  description: z.string().min(10, {
-    message: 'La description doit comporter au moins 10 caractères.',
-  }),
-  severity: z.enum(['low', 'medium', 'high'], {
-    required_error: 'Vous devez sélectionner une sévérité.',
-  }),
-  picture: z.any().optional(),
-});
-
-type ReportFormValues = z.infer<typeof reportFormSchema>;
 
 export default function ReportTrafficForm() {
     const { toast } = useToast();
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const { auth, firestore } = useFirebase();
+    const { user, isUserLoading } = useUser();
+
+    useEffect(() => {
+        if (!isUserLoading && !user) {
+            initiateAnonymousSignIn(auth);
+        }
+    }, [user, isUserLoading, auth]);
 
     const form = useForm<ReportFormValues>({
         resolver: zodResolver(reportFormSchema),
@@ -70,21 +68,51 @@ export default function ReportTrafficForm() {
     }
 
     async function onSubmit(data: ReportFormValues) {
-        setIsSubmitting(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        if (!user) {
+            toast({
+                title: 'Erreur',
+                description: "Vous devez être connecté pour signaler un incident. Veuillez patienter...",
+                variant: 'destructive',
+            });
+            if (!isUserLoading) {
+                initiateAnonymousSignIn(auth);
+            }
+            return;
+        }
 
-        console.log({ ...data, picture: imagePreview ? 'image_data_uri_present' : 'no_image' });
+        setIsSubmitting(true);
         
-        toast({
-            title: 'Rapport envoyé !',
-            description: "Merci pour votre contribution. Votre rapport a été soumis avec succès.",
-            variant: 'default',
-        });
-        
-        form.reset();
-        setImagePreview(null);
-        setIsSubmitting(false);
+        try {
+            const eventData = {
+                ...data,
+                userId: user.uid,
+                user: user.isAnonymous ? "Utilisateur Anonyme" : (user.displayName || "Utilisateur Anonyme"),
+                userAvatar: user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`,
+                picture: imagePreview || '',
+                createdAt: serverTimestamp(),
+            };
+
+            const eventsCollection = collection(firestore, 'events');
+            await addDocumentNonBlocking(eventsCollection, eventData);
+
+            toast({
+                title: 'Rapport envoyé !',
+                description: "Merci pour votre contribution. Votre rapport a été soumis avec succès.",
+                variant: 'default',
+            });
+            
+            form.reset();
+            setImagePreview(null);
+        } catch (error) {
+            console.error("Error submitting report:", error);
+            toast({
+                title: 'Oh oh! Une erreur est survenue.',
+                description: "Impossible de soumettre votre rapport. Veuillez réessayer.",
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     return (
@@ -103,7 +131,7 @@ export default function ReportTrafficForm() {
                                 <FormItem>
                                     <FormLabel>Lieu de l'incident</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Ex: Rond-point Victoire" {...field} />
+                                        <Input placeholder="Ex: Rond-point Victoire" {...field} disabled={isSubmitting || isUserLoading} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -120,6 +148,7 @@ export default function ReportTrafficForm() {
                                         placeholder="Décrivez ce qui se passe..."
                                         className="resize-none"
                                         {...field}
+                                        disabled={isSubmitting || isUserLoading}
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -132,7 +161,7 @@ export default function ReportTrafficForm() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Sévérité</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isUserLoading}>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Sélectionnez le niveau de sévérité" />
@@ -162,7 +191,7 @@ export default function ReportTrafficForm() {
                                                 accept="image/*" 
                                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                                 onChange={handlePictureChange}
-                                                disabled={isSubmitting}
+                                                disabled={isSubmitting || isUserLoading}
                                             />
                                             <label htmlFor="picture" className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors">
                                                 {imagePreview ? (
@@ -182,7 +211,7 @@ export default function ReportTrafficForm() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        <Button type="submit" className="w-full" disabled={isSubmitting || isUserLoading}>
                             {isSubmitting ? 'Envoi en cours...' : (
                                 <>
                                     <Send className="mr-2 h-4 w-4" />

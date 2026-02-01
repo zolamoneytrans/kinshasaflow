@@ -1,14 +1,82 @@
 import { z } from "zod";
+import { Timestamp } from "firebase/firestore";
+
+// Schema for comments to be stored in Firestore
+export const commentSchema = z.object({
+  userId: z.string(),
+  author: z.string(),
+  avatar: z.string(),
+  text: z.string().min(1, "Le commentaire ne peut pas être vide."),
+  createdAt: z.instanceof(Timestamp).or(z.any()), // Allow server timestamp
+});
+export type Comment = z.infer<typeof commentSchema>;
+export type WithId<T> = T & { id: string };
+
+// Schema for event reports to be stored in Firestore
+export const eventReportSchema = z.object({
+  location: z.string(),
+  description: z.string(),
+  severity: z.enum(['low', 'medium', 'high']),
+  userId: z.string(),
+  user: z.string(),
+  userAvatar: z.string(),
+  picture: z.string().optional(),
+  createdAt: z.instanceof(Timestamp).or(z.any()), // Allow server timestamp
+});
+export type EventReport = z.infer<typeof eventReportSchema>;
+
+// For client-side form validation which doesn't have server timestamps yet
+export const reportFormSchema = z.object({
+  location: z.string().min(5, {
+    message: 'Le lieu doit comporter au moins 5 caractères.',
+  }),
+  description: z.string().min(10, {
+    message: 'La description doit comporter au moins 10 caractères.',
+  }),
+  severity: z.enum(['low', 'medium', 'high'], {
+    required_error: 'Vous devez sélectionner une sévérité.',
+  }),
+  picture: z.any().optional(),
+});
+export type ReportFormValues = z.infer<typeof reportFormSchema>;
+
+
+// Schemas for AI flow
+export const TrafficTipsInputSchema = z.object({
+  location: z.string().describe("Le lieu de l'incident de la circulation à Kinshasa."),
+  description: z.string().describe("Une description de l'incident de la circulation."),
+});
+export type TrafficTipsInput = z.infer<typeof TrafficTipsInputSchema>;
+
+export const TrafficTipsOutputSchema = z.object({
+  tips: z.array(z.string()).describe("Une liste de conseils pratiques pour éviter les embouteillages."),
+});
+export type TrafficTipsOutput = z.infer<typeof TrafficTipsOutputSchema>;
+
+// Dummy data for components that haven't been migrated to Firebase yet
+export const policeReportSchema = z.object({
+  location: z.string(),
+  note: z.string(),
+  type: z.enum(['control', 'traffic_management', 'incident']),
+});
+export type PoliceReport = z.infer<typeof policeReportSchema>;
+export const dummyPoliceReports: (PoliceReport & { id: number, time: string })[] = [
+    { id: 1, location: "Rond-point Victoire", note: "Contrôle de routine des documents.", type: "control", time: "il y a 15m" },
+    { id: 2, location: "Boulevard du 30 Juin", note: "Gestion du trafic suite à un événement.", type: "traffic_management", time: "il y a 30m" },
+    { id: 3, location: "Pont Matete", note: "Présence renforcée pour la sécurité.", type: "control", time: "il y a 5m" },
+    { id: 4, location: "Avenue Kasa-Vubu", note: "Intervention suite à un petit accrochage.", type: "incident", time: "il y a 45m" },
+    { id: 5, location: "Gombe, près de l'Hôtel de Ville", note: "Escorte d'un convoi officiel.", type: "traffic_management", time: "il y a 1h" },
+    { id: 6, location: "Limete, 7ème Rue", note: "Contrôle de vitesse.", type: "control", time: "il y a 20m" },
+    { id: 7, location: "UPN", note: "Présence préventive.", type: "control", time: "il y a 2h" },
+    { id: 8, location: "Marché Central", note: "Patrouille pour la sécurité des commerçants.", type: "control", time: "il y a 1h 15m" },
+];
 
 export const trafficReportSchema = z.object({
   location: z.string().min(3, "Location is too short."),
   description: z.string().min(10, "Description is too short."),
   severity: z.enum(["low", "medium", "high"]),
 });
-
 export type TrafficReport = z.infer<typeof trafficReportSchema>;
-
-// Dummy data for now
 export const dummyReports: (TrafficReport & { id: number, time: string })[] = [
     { id: 1, location: "Rond-point Victoire", description: "Forte congestion due à la journée de marché.", severity: "high", time: "il y a 10m" },
     { id: 2, location: "Boulevard du 30 Juin", description: "Accident impliquant un camion. Route partiellement bloquée.", severity: "high", time: "il y a 25m" },
@@ -60,95 +128,4 @@ export const dummyReports: (TrafficReport & { id: number, time: string })[] = [
     { id: 48, location: "Stade des Martyrs", description: "Fin de concert, attendez-vous à de forts ralentissements.", severity: "high", time: "il y a 30m" },
     { id: 49, location: "Avenue de la Justice", description: "Zone du palais de justice très fréquentée, stationnement limité.", severity: "low", time: "il y a 1h 50m" },
     { id: 50, location: "Triangle de la Cité", description: "Circulation fluide, mieux que prévu.", severity: "low", time: "il y a 19m" },
-];
-
-export const policeReportSchema = z.object({
-  location: z.string(),
-  note: z.string(),
-  type: z.enum(['control', 'traffic_management', 'incident']),
-});
-
-export type PoliceReport = z.infer<typeof policeReportSchema>;
-
-export const dummyPoliceReports: (PoliceReport & { id: number, time: string })[] = [
-    { id: 1, location: "Rond-point Victoire", note: "Contrôle de routine des documents.", type: "control", time: "il y a 15m" },
-    { id: 2, location: "Boulevard du 30 Juin", note: "Gestion du trafic suite à un événement.", type: "traffic_management", time: "il y a 30m" },
-    { id: 3, location: "Pont Matete", note: "Présence renforcée pour la sécurité.", type: "control", time: "il y a 5m" },
-    { id: 4, location: "Avenue Kasa-Vubu", note: "Intervention suite à un petit accrochage.", type: "incident", time: "il y a 45m" },
-    { id: 5, location: "Gombe, près de l'Hôtel de Ville", note: "Escorte d'un convoi officiel.", type: "traffic_management", time: "il y a 1h" },
-    { id: 6, location: "Limete, 7ème Rue", note: "Contrôle de vitesse.", type: "control", time: "il y a 20m" },
-    { id: 7, location: "UPN", note: "Présence préventive.", type: "control", time: "il y a 2h" },
-    { id: 8, location: "Marché Central", note: "Patrouille pour la sécurité des commerçants.", type: "control", time: "il y a 1h 15m" },
-];
-
-export const TrafficTipsInputSchema = z.object({
-  location: z.string().describe("Le lieu de l'incident de la circulation à Kinshasa."),
-  description: z.string().describe("Une description de l'incident de la circulation."),
-});
-export type TrafficTipsInput = z.infer<typeof TrafficTipsInputSchema>;
-
-export const TrafficTipsOutputSchema = z.object({
-  tips: z.array(z.string()).describe("Une liste de conseils pratiques pour éviter les embouteillages."),
-});
-export type TrafficTipsOutput = z.infer<typeof TrafficTipsOutputSchema>;
-
-export const commentSchema = z.object({
-  id: z.string(),
-  author: z.string(),
-  avatar: z.string(),
-  text: z.string(),
-  timestamp: z.string(),
-});
-export type Comment = z.infer<typeof commentSchema>;
-
-export const eventReportSchema = trafficReportSchema.extend({
-  id: z.number(),
-  time: z.string(),
-  user: z.string(),
-  userAvatar: z.string(),
-  picture: z.string().optional(),
-  comments: z.array(commentSchema),
-});
-export type EventReport = z.infer<typeof eventReportSchema>;
-
-
-// Dummy data for events page
-export const dummyEvents: EventReport[] = [
-  {
-    id: 101,
-    location: "Rond-point Victoire",
-    description: "Un camion a perdu sa cargaison, bloquant complètement la circulation. Évitez la zone si possible.",
-    severity: "high",
-    time: "il y a 30m",
-    user: "Jean Dupont",
-    userAvatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
-    picture: "https://picsum.photos/seed/101/600/400",
-    comments: [
-      { id: 'c1-1', author: "Marie Claire", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704e", text: "Merci pour l'info ! J'allais justement par là.", timestamp: "il y a 25m" },
-      { id: 'c1-2', author: "Pierre T.", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704f", text: "C'est le chaos total. Je suis coincé depuis 20 minutes.", timestamp: "il y a 15m" },
-    ]
-  },
-  {
-    id: 102,
-    location: "Avenue Kasa-Vubu",
-    description: "Feux de circulation en panne au croisement avec l'avenue de l'Enseignement. La police est sur place mais le trafic est très lent.",
-    severity: "medium",
-    time: "il y a 1h",
-    user: "Sylvie M.",
-    userAvatar: "https://i.pravatar.cc/150?u=a042581f4e29026704a",
-    picture: "https://picsum.photos/seed/102/600/400",
-    comments: [
-       { id: 'c2-1', author: "Admin", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704b", text: "Nos équipes techniques sont informées. Merci.", timestamp: "il y a 45m" },
-    ]
-  },
-  {
-    id: 103,
-    location: "Pont Matete",
-    description: "Circulation fluide en ce moment, rien à signaler.",
-    severity: "low",
-    time: "il y a 5m",
-    user: "Bot Trafic",
-    userAvatar: "https://i.pravatar.cc/150?u=a042581f4e29026704c",
-    comments: []
-  },
 ];

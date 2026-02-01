@@ -53,6 +53,48 @@ export const TrafficTipsOutputSchema = z.object({
 });
 export type TrafficTipsOutput = z.infer<typeof TrafficTipsOutputSchema>;
 
+// New schema for Announcements
+export const annonceSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  content: z.string(),
+  publishedAt: z.string(),
+  source: z.string(),
+});
+export type Annonce = z.infer<typeof annonceSchema>;
+
+export const dummyAnnouncements: Annonce[] = [
+  {
+    id: 1,
+    title: 'Nouvelles régulations sur le stationnement au centre-ville',
+    content: "À partir du 1er septembre, de nouvelles zones de stationnement payant seront mises en place dans la commune de la Gombe pour désengorger les artères principales. Les résidents peuvent demander des vignettes à tarif préférentiel.",
+    publishedAt: "2024-08-15",
+    source: "Hôtel de Ville de Kinshasa"
+  },
+  {
+    id: 2,
+    title: 'Fermeture temporaire du Boulevard Lumumba pour travaux',
+    content: "Le tronçon du Boulevard Lumumba entre la 1ère et la 7ème rue Limete sera fermé à la circulation du 20 au 25 août pour des travaux de réfection de la chaussée. Des déviations seront mises en place par les avenues environnantes.",
+    publishedAt: "2024-08-12",
+    source: "Ministère des Infrastructures et Travaux Publics"
+  },
+  {
+    id: 3,
+    title: 'Campagne de contrôle technique obligatoire pour les taxis',
+    content: "Tous les véhicules à usage de taxi sont priés de se présenter pour un contrôle technique obligatoire avant le 30 septembre. Les véhicules non conformes seront immobilisés.",
+    publishedAt: "2024-08-10",
+    source: "Police de Circulation Routière (PCR)"
+  },
+  {
+    id: 4,
+    title: 'Introduction de nouvelles plaques d\'immatriculation',
+    content: "Le programme de remplacement des plaques d'immatriculation débutera en octobre. Les modalités de remplacement seront communiquées prochainement. Les anciennes plaques resteront valides pendant une période de transition de 6 mois.",
+    publishedAt: "2024-08-05",
+    source: "Direction Générale des Impôts (DGI)"
+  }
+];
+
+
 // Dummy data for components that haven't been migrated to Firebase yet
 export const policeReportSchema = z.object({
   location: z.string(),

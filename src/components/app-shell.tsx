@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2 } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -15,6 +15,30 @@ import {
   SidebarHeader,
 } from '@/components/ui/sidebar';
 import { UserNav } from './auth/user-nav';
+import { useUser } from '@/firebase';
+import React, { useEffect } from 'react';
+
+function ProtectedContent({ children }: { children: React.ReactNode }) {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -40,6 +64,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
+
+  const isProtectedPage = ![
+    '/',
+    '/login',
+    '/signup',
+  ].includes(pathname);
 
   return (
     <div className="flex h-screen bg-background">
@@ -110,7 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </header>
                 <main className="flex-1 p-4 overflow-hidden">
                     <div className="h-full w-full flex">
-                        {children}
+                        {isProtectedPage ? <ProtectedContent>{children}</ProtectedContent> : children}
                     </div>
                 </main>
             </div>

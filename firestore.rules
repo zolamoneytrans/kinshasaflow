@@ -13,10 +13,10 @@
  * - No user listing: To protect user privacy, it is impossible to list all documents in the `/users` collection.
  * - Templates are read-only for non-admins: The `/idTemplates` collection is intended to be managed by administrators.
  *   Write operations are disabled for regular users.
- * - Events are publicly readable: All authenticated users can read event data to stay informed.
- * - Event creation is for authenticated users: Any signed-in user (including anonymous ones) can report an event.
+ * - Events are publicly readable: All users (authenticated or not) can read event data to stay informed.
+ * - Event creation is for authenticated users: Any signed-in user can report an event.
  * - Event comments are publicly readable but writes are restricted: Similar to events, comments can be read by
- *   any authenticated user, but only created by authenticated users, with ownership enforced.
+ *   any user, but only created by authenticated users, with ownership enforced.
  *
  * Denormalization for Authorization: The `GeneratedId`, `EventReport`, and `Comment` documents contain a `userId` field.
  * The rules enforce on creation that this field matches the creator's UID. This ensures a permanent and
@@ -92,7 +92,7 @@ service cloud.firestore {
      * @path          /events/{eventId}
      */
     match /events/{eventId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true; // Publicly readable by anyone
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;
 
@@ -101,7 +101,7 @@ service cloud.firestore {
        * @path          /events/{eventId}/comments/{commentId}
        */
       match /comments/{commentId} {
-        allow get, list: if isSignedIn();
+        allow get, list: if true; // Publicly readable by anyone
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         // Allow users to update or delete their own comments
         allow update, delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { EventReport, Comment as CommentType, WithId } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,11 +17,12 @@ import { Clock, MessageSquare, Send, ThumbsUp, ThumbsDown, Loader2 } from 'lucid
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { type VariantProps } from 'class-variance-authority';
 import { Separator } from '@/components/ui/separator';
-import { useCollection, useFirebase, useUser, useMemoFirebase, addDocumentNonBlocking, initiateAnonymousSignIn } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, Timestamp, doc } from 'firebase/firestore';
+import { useCollection, useFirebase, useUser, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Skeleton } from './ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 const SeverityBadge = ({ severity }: { severity: EventReport['severity'] }) => {
     const variant: VariantProps<typeof badgeVariants>['variant'] = {
@@ -61,7 +63,9 @@ const EventCard = ({ event }: { event: WithId<EventReport> }) => {
     const [newComment, setNewComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    const { firestore, auth } = useFirebase();
+    const router = useRouter();
+    const { toast } = useToast();
+    const { firestore } = useFirebase();
     const { user, isUserLoading } = useUser();
     
     const commentsCollection = useMemoFirebase(() => collection(firestore, 'events', event.id, 'comments'), [firestore, event.id]);
@@ -69,12 +73,17 @@ const EventCard = ({ event }: { event: WithId<EventReport> }) => {
     const { data: comments, isLoading: isLoadingComments } = useCollection<CommentType>(commentsQuery);
 
     const handleAddComment = async () => {
-        if (newComment.trim() === '' || !user) {
-             if (!user && !isUserLoading) {
-                initiateAnonymousSignIn(auth);
-            }
+        if (!user) {
+            toast({
+                title: "Veuillez vous connecter",
+                description: "Vous devez être connecté pour commenter.",
+                variant: 'destructive'
+            });
+            router.push('/login');
             return;
         }
+
+        if (newComment.trim() === '') return;
 
         setIsSubmitting(true);
         const commentData = {
@@ -196,23 +205,12 @@ const EventCardSkeleton = () => (
 
 
 export default function EvenementsFeed() {
-    const { firestore, auth } = useFirebase();
-    const { user, isUserLoading: isAuthLoading } = useUser();
-    
-    useEffect(() => {
-        if (!isAuthLoading && !user) {
-            initiateAnonymousSignIn(auth);
-        }
-    }, [isAuthLoading, user, auth]);
-
+    const { firestore } = useFirebase();
     const eventsCollection = useMemoFirebase(() => collection(firestore, 'events'), [firestore]);
-    const eventsQuery = useMemoFirebase(() => {
-        if (!user) return null;
-        return query(eventsCollection, orderBy('createdAt', 'desc'))
-    }, [eventsCollection, user]);
+    const eventsQuery = useMemoFirebase(() => query(eventsCollection, orderBy('createdAt', 'desc')), [eventsCollection]);
     const { data: events, isLoading: isLoadingEvents } = useCollection<EventReport>(eventsQuery);
 
-    const isLoading = isAuthLoading || isLoadingEvents;
+    const isLoading = isLoadingEvents;
 
   return (
     <div className="w-full h-full overflow-y-auto pr-2">

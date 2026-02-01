@@ -14,6 +14,7 @@ import {
   SidebarInset,
   SidebarHeader,
 } from '@/components/ui/sidebar';
+import { UserNav } from './auth/user-nav';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -24,6 +25,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/police-routiere') return 'Police Routière';
     if (pathname === '/signaler-embouteillage') return 'Signaler un Embouteillage';
     if (pathname === '/evenements') return 'Événements';
+    if (pathname === '/login') return 'Se connecter';
+    if (pathname === '/signup') return "S'inscrire";
     return 'Kinshasa Flow';
   }
 
@@ -33,6 +36,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/police-routiere') return 'Signalements de la présence policière à Kinshasa';
     if (pathname === '/signaler-embouteillage') return 'Signalez un incident pour aider les autres conducteurs';
     if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
+    if (pathname === '/login') return 'Accédez à votre compte pour contribuer.';
+    if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -93,12 +98,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Sidebar>
         <SidebarInset>
             <div className="flex flex-col h-full">
-                <header className="bg-card border-b p-4 flex items-center gap-4">
-                    <SidebarTrigger className="md:hidden" />
-                    <div>
-                      <h1 className="text-2xl font-bold text-foreground">{getPageTitle()}</h1>
-                      <p className="text-muted-foreground">{getPageDescription()}</p>
+                <header className="bg-card border-b p-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <SidebarTrigger className="md:hidden" />
+                      <div>
+                        <h1 className="text-2xl font-bold text-foreground">{getPageTitle()}</h1>
+                        <p className="text-muted-foreground">{getPageDescription()}</p>
+                      </div>
                     </div>
+                    <UserNav />
                 </header>
                 <main className="flex-1 p-4 overflow-hidden">
                     <div className="h-full w-full flex">

@@ -129,3 +129,17 @@ export const dummyReports: (TrafficReport & { id: number, time: string })[] = [
     { id: 49, location: "Avenue de la Justice", description: "Zone du palais de justice très fréquentée, stationnement limité.", severity: "low", time: "il y a 1h 50m" },
     { id: 50, location: "Triangle de la Cité", description: "Circulation fluide, mieux que prévu.", severity: "low", time: "il y a 19m" },
 ];
+
+// Schemas for Auth
+export const loginSchema = z.object({
+  email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }),
+  password: z.string().min(1, { message: "Veuillez entrer votre mot de passe." }),
+});
+export type LoginValues = z.infer<typeof loginSchema>;
+
+export const signupSchema = z.object({
+  name: z.string().min(2, { message: "Le nom doit comporter au moins 2 caractères." }),
+  email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }),
+  password: z.string().min(8, { message: "Le mot de passe doit comporter au moins 8 caractères." }),
+});
+export type SignupValues = z.infer<typeof signupSchema>;

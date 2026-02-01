@@ -2,12 +2,10 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -24,27 +22,23 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Send } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Camera, Send, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { reportFormSchema, ReportFormValues } from '@/lib/types';
-import { useFirebase, useUser, initiateAnonymousSignIn, addDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
 
 
 export default function ReportTrafficForm() {
     const { toast } = useToast();
+    const router = useRouter();
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    const { auth, firestore } = useFirebase();
+    const { firestore } = useFirebase();
     const { user, isUserLoading } = useUser();
-
-    useEffect(() => {
-        if (!isUserLoading && !user) {
-            initiateAnonymousSignIn(auth);
-        }
-    }, [user, isUserLoading, auth]);
 
     const form = useForm<ReportFormValues>({
         resolver: zodResolver(reportFormSchema),
@@ -70,13 +64,11 @@ export default function ReportTrafficForm() {
     async function onSubmit(data: ReportFormValues) {
         if (!user) {
             toast({
-                title: 'Erreur',
-                description: "Vous devez être connecté pour signaler un incident. Veuillez patienter...",
+                title: 'Veuillez vous connecter',
+                description: "Vous devez être connecté pour signaler un incident.",
                 variant: 'destructive',
             });
-            if (!isUserLoading) {
-                initiateAnonymousSignIn(auth);
-            }
+            router.push('/login');
             return;
         }
 
@@ -103,6 +95,7 @@ export default function ReportTrafficForm() {
             
             form.reset();
             setImagePreview(null);
+            router.push('/evenements');
         } catch (error) {
             console.error("Error submitting report:", error);
             toast({
@@ -212,7 +205,12 @@ export default function ReportTrafficForm() {
                             )}
                         />
                         <Button type="submit" className="w-full" disabled={isSubmitting || isUserLoading}>
-                            {isSubmitting ? 'Envoi en cours...' : (
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Envoi en cours...
+                                </>
+                            ) : (
                                 <>
                                     <Send className="mr-2 h-4 w-4" />
                                     Soumettre le rapport

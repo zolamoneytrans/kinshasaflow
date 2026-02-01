@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { EventReport, Comment as CommentType, WithId } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
@@ -196,10 +196,23 @@ const EventCardSkeleton = () => (
 
 
 export default function EvenementsFeed() {
-    const { firestore } = useFirebase();
+    const { firestore, auth } = useFirebase();
+    const { user, isUserLoading: isAuthLoading } = useUser();
+    
+    useEffect(() => {
+        if (!isAuthLoading && !user) {
+            initiateAnonymousSignIn(auth);
+        }
+    }, [isAuthLoading, user, auth]);
+
     const eventsCollection = useMemoFirebase(() => collection(firestore, 'events'), [firestore]);
-    const eventsQuery = useMemoFirebase(() => query(eventsCollection, orderBy('createdAt', 'desc')), [eventsCollection]);
-    const { data: events, isLoading } = useCollection<EventReport>(eventsQuery);
+    const eventsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(eventsCollection, orderBy('createdAt', 'desc'))
+    }, [eventsCollection, user]);
+    const { data: events, isLoading: isLoadingEvents } = useCollection<EventReport>(eventsQuery);
+
+    const isLoading = isAuthLoading || isLoadingEvents;
 
   return (
     <div className="w-full h-full overflow-y-auto pr-2">

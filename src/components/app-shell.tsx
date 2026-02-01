@@ -49,54 +49,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SidebarHeader>
             <SidebarMenu className="p-2">
               <SidebarMenuItem>
-                <Link href="/" legacyBehavior passHref>
-                  <SidebarMenuButton asChild isActive={pathname === '/'} tooltip={{children: "Rapports"}}>
-                    <a>
-                      <Home />
-                      <span>Rapports</span>
-                    </a>
-                  </SidebarMenuButton>
-                </Link>
+                <SidebarMenuButton asChild isActive={pathname === '/'} tooltip={{children: "Rapports"}}>
+                  <Link href="/">
+                    <Home />
+                    <span>Rapports</span>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <Link href="/live-traffic" legacyBehavior passHref>
-                  <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} tooltip={{children: "Embouteillage en Temps Réel"}}>
-                    <a>
-                      <Activity />
-                      <span>Temps Réel</span>
-                    </a>
-                  </SidebarMenuButton>
-                </Link>
+                <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} tooltip={{children: "Embouteillage en Temps Réel"}}>
+                  <Link href="/live-traffic">
+                    <Activity />
+                    <span>Temps Réel</span>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <Link href="/police-routiere" legacyBehavior passHref>
-                  <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}}>
-                    <a>
-                      <Siren />
-                      <span>Police</span>
-                    </a>
-                  </SidebarMenuButton>
-                </Link>
+                <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}}>
+                  <Link href="/police-routiere">
+                    <Siren />
+                    <span>Police</span>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <Link href="/evenements" legacyBehavior passHref>
-                  <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}}>
-                    <a>
-                      <Megaphone />
-                      <span>Événements</span>
-                    </a>
-                  </SidebarMenuButton>
-                </Link>
+                <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}}>
+                  <Link href="/evenements">
+                    <Megaphone />
+                    <span>Événements</span>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <Link href="/signaler-embouteillage" legacyBehavior passHref>
-                  <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}}>
-                    <a>
-                      <PlusCircle />
-                      <span>Signaler</span>
-                    </a>
-                  </SidebarMenuButton>
-                </Link>
+                <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}}>
+                  <Link href="/signaler-embouteillage">
+                    <PlusCircle />
+                    <span>Signaler</span>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>

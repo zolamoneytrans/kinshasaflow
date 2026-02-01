@@ -99,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </div>
                 </header>
                 <main className="flex-1 p-4 overflow-hidden">
-                    <div className="h-full w-full">
+                    <div className="h-full w-full flex">
                         {children}
                     </div>
                 </main>

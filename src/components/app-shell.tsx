@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2 } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -47,6 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/') return 'Rapports de trafic';
     if (pathname === '/live-traffic') return 'Embouteillage en Temps Réel';
     if (pathname === '/police-routiere') return 'Police Routière';
+    if (pathname === '/routes') return 'État des Routes';
     if (pathname === '/signaler-embouteillage') return 'Signaler un Embouteillage';
     if (pathname === '/evenements') return 'Événements';
     if (pathname === '/login') return 'Se connecter';
@@ -58,6 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/') return 'Mises à jour en temps réel pour Kinshasa';
     if (pathname === '/live-traffic') return 'Un flux en direct du trafic dans la ville de Kinshasa';
     if (pathname === '/police-routiere') return 'Signalements de la présence policière à Kinshasa';
+    if (pathname === '/routes') return 'Statistiques sur les infrastructures routières';
     if (pathname === '/signaler-embouteillage') return 'Signalez un incident pour aider les autres conducteurs';
     if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
     if (pathname === '/login') return 'Accédez à votre compte pour contribuer.';
@@ -104,6 +106,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/police-routiere">
                     <Siren />
                     <span>Police</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/routes'} tooltip={{children: "État des Routes"}}>
+                  <Link href="/routes">
+                    <Route />
+                    <span>Routes</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

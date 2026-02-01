@@ -1,0 +1,181 @@
+{
+  "entities": {
+    "IdTemplate": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "IdTemplate",
+      "type": "object",
+      "description": "Represents a template for generating IDs, such as student, employee, or membership cards.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ID template."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the ID template (e.g., 'Student ID', 'Employee Badge')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the ID template and its purpose."
+        },
+        "fields": {
+          "type": "array",
+          "description": "List of required and optional fields for this template (e.g., name, address, date of birth).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "layout": {
+          "type": "string",
+          "description": "Defines the layout of the ID template using a data structure like JSON or string.",
+          "format": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "fields",
+        "layout"
+      ]
+    },
+    "GeneratedId": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GeneratedId",
+      "type": "object",
+      "description": "Represents a generated ID for a user based on a selected template.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the generated ID."
+        },
+        "templateId": {
+          "type": "string",
+          "description": "Reference to IdTemplate. (Relationship: IdTemplate 1:N GeneratedId)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N GeneratedId)"
+        },
+        "creationDate": {
+          "type": "string",
+          "description": "Date and time when the ID was generated.",
+          "format": "date-time"
+        },
+        "fieldValues": {
+          "type": "string",
+          "description": "A JSON string containing the values entered by the user for the template fields.",
+          "format": "string"
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "URL of the uploaded photo for the ID.",
+          "format": "uri"
+        },
+        "qrCodeData": {
+          "type": "string",
+          "description": "Data encoded in the QR code associated with the ID.",
+          "format": "string"
+        }
+      },
+      "required": [
+        "id",
+        "templateId",
+        "userId",
+        "creationDate",
+        "fieldValues",
+        "photoUrl",
+        "qrCodeData"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the IDGenius application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "name"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information.  User documents are accessible only to the user and admins (admin check not modeled here).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/generatedIds/{generatedId}",
+        "definition": {
+          "entityName": "GeneratedId",
+          "schema": {
+            "$ref": "#/backend/entities/GeneratedId"
+          },
+          "description": "Stores generated ID information for each user. Organized as a subcollection of the user document to ensure that only the user can access these documents. Includes denormalized 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "generatedId",
+              "description": "The unique identifier for the generated ID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/idTemplates/{idTemplateId}",
+        "definition": {
+          "entityName": "IdTemplate",
+          "schema": {
+            "$ref": "#/backend/entities/IdTemplate"
+          },
+          "description": "Stores ID templates.  Templates are intended to be created and modified by admins (admin check not modeled here).",
+          "params": [
+            {
+              "name": "idTemplateId",
+              "description": "The unique identifier for the ID template."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support the IDGenius application, focusing on user-generated IDs based on templates. It emphasizes authorization independence, clarity, and scalability.  User data and related generated IDs are stored under user-specific paths for secure access. IdTemplates are stored in a root-level collection accessible to admins (not modeled here, but easily implemented via a separate `/roles_admin/{uid}` collection check in rules). This ensures only authorized users can create or modify templates.  Authorization Independence is achieved by storing GeneratedId documents within the `/users/{userId}/generatedIds/{generatedId}` path, eliminating the need for `get()` calls to parent documents for authorization. The structure inherently supports QAPs by segregating data based on user ownership and the type of data (templates vs. generated IDs)."
+  }
+}

@@ -1,0 +1,102 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership model. All user-specific data, such as
+ * profiles and generated IDs, is stored within a path dedicated to that user (`/users/{userId}/...`).
+ * This ensures that a user can only ever access their own information.
+ *
+ * Data Structure: The data is organized into two main top-level collections:
+ * 1. `/users`: Contains individual user documents and their subcollections.
+ * 2. `/idTemplates`: A public, read-only collection of templates available to all authenticated users.
+ *
+ * Key Security Decisions:
+ * - User data is private: Access to `/users/{userId}` and all its subcollections is restricted to the
+ *   authenticated user whose UID matches the `{userId}` in the path.
+ * - No user listing: To protect user privacy, it is impossible to list all documents in the `/users` collection.
+ * - Templates are read-only: The `/idTemplates` collection is intended to be managed by administrators.
+ *   Since admin roles are not modeled in this version, all write operations are disabled for regular users,
+ *   making the collection effectively read-only for them.
+ *
+ * Denormalization for Authorization: The `GeneratedId` documents, located at `/users/{userId}/generatedIds/{generatedId}`,
+ * contain a `userId` field. The rules enforce on creation that this field matches the `{userId}` from the
+ * path. This ensures a permanent and easily verifiable link to the owner without needing extra database reads.
+ *
+ * Structural Segregation: User-private data (`/users/{userId}/generatedIds`) is stored in a separate,
+ * locked-down collection from publicly readable data (`/idTemplates`). This separation provides a more
+ * secure and performant way to manage access control for list operations.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions to improve readability and maintainability of rules.
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the primary function for enforcing document ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document. Used for update and delete
+     * operations to prevent acting on non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description   Rules for the User collection. Each document stores a user's profile.
+     * @path          /users/{userId}
+     * @allow         (create) An authenticated user with UID 'user_abc' can create their own user document at `/users/user_abc`.
+     * @deny          (list) An authenticated user cannot list all documents in the `/users` collection.
+     * @deny          (get) An authenticated user 'user_abc' cannot get the document for 'user_xyz'.
+     * @principle     Restricts access to a user's own data tree and enforces relational integrity between the document ID and its content.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // CRITICAL: Prevent listing of all users.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description   Rules for a user's generated IDs.
+       * @path          /users/{userId}/generatedIds/{generatedId}
+       * @allow         (create) User 'user_abc' can create a new generatedId document in their own subcollection.
+       * @allow         (list) User 'user_abc' can list all of their own generated IDs.
+       * @deny          (get) User 'user_xyz' cannot read a generatedId belonging to 'user_abc'.
+       * @principle     Enforces document ownership via the path and validates the denormalized `userId` field for data consistency.
+       */
+      match /generatedIds/{generatedId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description   Rules for the ID Templates collection. Templates are public and read-only for all signed-in users.
+     * @path          /idTemplates/{idTemplateId}
+     * @allow         (get, list) Any authenticated user can read or list ID templates.
+     * @deny          (create, update, delete) No authenticated user can write to the templates collection, as this is reserved for admins (not modeled).
+     * @principle     Provides public read access for shared resources while preventing modification by non-privileged users.
+     */
+    match /idTemplates/{idTemplateId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false; // Writes are disabled; templates are managed by admins.
+      allow update: if false; // Writes are disabled; templates are managed by admins.
+      allow delete: if false; // Writes are disabled; templates are managed by admins.
+    }
+  }
+}

@@ -91,3 +91,64 @@ export const TrafficTipsOutputSchema = z.object({
   tips: z.array(z.string()).describe("Une liste de conseils pratiques pour éviter les embouteillages."),
 });
 export type TrafficTipsOutput = z.infer<typeof TrafficTipsOutputSchema>;
+
+export const commentSchema = z.object({
+  id: z.string(),
+  author: z.string(),
+  avatar: z.string(),
+  text: z.string(),
+  timestamp: z.string(),
+});
+export type Comment = z.infer<typeof commentSchema>;
+
+export const eventReportSchema = trafficReportSchema.extend({
+  id: z.number(),
+  time: z.string(),
+  user: z.string(),
+  userAvatar: z.string(),
+  picture: z.string().optional(),
+  comments: z.array(commentSchema),
+});
+export type EventReport = z.infer<typeof eventReportSchema>;
+
+
+// Dummy data for events page
+export const dummyEvents: EventReport[] = [
+  {
+    id: 101,
+    location: "Rond-point Victoire",
+    description: "Un camion a perdu sa cargaison, bloquant complètement la circulation. Évitez la zone si possible.",
+    severity: "high",
+    time: "il y a 30m",
+    user: "Jean Dupont",
+    userAvatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
+    picture: "https://picsum.photos/seed/101/600/400",
+    comments: [
+      { id: 'c1-1', author: "Marie Claire", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704e", text: "Merci pour l'info ! J'allais justement par là.", timestamp: "il y a 25m" },
+      { id: 'c1-2', author: "Pierre T.", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704f", text: "C'est le chaos total. Je suis coincé depuis 20 minutes.", timestamp: "il y a 15m" },
+    ]
+  },
+  {
+    id: 102,
+    location: "Avenue Kasa-Vubu",
+    description: "Feux de circulation en panne au croisement avec l'avenue de l'Enseignement. La police est sur place mais le trafic est très lent.",
+    severity: "medium",
+    time: "il y a 1h",
+    user: "Sylvie M.",
+    userAvatar: "https://i.pravatar.cc/150?u=a042581f4e29026704a",
+    picture: "https://picsum.photos/seed/102/600/400",
+    comments: [
+       { id: 'c2-1', author: "Admin", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704b", text: "Nos équipes techniques sont informées. Merci.", timestamp: "il y a 45m" },
+    ]
+  },
+  {
+    id: 103,
+    location: "Pont Matete",
+    description: "Circulation fluide en ce moment, rien à signaler.",
+    severity: "low",
+    time: "il y a 5m",
+    user: "Bot Trafic",
+    userAvatar: "https://i.pravatar.cc/150?u=a042581f4e29026704c",
+    comments: []
+  },
+];

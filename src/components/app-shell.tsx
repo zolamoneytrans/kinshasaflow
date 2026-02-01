@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -23,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/live-traffic') return 'Embouteillage en Temps Réel';
     if (pathname === '/police-routiere') return 'Police Routière';
     if (pathname === '/signaler-embouteillage') return 'Signaler un Embouteillage';
+    if (pathname === '/evenements') return 'Événements';
     return 'Kinshasa Flow';
   }
 
@@ -31,6 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/live-traffic') return 'Un flux en direct du trafic dans la ville de Kinshasa';
     if (pathname === '/police-routiere') return 'Signalements de la présence policière à Kinshasa';
     if (pathname === '/signaler-embouteillage') return 'Signalez un incident pour aider les autres conducteurs';
+    if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -72,6 +74,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <a>
                       <Siren />
                       <span>Police</span>
+                    </a>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <Link href="/evenements" legacyBehavior passHref>
+                  <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}}>
+                    <a>
+                      <Megaphone />
+                      <span>Événements</span>
                     </a>
                   </SidebarMenuButton>
                 </Link>

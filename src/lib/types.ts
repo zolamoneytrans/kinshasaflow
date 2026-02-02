@@ -227,3 +227,49 @@ export const signupSchema = z.object({
   password: z.string().min(8, { message: "Le mot de passe doit comporter au moins 8 caractères." }),
 });
 export type SignupValues = z.infer<typeof signupSchema>;
+
+// Schema for Videos
+export const videoSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  user: z.string(),
+  userAvatar: z.string(),
+  videoUrl: z.string().url(),
+  thumbnailUrl: z.string().url(),
+});
+export type Video = z.infer<typeof videoSchema>;
+
+export const dummyVideos: Video[] = [
+  {
+    id: 1,
+    title: "Embouteillage monstre vers le centre-ville",
+    user: "Reporter Kinois",
+    userAvatar: "https://i.pravatar.cc/150?u=reporter1",
+    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    thumbnailUrl: "https://picsum.photos/seed/kin1/1280/720",
+  },
+  {
+    id: 2,
+    title: "Ambiance au marché central aujourd'hui",
+    user: "Mama Z",
+    userAvatar: "https://i.pravatar.cc/150?u=reporter2",
+    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    thumbnailUrl: "https://picsum.photos/seed/kin2/1280/720",
+  },
+  {
+    id: 3,
+    title: "Travaux sur le boulevard, circulation difficile",
+    user: "Chauffeur_pro",
+    userAvatar: "https://i.pravatar.cc/150?u=reporter3",
+    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    thumbnailUrl: "https://picsum.photos/seed/kin3/1280/720",
+  },
+  {
+    id: 4,
+    title: "La pluie a surpris tout le monde à Gombe",
+    user: "Kin_La_Belle",
+    userAvatar: "https://i.pravatar.cc/150?u=reporter4",
+    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    thumbnailUrl: "https://picsum.photos/seed/kin4/1280/720",
+  },
+];

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -51,6 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/annonces') return 'Annonces Officielles';
     if (pathname === '/signaler-embouteillage') return 'Signaler un Embouteillage';
     if (pathname === '/evenements') return 'Événements';
+    if (pathname === '/videos') return 'Vidéos';
     if (pathname === '/login') return 'Se connecter';
     if (pathname === '/signup') return "S'inscrire";
     return 'Kinshasa Flow';
@@ -64,6 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/annonces') return 'Mises à jour du gouvernement pour les automobilistes';
     if (pathname === '/signaler-embouteillage') return 'Signalez un incident pour aider les autres conducteurs';
     if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
+    if (pathname === '/videos') return 'Un aperçu de la vie à Kinshasa en vidéos.';
     if (pathname === '/login') return 'Accédez à votre compte pour contribuer.';
     if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
@@ -132,6 +134,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/evenements">
                     <Megaphone />
                     <span>Événements</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/videos'} tooltip={{children: "Vidéos"}}>
+                  <Link href="/videos">
+                    <Video />
+                    <span>Vidéos</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

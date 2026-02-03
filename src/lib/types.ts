@@ -228,7 +228,16 @@ export const signupSchema = z.object({
 });
 export type SignupValues = z.infer<typeof signupSchema>;
 
-// Schema for Videos
+// Schema for a single video comment
+export const videoCommentSchema = z.object({
+  id: z.string(),
+  user: z.string(),
+  avatar: z.string(),
+  text: z.string(),
+});
+export type VideoComment = z.infer<typeof videoCommentSchema>;
+
+// Schema for Videos, now including comments
 export const videoSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -236,40 +245,67 @@ export const videoSchema = z.object({
   userAvatar: z.string(),
   videoUrl: z.string().url(),
   thumbnailUrl: z.string().url(),
+  likes: z.number(),
+  comments: z.array(videoCommentSchema),
 });
 export type Video = z.infer<typeof videoSchema>;
+
+// New schema for the upload form
+export const videoUploadFormSchema = z.object({
+    title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
+    video: z.any().refine(file => file?.length == 1, "Un fichier vidéo est requis."),
+});
+export type VideoUploadFormValues = z.infer<typeof videoUploadFormSchema>;
+
 
 export const dummyVideos: Video[] = [
   {
     id: 1,
-    title: "Embouteillage monstre vers le centre-ville",
+    title: "Embouteillage monstre vers le Rond-Point Victoire",
     user: "Reporter Kinois",
     userAvatar: "https://i.pravatar.cc/150?u=reporter1",
     videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
     thumbnailUrl: "https://picsum.photos/seed/kin1/1280/720",
+    likes: 243,
+    comments: [
+        { id: "c1", user: "Jean_Lemba", avatar: "https://i.pravatar.cc/150?u=jean", text: "Ah oui, j'étais bloqué là pendant 2h !" },
+        { id: "c2", user: "Sarah_Lingwala", avatar: "https://i.pravatar.cc/150?u=sarah", text: "Toujours la même histoire à Victoire." },
+    ]
   },
   {
     id: 2,
-    title: "Ambiance au marché central aujourd'hui",
+    title: "Ambiance Wenge au bord de la route",
     user: "Mama Z",
     userAvatar: "https://i.pravatar.cc/150?u=reporter2",
     videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
     thumbnailUrl: "https://picsum.photos/seed/kin2/1280/720",
+    likes: 812,
+    comments: [
+        { id: "c3", user: "Didier_Music", avatar: "https://i.pravatar.cc/150?u=didier", text: "Le son est bon !" },
+    ]
   },
   {
     id: 3,
-    title: "Travaux sur le boulevard, circulation difficile",
+    title: "Inondation à Limete après la pluie",
     user: "Chauffeur_pro",
     userAvatar: "https://i.pravatar.cc/150?u=reporter3",
     videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
     thumbnailUrl: "https://picsum.photos/seed/kin3/1280/720",
+    likes: 102,
+    comments: [
+        { id: "c4", user: "Architecte_243", avatar: "https://i.pravatar.cc/150?u=archi", text: "Il faut refaire le drainage." },
+        { id: "c5", user: "Sarah_Lingwala", avatar: "https://i.pravatar.cc/150?u=sarah", text: "Ma voiture a failli se noyer là-bas hier." },
+        { id: "c6", user: "Patient_K", avatar: "https://i.pravatar.cc/150?u=patient", text: " Courage à nous les Kinois" },
+    ]
   },
   {
     id: 4,
-    title: "La pluie a surpris tout le monde à Gombe",
+    title: "La vie nocturne à Matonge",
     user: "Kin_La_Belle",
     userAvatar: "https://i.pravatar.cc/150?u=reporter4",
     videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
     thumbnailUrl: "https://picsum.photos/seed/kin4/1280/720",
+    likes: 540,
+    comments: []
   },
 ];

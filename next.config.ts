@@ -42,7 +42,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'i.pravatar.cc',
+        hostname: 'firebasestorage.googleapis.com',
         port: '',
         pathname: '/**',
       }

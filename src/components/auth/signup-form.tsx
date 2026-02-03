@@ -18,7 +18,7 @@ import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { SignupValues, signupSchema } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
-import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
+import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup, updateProfile, User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -56,12 +56,13 @@ export function SignupForm() {
         },
     });
 
-    async function saveUserToFirestore(user: any) {
+    async function saveUserToFirestore(user: FirebaseUser) {
         const userRef = doc(firestore, 'users', user.uid);
         const userData = {
             id: user.uid,
             email: user.email,
             name: user.displayName,
+            photoURL: user.photoURL || ''
         };
         return setDoc(userRef, userData, { merge: true });
     }

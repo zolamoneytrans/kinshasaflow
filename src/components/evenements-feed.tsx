@@ -13,7 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { Clock, MessageSquare, Send, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
+import { Clock, MessageSquare, Send, ThumbsUp, ThumbsDown, Loader2, User } from 'lucide-react';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { type VariantProps } from 'class-variance-authority';
 import { Separator } from '@/components/ui/separator';
@@ -46,7 +46,7 @@ const Comment = ({ comment }: { comment: WithId<CommentType> }) => {
         <div className="flex items-start gap-3">
             <Avatar className="h-8 w-8 border">
                 <AvatarImage src={comment.avatar} alt={`@${comment.author}`} />
-                <AvatarFallback>{comment.author.charAt(0)}</AvatarFallback>
+                <AvatarFallback><User className="w-4 h-4" /></AvatarFallback>
             </Avatar>
             <div className="flex-1">
                 <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ const EventCard = ({ event }: { event: WithId<EventReport> }) => {
         const commentData = {
             userId: user.uid,
             author: user.isAnonymous ? "Utilisateur Anonyme" : (user.displayName || "Utilisateur Anonyme"),
-            avatar: user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`,
+            avatar: user.photoURL || "",
             text: newComment,
             createdAt: serverTimestamp(),
         };
@@ -107,7 +107,7 @@ const EventCard = ({ event }: { event: WithId<EventReport> }) => {
                 <div className="flex items-start gap-4">
                     <Avatar className="border">
                         <AvatarImage src={event.userAvatar} alt={`@${event.user}`} />
-                        <AvatarFallback>{event.user.charAt(0)}</AvatarFallback>
+                        <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                         <div className="flex items-center justify-between">

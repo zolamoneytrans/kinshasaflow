@@ -11,7 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Heart, MessageCircle, Send, UploadCloud, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Send, UploadCloud, Loader2, User } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -22,7 +22,7 @@ const CommentItem = ({ comment }: { comment: VideoComment }) => {
         <div className="flex items-start gap-3">
             <Avatar className="h-8 w-8 border">
                 <AvatarImage src={comment.avatar} alt={`@${comment.user}`} />
-                <AvatarFallback>{comment.user.charAt(0)}</AvatarFallback>
+                <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
             </Avatar>
             <div className="flex-1">
                 <p className="font-semibold text-sm">{comment.user}</p>
@@ -61,7 +61,7 @@ const VideoCard = ({ video, onLike, onAddComment }: { video: Video, onLike: (vid
             <CardHeader className="flex-row items-center gap-3 p-4">
                 <Avatar className="h-10 w-10 border">
                     <AvatarImage src={video.userAvatar} alt={video.user} />
-                    <AvatarFallback>{video.user.charAt(0)}</AvatarFallback>
+                    <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
                 </Avatar>
                 <div>
                     <p className="font-semibold">{video.user}</p>
@@ -238,7 +238,7 @@ export default function VideosFeed() {
         const newComment: VideoComment = {
             id: `c${Date.now()}`,
             user: user.isAnonymous ? "Utilisateur Anonyme" : (user.displayName || "Utilisateur"),
-            avatar: user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`,
+            avatar: user.photoURL || "",
             text: commentText,
         };
         setVideos(prevVideos => 
@@ -259,7 +259,7 @@ export default function VideosFeed() {
             title,
             videoUrl,
             user: user.isAnonymous ? "Utilisateur Anonyme" : (user.displayName || "Utilisateur"),
-            userAvatar: user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`,
+            userAvatar: user.photoURL || "",
             thumbnailUrl: 'https://picsum.photos/seed/new/1280/720', // generic thumbnail
             likes: 0,
             comments: [],

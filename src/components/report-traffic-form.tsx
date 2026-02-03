@@ -79,7 +79,7 @@ export default function ReportTrafficForm() {
                 ...data,
                 userId: user.uid,
                 user: user.isAnonymous ? "Utilisateur Anonyme" : (user.displayName || "Utilisateur Anonyme"),
-                userAvatar: user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`,
+                userAvatar: user.photoURL || "",
                 picture: imagePreview || '',
                 createdAt: serverTimestamp(),
             };

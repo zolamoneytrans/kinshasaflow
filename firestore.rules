@@ -101,9 +101,30 @@ service cloud.firestore {
        * @path          /events/{eventId}/comments/{commentId}
        */
       match /comments/{commentId} {
-        allow get, list: if true; // Publicly readable by anyone
+        allow get, list: if isSignedIn();
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         // Allow users to update or delete their own comments
+        allow update, delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;
+      }
+    }
+    
+    /**
+     * @description   Rules for the Videos collection.
+     * @path          /videos/{videoId}
+     */
+    match /videos/{videoId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid; // for likes
+      allow delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;
+
+      /**
+       * @description   Rules for the comments subcollection within a video.
+       * @path          /videos/{videoId}/comments/{commentId}
+       */
+      match /comments/{commentId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow update, delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;
       }
     }

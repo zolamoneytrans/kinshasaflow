@@ -187,6 +187,50 @@
         }
       },
       "required": ["userId", "author", "avatar", "text", "createdAt"]
+    },
+    "Video": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Video",
+      "type": "object",
+      "description": "Represents a user-uploaded video.",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "videoUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        },
+        "userAvatar": {
+          "type": "string",
+          "format": "uri"
+        },
+        "likes": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "title",
+        "videoUrl",
+        "userId",
+        "user",
+        "createdAt",
+        "likes"
+      ]
     }
   },
   "auth": {
@@ -278,6 +322,42 @@
             {
               "name": "eventId",
               "description": "The unique identifier for the parent event report."
+            },
+            {
+              "name": "commentId",
+              "description": "The unique identifier for the comment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/videos/{videoId}",
+        "definition": {
+          "entityName": "Video",
+          "schema": {
+            "$ref": "#/backend/entities/Video"
+          },
+          "description": "Stores user-uploaded videos. Publicly readable, but only the owner can create/delete.",
+          "params": [
+            {
+              "name": "videoId",
+              "description": "The unique identifier for the video."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/videos/{videoId}/comments/{commentId}",
+        "definition": {
+          "entityName": "Comment",
+          "schema": {
+            "$ref": "#/backend/entities/Comment"
+          },
+          "description": "Stores comments for a specific video. Comments are publicly readable but can only be created by authenticated users.",
+          "params": [
+            {
+              "name": "videoId",
+              "description": "The unique identifier for the parent video."
             },
             {
               "name": "commentId",

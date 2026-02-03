@@ -228,25 +228,16 @@ export const signupSchema = z.object({
 });
 export type SignupValues = z.infer<typeof signupSchema>;
 
-// Schema for a single video comment
-export const videoCommentSchema = z.object({
-  id: z.string(),
-  user: z.string(),
-  avatar: z.string(),
-  text: z.string(),
-});
-export type VideoComment = z.infer<typeof videoCommentSchema>;
-
-// Schema for Videos, now including comments
+// Schema for Videos to be stored in Firestore
 export const videoSchema = z.object({
-  id: z.number(),
   title: z.string(),
   user: z.string(),
   userAvatar: z.string(),
+  userId: z.string(),
   videoUrl: z.string().url(),
   thumbnailUrl: z.string().url(),
   likes: z.number(),
-  comments: z.array(videoCommentSchema),
+  createdAt: z.instanceof(Timestamp).or(z.any()),
 });
 export type Video = z.infer<typeof videoSchema>;
 
@@ -256,56 +247,3 @@ export const videoUploadFormSchema = z.object({
     video: z.any().refine(file => file?.length == 1, "Un fichier vidéo est requis."),
 });
 export type VideoUploadFormValues = z.infer<typeof videoUploadFormSchema>;
-
-
-export const dummyVideos: Video[] = [
-  {
-    id: 1,
-    title: "Embouteillage monstre vers le Rond-Point Victoire",
-    user: "Reporter Kinois",
-    userAvatar: "",
-    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    thumbnailUrl: "https://picsum.photos/seed/kin1/1280/720",
-    likes: 243,
-    comments: [
-        { id: "c1", user: "Jean_Lemba", avatar: "", text: "Ah oui, j'étais bloqué là pendant 2h !" },
-        { id: "c2", user: "Sarah_Lingwala", avatar: "", text: "Toujours la même histoire à Victoire." },
-    ]
-  },
-  {
-    id: 2,
-    title: "Ambiance Wenge au bord de la route",
-    user: "Mama Z",
-    userAvatar: "",
-    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-    thumbnailUrl: "https://picsum.photos/seed/kin2/1280/720",
-    likes: 812,
-    comments: [
-        { id: "c3", user: "Didier_Music", avatar: "", text: "Le son est bon !" },
-    ]
-  },
-  {
-    id: 3,
-    title: "Inondation à Limete après la pluie",
-    user: "Chauffeur_pro",
-    userAvatar: "",
-    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-    thumbnailUrl: "https://picsum.photos/seed/kin3/1280/720",
-    likes: 102,
-    comments: [
-        { id: "c4", user: "Architecte_243", avatar: "", text: "Il faut refaire le drainage." },
-        { id: "c5", user: "Sarah_Lingwala", avatar: "", text: "Ma voiture a failli se noyer là-bas hier." },
-        { id: "c6", user: "Patient_K", avatar: "", text: " Courage à nous les Kinois" },
-    ]
-  },
-  {
-    id: 4,
-    title: "La vie nocturne à Matonge",
-    user: "Kin_La_Belle",
-    userAvatar: "",
-    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-    thumbnailUrl: "https://picsum.photos/seed/kin4/1280/720",
-    likes: 540,
-    comments: []
-  },
-];

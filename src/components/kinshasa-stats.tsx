@@ -13,7 +13,7 @@ const statsData = {
     area: "9,965 km²",
     density: "1,706 hab./km²",
     governor: "Gentiny Ngobila Mbaka",
-    governorImage: "https://picsum.photos/seed/governor/200/200",
+    governorImage: "https://picsum.photos/seed/governor-portrait/200/200",
   },
   communes: [
     "Bandalungwa", "Barumbu", "Bumbu", "Gombe", "Kalamu", "Kasa-Vubu", "Kimbanseke", "Kinshasa", "Kintambo", "Kisenso", "Lemba", "Limete", "Lingwala", "Makala", "Maluku", "Masina", "Matete", "Mont-Ngafula", "N'djili", "N'sele", "Ngaba", "Ngaliema", "Ngiri-Ngiri", "Selembao"
@@ -90,7 +90,7 @@ export default function KinshasaStats() {
           animate="visible"
           className="space-y-6"
         >
-          <TabsContent value="apercu">
+          <TabsContent value="apercu" className="space-y-6">
             <motion.div variants={itemVariants}>
               <Card className="h-full">
                 <CardHeader>

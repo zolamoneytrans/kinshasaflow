@@ -17,6 +17,7 @@ import {
 import { UserNav } from './auth/user-nav';
 import { useUser } from '@/firebase';
 import React, { useEffect } from 'react';
+import { Logo } from './logo';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -83,9 +84,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar>
           <SidebarContent>
             <SidebarHeader className="border-b">
-               <div className="p-2 flex items-center gap-2">
-                <TrafficCone className="text-primary" />
-                <h2 className="text-xl font-bold">Kinshasa Flow</h2>
+               <div className="p-3 flex items-center justify-center">
+                <Logo className="h-9 w-auto text-sidebar-primary" />
                </div>
             </SidebarHeader>
             <SidebarMenu className="p-2">

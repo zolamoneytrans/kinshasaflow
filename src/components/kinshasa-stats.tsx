@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Building, AreaChart, DollarSign, University, Hospital, Car, Road, TrendingUp, Lightbulb } from "lucide-react";
+import { Users, Building, AreaChart, DollarSign, University, Hospital, Car, Route, TrendingUp, Lightbulb } from "lucide-react";
 import { motion } from "framer-motion";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -142,7 +142,7 @@ export default function KinshasaStats() {
                   <p className="font-semibold mb-2">Artères Principales</p>
                   <div className="flex flex-wrap gap-2">
                       {statsData.transport.mainRoads.split(', ').map(road => (
-                          <div key={road} className="text-xs flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-full"><Road className="h-3 w-3" />{road}</div>
+                          <div key={road} className="text-xs flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-full"><Route className="h-3 w-3" />{road}</div>
                       ))}
                   </div>
               </div>

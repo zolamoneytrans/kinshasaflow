@@ -1,7 +1,10 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Building, AreaChart, DollarSign, University, Hospital } from "lucide-react";
+import { Users, Building, AreaChart, DollarSign, University, Hospital, Car, Road, TrendingUp, Lightbulb } from "lucide-react";
+import { motion } from "framer-motion";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 const statsData = {
   general: {
@@ -11,131 +14,221 @@ const statsData = {
   },
   economy: {
     gdp: "Approx. 55 Milliards USD (Ville-province)",
-    keySectors: ["Services", "Commerce", "Construction", "Industrie légère"],
+    keySectors: ["Services", "Commerce", "Construction", "Industrie légère", "Transport"],
   },
-  projections2026: {
-    population: "18.5 Million (projection)",
-    economicGrowth: "+4.5% (prévision)",
+  projections: {
+    economicGrowth: "+4.5% (prévision 2026)",
     focusAreas: ["Infrastructures numériques", "Transport urbain", "Énergies renouvelables"],
   },
   infrastructure: {
     universities: "Plus de 50 institutions",
     hospitals: "Plus de 300 centres de santé et hôpitaux",
+  },
+  transport: {
+    mainRoads: "Blvd. Lumumba, Blvd. du 30 Juin, Av. Kasa-Vubu",
+    vehicles: "Plus de 1.2 million de véhicules (estimation)",
   }
+};
+
+const populationChartData = [
+  { year: "2020", "Population (Millions)": 14.3 },
+  { year: "2024", "Population (Millions)": 17.0 },
+  { year: "2026", "Population (Millions)": 18.5 },
+  { year: "2030", "Population (Millions)": 21.7 },
+];
+
+const chartConfig = {
+  population: {
+    label: "Population (Millions)",
+    color: "hsl(var(--primary))",
+  },
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+        duration: 0.5
+    }
+  },
 };
 
 export default function KinshasaStats() {
   return (
     <div className="w-full h-full overflow-y-auto pr-2">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <motion.div 
+        className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="text-primary" />
-              Démographie
-            </CardTitle>
-            <CardDescription>Population et superficie de Kinshasa.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <p className="font-semibold">Population</p>
-              <p className="text-muted-foreground">{statsData.general.population}</p>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <p className="font-semibold">Superficie</p>
-              <p className="text-muted-foreground">{statsData.general.area}</p>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <p className="font-semibold">Densité</p>
-              <p className="text-muted-foreground">{statsData.general.density}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="text-primary" />
+                Démographie
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <p className="font-semibold">Population</p>
+                <p className="text-muted-foreground">{statsData.general.population}</p>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <p className="font-semibold">Superficie</p>
+                <p className="text-muted-foreground">{statsData.general.area}</p>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <p className="font-semibold">Densité</p>
+                <p className="text-muted-foreground">{statsData.general.density}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="text-success" />
-              Économie
-            </CardTitle>
-             <CardDescription>Aperçu économique de la ville-province.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-3 rounded-lg border bg-muted/30">
-                <p className="font-semibold mb-1">PIB (estimation)</p>
-                <p className="text-2xl font-bold text-success">{statsData.economy.gdp}</p>
-            </div>
-             <div className="p-3 rounded-lg border bg-muted/30">
-                <p className="font-semibold mb-2">Secteurs Clés</p>
-                <div className="flex flex-wrap gap-2">
-                    {statsData.economy.keySectors.map(sector => (
-                        <div key={sector} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">{sector}</div>
-                    ))}
+        <motion.div variants={itemVariants}>
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="text-success" />
+                Économie
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3 rounded-lg border bg-muted/30">
+                  <p className="font-semibold mb-1">PIB (estimation)</p>
+                  <p className="text-2xl font-bold text-success">{statsData.economy.gdp}</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-muted/30">
+                  <p className="font-semibold mb-2">Secteurs Clés</p>
+                  <div className="flex flex-wrap gap-2">
+                      {statsData.economy.keySectors.map(sector => (
+                          <div key={sector} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">{sector}</div>
+                      ))}
+                  </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Car className="text-primary" />
+                Transport
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <p className="font-semibold">Véhicules (est.)</p>
+                <p className="text-muted-foreground">{statsData.transport.vehicles}</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-muted/30">
+                  <p className="font-semibold mb-2">Artères Principales</p>
+                  <div className="flex flex-wrap gap-2">
+                      {statsData.transport.mainRoads.split(', ').map(road => (
+                          <div key={road} className="text-xs flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-full"><Road className="h-3 w-3" />{road}</div>
+                      ))}
+                  </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-3">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <AreaChart className="text-primary" />
+                        Projections & Avenir
+                    </CardTitle>
+                    <CardDescription>Croissance démographique et axes de développement futurs.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid lg:grid-cols-2 gap-6 items-center">
+                    <div className="h-[250px] w-full">
+                      <p className="text-sm font-semibold text-foreground mb-2">Croissance de la Population</p>
+                      <ChartContainer config={chartConfig} className="w-full h-full">
+                          <BarChart accessibilityLayer data={populationChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                              <CartesianGrid vertical={false} />
+                              <XAxis dataKey="year" tickLine={false} tickMargin={10} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12}/>
+                              <YAxis unit="M" tickLine={false} tickMargin={10} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12}/>
+                              <ChartTooltip 
+                                  cursor={false} 
+                                  content={<ChartTooltipContent indicator="dot" />}
+                              />
+                              <Bar dataKey="Population (Millions)" name="Population" fill="hsl(var(--primary))" radius={4} />
+                          </BarChart>
+                      </ChartContainer>
+                    </div>
+                     <div className="space-y-4">
+                        <div className="flex items-start gap-4 p-4 rounded-lg border">
+                          <div className="bg-primary/10 text-primary p-3 rounded-full">
+                            <TrendingUp className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-xl">{statsData.projections.economicGrowth}</p>
+                            <p className="text-muted-foreground">Croissance économique attendue</p>
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg border">
+                            <p className="font-semibold mb-3 flex items-center gap-2"><Lightbulb className="text-primary h-5 w-5"/> Axes de Développement</p>
+                            <div className="flex flex-wrap gap-2">
+                                {statsData.projections.focusAreas.map(area => (
+                                    <div key={area} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">{area}</div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="md:col-span-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="text-primary" />
+                Infrastructures Sociales
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-4">
+              <div className="flex items-start gap-4 p-4 rounded-lg border">
+                <div className="bg-primary/10 text-primary p-3 rounded-full">
+                  <University className="h-6 w-6" />
                 </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AreaChart className="text-primary" />
-              Projections 2026
-            </CardTitle>
-            <CardDescription>Perspectives de développement futures.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <p className="font-semibold">Population Projetée</p>
-              <p className="text-muted-foreground">{statsData.projections2026.population}</p>
-            </div>
-             <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <p className="font-semibold">Croissance Économique</p>
-              <p className="text-muted-foreground">{statsData.projections2026.economicGrowth}</p>
-            </div>
-             <div className="p-3 rounded-lg border bg-muted/30">
-                <p className="font-semibold mb-2">Axes de Développement</p>
-                 <div className="flex flex-wrap gap-2">
-                    {statsData.projections2026.focusAreas.map(area => (
-                        <div key={area} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">{area}</div>
-                    ))}
+                <div>
+                  <p className="font-bold text-xl">{statsData.infrastructure.universities}</p>
+                  <p className="text-muted-foreground">Universités & Instituts Supérieurs</p>
                 </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-2 lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building className="text-primary" />
-              Infrastructures
-            </CardTitle>
-            <CardDescription>Infrastructures sociales clés de la ville.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-4 p-4 rounded-lg border">
-              <div className="bg-primary/10 text-primary p-3 rounded-full">
-                <University className="h-6 w-6" />
               </div>
-              <div>
-                <p className="font-bold text-xl">{statsData.infrastructure.universities}</p>
-                <p className="text-muted-foreground">Universités & Instituts Supérieurs</p>
+              <div className="flex items-start gap-4 p-4 rounded-lg border">
+                <div className="bg-success/10 text-success p-3 rounded-full">
+                  <Hospital className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="font-bold text-xl">{statsData.infrastructure.hospitals}</p>
+                  <p className="text-muted-foreground">Hôpitaux & Centres de Santé</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-4 p-4 rounded-lg border">
-              <div className="bg-success/10 text-success p-3 rounded-full">
-                <Hospital className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-bold text-xl">{statsData.infrastructure.hospitals}</p>
-                <p className="text-muted-foreground">Hôpitaux & Centres de Santé</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-      </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

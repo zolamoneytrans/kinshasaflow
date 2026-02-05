@@ -1,7 +1,7 @@
 'use client';
-
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Building, AreaChart, DollarSign, University, Hospital, Car, Route, TrendingUp, Lightbulb } from "lucide-react";
+import { Users, Building, AreaChart, DollarSign, University, Hospital, Car, Route, TrendingUp, Lightbulb, UserCircle, Map } from "lucide-react";
 import { motion } from "framer-motion";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -12,7 +12,12 @@ const statsData = {
     population: "17 Million (Estimation 2024)",
     area: "9,965 km²",
     density: "1,706 hab./km²",
+    governor: "Gentiny Ngobila Mbaka",
+    governorImage: "https://picsum.photos/seed/governor/200/200",
   },
+  communes: [
+    "Bandalungwa", "Barumbu", "Bumbu", "Gombe", "Kalamu", "Kasa-Vubu", "Kimbanseke", "Kinshasa", "Kintambo", "Kisenso", "Lemba", "Limete", "Lingwala", "Makala", "Maluku", "Masina", "Matete", "Mont-Ngafula", "N'djili", "N'sele", "Ngaba", "Ngaliema", "Ngiri-Ngiri", "Selembao"
+  ],
   economy: {
     gdp: "Approx. 55 Milliards USD (Ville-province)",
     keySectors: ["Services", "Commerce", "Construction", "Industrie légère", "Transport"],
@@ -70,8 +75,9 @@ export default function KinshasaStats() {
   return (
     <div className="w-full h-full overflow-y-auto pr-2">
       <Tabs defaultValue="apercu" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="apercu">Aperçu</TabsTrigger>
+          <TabsTrigger value="communes">Communes</TabsTrigger>
           <TabsTrigger value="transport">Transport</TabsTrigger>
           <TabsTrigger value="infrastructures">Infrastructures</TabsTrigger>
           <TabsTrigger value="economie-avenir">Économie & Avenir</TabsTrigger>
@@ -82,6 +88,7 @@ export default function KinshasaStats() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
+          className="space-y-6"
         >
           <TabsContent value="apercu">
             <motion.div variants={itemVariants}>
@@ -108,8 +115,56 @@ export default function KinshasaStats() {
                 </CardContent>
               </Card>
             </motion.div>
+            <motion.div variants={itemVariants}>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <UserCircle className="text-primary" />
+                            Gouverneur de la ville
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex items-center gap-4">
+                        <Image src={statsData.general.governorImage} alt="Gouverneur de Kinshasa" width={80} height={80} className="rounded-full border-2 border-primary" data-ai-hint="official portrait" />
+                        <div>
+                            <p className="font-bold text-lg">{statsData.general.governor}</p>
+                            <p className="text-muted-foreground">Gouverneur de la ville-province de Kinshasa</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </motion.div>
           </TabsContent>
         </motion.div>
+
+        <motion.div
+          key="communes"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <TabsContent value="communes">
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Map className="text-primary" />
+                    Les 24 Communes
+                  </CardTitle>
+                  <CardDescription>Kinshasa est divisée en 24 communes administratives.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {statsData.communes.map(commune => (
+                      <div key={commune} className="p-3 rounded-lg border bg-muted/30 text-sm font-medium hover:bg-accent transition-colors cursor-default">
+                        {commune}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+        </motion.div>
+
 
         <motion.div
           key="transport"

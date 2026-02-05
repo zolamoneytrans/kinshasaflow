@@ -5,6 +5,7 @@ import { Users, Building, AreaChart, DollarSign, University, Hospital, Car, Rout
 import { motion } from "framer-motion";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const statsData = {
   general: {
@@ -68,167 +69,204 @@ const itemVariants = {
 export default function KinshasaStats() {
   return (
     <div className="w-full h-full overflow-y-auto pr-2">
-      <motion.div 
-        className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <Tabs defaultValue="apercu" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsTrigger value="apercu">Aperçu</TabsTrigger>
+          <TabsTrigger value="transport">Transport</TabsTrigger>
+          <TabsTrigger value="infrastructures">Infrastructures</TabsTrigger>
+          <TabsTrigger value="economie-avenir">Économie & Avenir</TabsTrigger>
+        </TabsList>
         
-        <motion.div variants={itemVariants}>
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="text-primary" />
-                Démographie
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                <p className="font-semibold">Population</p>
-                <p className="text-muted-foreground">{statsData.general.population}</p>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                <p className="font-semibold">Superficie</p>
-                <p className="text-muted-foreground">{statsData.general.area}</p>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                <p className="font-semibold">Densité</p>
-                <p className="text-muted-foreground">{statsData.general.density}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="text-success" />
-                Économie
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-3 rounded-lg border bg-muted/30">
-                  <p className="font-semibold mb-1">PIB (estimation)</p>
-                  <p className="text-2xl font-bold text-success">{statsData.economy.gdp}</p>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30">
-                  <p className="font-semibold mb-2">Secteurs Clés</p>
-                  <div className="flex flex-wrap gap-2">
-                      {statsData.economy.keySectors.map(sector => (
-                          <div key={sector} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">{sector}</div>
-                      ))}
-                  </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Car className="text-primary" />
-                Transport
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                <p className="font-semibold">Véhicules (est.)</p>
-                <p className="text-muted-foreground">{statsData.transport.vehicles}</p>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30">
-                  <p className="font-semibold mb-2">Artères Principales</p>
-                  <div className="flex flex-wrap gap-2">
-                      {statsData.transport.mainRoads.split(', ').map(road => (
-                          <div key={road} className="text-xs flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-full"><Route className="h-3 w-3" />{road}</div>
-                      ))}
-                  </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        
-        <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-3">
-            <Card>
+        <motion.div
+          key="apercu"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <TabsContent value="apercu">
+            <motion.div variants={itemVariants}>
+              <Card className="h-full">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <AreaChart className="text-primary" />
-                        Projections & Avenir
-                    </CardTitle>
-                    <CardDescription>Croissance démographique et axes de développement futurs.</CardDescription>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="text-primary" />
+                    Démographie
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="grid lg:grid-cols-2 gap-6 items-center">
-                    <div className="h-[250px] w-full">
-                      <p className="text-sm font-semibold text-foreground mb-2">Croissance de la Population</p>
-                      <ChartContainer config={chartConfig} className="w-full h-full">
-                          <BarChart accessibilityLayer data={populationChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                              <CartesianGrid vertical={false} />
-                              <XAxis dataKey="year" tickLine={false} tickMargin={10} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12}/>
-                              <YAxis unit="M" tickLine={false} tickMargin={10} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12}/>
-                              <ChartTooltip 
-                                  cursor={false} 
-                                  content={<ChartTooltipContent indicator="dot" />}
-                              />
-                              <Bar dataKey="Population (Millions)" name="Population" fill="hsl(var(--primary))" radius={4} />
-                          </BarChart>
-                      </ChartContainer>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <p className="font-semibold">Population</p>
+                    <p className="text-muted-foreground">{statsData.general.population}</p>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <p className="font-semibold">Superficie</p>
+                    <p className="text-muted-foreground">{statsData.general.area}</p>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <p className="font-semibold">Densité</p>
+                    <p className="text-muted-foreground">{statsData.general.density}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+        </motion.div>
+
+        <motion.div
+          key="transport"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <TabsContent value="transport">
+            <motion.div variants={itemVariants}>
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Car className="text-primary" />
+                    Transport
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <p className="font-semibold">Véhicules (est.)</p>
+                    <p className="text-muted-foreground">{statsData.transport.vehicles}</p>
+                  </div>
+                  <div className="p-3 rounded-lg border bg-muted/30">
+                      <p className="font-semibold mb-2">Artères Principales</p>
+                      <div className="flex flex-wrap gap-2">
+                          {statsData.transport.mainRoads.split(', ').map(road => (
+                              <div key={road} className="text-xs flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-full"><Route className="h-3 w-3" />{road}</div>
+                          ))}
+                      </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+        </motion.div>
+
+        <motion.div
+          key="infrastructures"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <TabsContent value="infrastructures">
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building className="text-primary" />
+                    Infrastructures Sociales
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-4 p-4 rounded-lg border">
+                    <div className="bg-primary/10 text-primary p-3 rounded-full">
+                      <University className="h-6 w-6" />
                     </div>
-                     <div className="space-y-4">
-                        <div className="flex items-start gap-4 p-4 rounded-lg border">
-                          <div className="bg-primary/10 text-primary p-3 rounded-full">
-                            <TrendingUp className="h-6 w-6" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-xl">{statsData.projections.economicGrowth}</p>
-                            <p className="text-muted-foreground">Croissance économique attendue</p>
-                          </div>
+                    <div>
+                      <p className="font-bold text-xl">{statsData.infrastructure.universities}</p>
+                      <p className="text-muted-foreground">Universités & Instituts Supérieurs</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4 p-4 rounded-lg border">
+                    <div className="bg-success/10 text-success p-3 rounded-full">
+                      <Hospital className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xl">{statsData.infrastructure.hospitals}</p>
+                      <p className="text-muted-foreground">Hôpitaux & Centres de Santé</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+        </motion.div>
+
+        <motion.div
+          key="economie-avenir"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6"
+        >
+          <TabsContent value="economie-avenir">
+              <motion.div variants={itemVariants}>
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="text-success" />
+                      Économie
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-3 rounded-lg border bg-muted/30">
+                        <p className="font-semibold mb-1">PIB (estimation)</p>
+                        <p className="text-2xl font-bold text-success">{statsData.economy.gdp}</p>
+                    </div>
+                    <div className="p-3 rounded-lg border bg-muted/30">
+                        <p className="font-semibold mb-2">Secteurs Clés</p>
+                        <div className="flex flex-wrap gap-2">
+                            {statsData.economy.keySectors.map(sector => (
+                                <div key={sector} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">{sector}</div>
+                            ))}
                         </div>
-                        <div className="p-4 rounded-lg border">
-                            <p className="font-semibold mb-3 flex items-center gap-2"><Lightbulb className="text-primary h-5 w-5"/> Axes de Développement</p>
-                            <div className="flex flex-wrap gap-2">
-                                {statsData.projections.focusAreas.map(area => (
-                                    <div key={area} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">{area}</div>
-                                ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+              <motion.div variants={itemVariants} className="mt-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <AreaChart className="text-primary" />
+                            Projections & Avenir
+                        </CardTitle>
+                        <CardDescription>Croissance démographique et axes de développement futurs.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid lg:grid-cols-2 gap-6 items-center">
+                        <div className="h-[250px] w-full">
+                          <p className="text-sm font-semibold text-foreground mb-2">Croissance de la Population</p>
+                          <ChartContainer config={chartConfig} className="w-full h-full">
+                              <BarChart accessibilityLayer data={populationChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                  <CartesianGrid vertical={false} />
+                                  <XAxis dataKey="year" tickLine={false} tickMargin={10} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12}/>
+                                  <YAxis unit="M" tickLine={false} tickMargin={10} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12}/>
+                                  <ChartTooltip 
+                                      cursor={false} 
+                                      content={<ChartTooltipContent indicator="dot" />}
+                                  />
+                                  <Bar dataKey="Population (Millions)" name="Population" fill="hsl(var(--primary))" radius={4} />
+                              </BarChart>
+                          </ChartContainer>
+                        </div>
+                         <div className="space-y-4">
+                            <div className="flex items-start gap-4 p-4 rounded-lg border">
+                              <div className="bg-primary/10 text-primary p-3 rounded-full">
+                                <TrendingUp className="h-6 w-6" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-xl">{statsData.projections.economicGrowth}</p>
+                                <p className="text-muted-foreground">Croissance économique attendue</p>
+                              </div>
+                            </div>
+                            <div className="p-4 rounded-lg border">
+                                <p className="font-semibold mb-3 flex items-center gap-2"><Lightbulb className="text-primary h-5 w-5"/> Axes de Développement</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {statsData.projections.focusAreas.map(area => (
+                                        <div key={area} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">{area}</div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+              </motion.div>
+          </TabsContent>
         </motion.div>
-
-        <motion.div variants={itemVariants} className="md:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="text-primary" />
-                Infrastructures Sociales
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
-              <div className="flex items-start gap-4 p-4 rounded-lg border">
-                <div className="bg-primary/10 text-primary p-3 rounded-full">
-                  <University className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="font-bold text-xl">{statsData.infrastructure.universities}</p>
-                  <p className="text-muted-foreground">Universités & Instituts Supérieurs</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4 p-4 rounded-lg border">
-                <div className="bg-success/10 text-success p-3 rounded-full">
-                  <Hospital className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="font-bold text-xl">{statsData.infrastructure.hospitals}</p>
-                  <p className="text-muted-foreground">Hôpitaux & Centres de Santé</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </motion.div>
+      </Tabs>
     </div>
   );
 }

@@ -59,8 +59,7 @@ export default function AssistantChat() {
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              <AvatarImage src="https://picsum.photos/seed/african-lady/100/100" alt="K-Flow Assistant" data-ai-hint="woman portrait" />
-              <AvatarFallback><Bot /></AvatarFallback>
+              <AvatarFallback><User /></AvatarFallback>
             </Avatar>
             <span>Assistant K-Flow</span>
           </CardTitle>
@@ -78,8 +77,7 @@ export default function AssistantChat() {
                 >
                   {message.role === 'assistant' && (
                     <Avatar className="h-8 w-8 border">
-                      <AvatarImage src="https://picsum.photos/seed/african-lady/100/100" alt="K-Flow Assistant" data-ai-hint="woman portrait" />
-                      <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
+                      <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
                     </Avatar>
                   )}
                   <div
@@ -103,8 +101,7 @@ export default function AssistantChat() {
               {isLoading && (
                 <div className="flex items-start gap-3 justify-start">
                     <Avatar className="h-8 w-8 border">
-                      <AvatarImage src="https://picsum.photos/seed/african-lady/100/100" alt="K-Flow Assistant" data-ai-hint="woman portrait" />
-                      <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
+                      <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
                     </Avatar>
                     <div className="bg-muted p-3 rounded-lg">
                         <Loader2 className="h-5 w-5 animate-spin" />

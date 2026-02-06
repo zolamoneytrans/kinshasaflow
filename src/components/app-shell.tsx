@@ -78,7 +78,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isProtectedPage = ![
     '/',
-    '/reports',
     '/login',
     '/signup',
   ].includes(pathname);

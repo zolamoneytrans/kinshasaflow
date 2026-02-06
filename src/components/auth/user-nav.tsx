@@ -23,28 +23,34 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useUser, useFirebase, initiateSignOut } from "@/firebase";
+import { useUser, useFirebase } from "@/firebase";
 import { Skeleton } from "../ui/skeleton";
 import { LogOut, User, Loader2, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import React, { useState, useRef } from "react";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from "firebase/storage";
-import { updateProfile } from "firebase/auth";
+import { updateProfile, signOut } from "firebase/auth";
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Input } from "../ui/input";
+import { useRouter } from "next/navigation";
   
 export function UserNav() {
     const { user, isUserLoading } = useUser();
     const { auth, firebaseApp, firestore } = useFirebase();
     const { toast } = useToast();
+    const router = useRouter();
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const handleSignOut = async () => {
+        await signOut(auth);
+        router.push('/');
+    };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -127,7 +133,7 @@ export function UserNav() {
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => initiateSignOut(auth)}>
+                        <DropdownMenuItem onClick={handleSignOut}>
                             <LogOut className="mr-2 h-4 w-4" />
                             <span>Se déconnecter</span>
                         </DropdownMenuItem>

@@ -1,10 +1,7 @@
-import TrafficReports from "@/components/traffic-reports";
-import { AppShell } from "@/components/app-shell";
+import WelcomePage from "@/components/welcome-page";
 
 export default function Home() {
   return (
-    <AppShell>
-      <TrafficReports />
-    </AppShell>
+      <WelcomePage />
   );
 }

@@ -1,0 +1,16 @@
+{
+  "name": "Kinshasa Flow",
+  "short_name": "K-Flow",
+  "description": "Naviguez facilement dans le trafic de Kinshasa.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fb",
+  "theme_color": "#248eeb",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

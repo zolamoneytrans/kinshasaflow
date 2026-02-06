@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
   const getPageTitle = () => {
-    if (pathname === '/') return 'Rapports de trafic';
+    if (pathname === '/reports') return 'Rapports de trafic';
     if (pathname === '/live-traffic') return 'Embouteillage en Temps Réel';
     if (pathname === '/police-routiere') return 'Police Routière';
     if (pathname === '/routes') return 'État des Routes';
@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const getPageDescription = () => {
-    if (pathname === '/') return 'Mises à jour en temps réel pour Kinshasa';
+    if (pathname === '/reports') return 'Mises à jour en temps réel pour Kinshasa';
     if (pathname === '/live-traffic') return 'Un flux en direct du trafic dans la ville de Kinshasa';
     if (pathname === '/police-routiere') return 'Signalements de la présence policière à Kinshasa';
     if (pathname === '/routes') return 'Statistiques sur les infrastructures routières';
@@ -78,6 +78,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isProtectedPage = ![
     '/',
+    '/reports',
     '/login',
     '/signup',
   ].includes(pathname);
@@ -94,8 +95,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SidebarHeader>
             <SidebarMenu className="p-2">
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/'} tooltip={{children: "Rapports"}}>
-                  <Link href="/">
+                <SidebarMenuButton asChild isActive={pathname === '/reports'} tooltip={{children: "Rapports"}}>
+                  <Link href="/reports">
                     <Home />
                     <span>Rapports</span>
                   </Link>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -54,6 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/evenements') return 'Événements';
     if (pathname === '/videos') return 'Vidéos';
     if (pathname === '/kinshasa') return 'Statistiques de Kinshasa';
+    if (pathname === '/assistant') return 'Assistant IA';
     if (pathname === '/login') return 'Se connecter';
     if (pathname === '/signup') return "S'inscrire";
     return 'Kinshasa Flow';
@@ -69,6 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
     if (pathname === '/videos') return 'Un aperçu de la vie à Kinshasa en vidéos.';
     if (pathname === '/kinshasa') return 'Informations et statistiques sur la ville.';
+    if (pathname === '/assistant') return 'Posez des questions sur les itinéraires à Kinshasa.';
     if (pathname === '/login') return 'Accédez à votre compte pour contribuer.';
     if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
@@ -152,6 +154,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/kinshasa">
                     <AreaChart />
                     <span>Kinshasa</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/assistant'} tooltip={{children: "Assistant IA"}}>
+                  <Link href="/assistant">
+                    <Bot />
+                    <span>Assistant</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

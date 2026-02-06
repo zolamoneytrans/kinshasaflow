@@ -53,6 +53,18 @@ export const TrafficTipsOutputSchema = z.object({
 });
 export type TrafficTipsOutput = z.infer<typeof TrafficTipsOutputSchema>;
 
+// Schemas for AI Assistant Flow
+export const AssistantInputSchema = z.object({
+  question: z.string().describe("The user's question about a route in Kinshasa."),
+});
+export type AssistantInput = z.infer<typeof AssistantInputSchema>;
+
+export const AssistantOutputSchema = z.object({
+  answer: z.string().describe("The AI assistant's answer in French or Lingala."),
+});
+export type AssistantOutput = z.infer<typeof AssistantOutputSchema>;
+
+
 // New schema for Announcements
 export const annonceSchema = z.object({
   id: z.number(),

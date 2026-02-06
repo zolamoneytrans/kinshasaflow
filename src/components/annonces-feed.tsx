@@ -67,6 +67,11 @@ export default function AnnoncesFeed() {
 
     useEffect(() => {
         fetchData();
+        const interval = setInterval(() => {
+            fetchData(true);
+        }, 15 * 60 * 1000); // 15 minutes
+
+        return () => clearInterval(interval);
     }, []);
 
     return (
@@ -85,7 +90,7 @@ export default function AnnoncesFeed() {
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto">
                 <div className="space-y-4">
-                    {loading ? (
+                    {loading && !isRefreshing ? (
                         Array.from({ length: 10 }).map((_, i) => <AnnonceSkeleton key={i} />)
                     ) : (
                         announcements.map(annonce => (

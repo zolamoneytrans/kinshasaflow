@@ -61,20 +61,22 @@ export default function PolicePresenceReports() {
     setLoading(true);
 
     // Simulate fetching data
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       setReports([...dummyPoliceReports].sort(() => Math.random() - 0.5));
       setLoading(false);
       if (isRefresh) {
         setIsRefreshing(false);
       }
     }, 1000);
-
-    return () => clearTimeout(timer);
   };
 
   useEffect(() => {
-    const cleanup = fetchData();
-    return cleanup;
+    fetchData();
+    const interval = setInterval(() => {
+        fetchData(true);
+    }, 15 * 60 * 1000); // 15 minutes
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleUpdate = () => {
@@ -97,7 +99,7 @@ export default function PolicePresenceReports() {
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto">
           <div className="space-y-4">
-            {loading ? (
+            {loading && !isRefreshing ? (
               Array.from({ length: 5 }).map((_, i) => <ReportSkeleton key={i} />)
             ) : (
               reports.map((report) => (

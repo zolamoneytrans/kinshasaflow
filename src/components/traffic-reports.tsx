@@ -89,7 +89,7 @@ export default function TrafficReports() {
     }
     setLoading(true);
     // Simulate fetching data
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       setAllReports(dummyReports.sort(() => Math.random() - 0.5)); // Shuffle for refresh effect
       setLoading(false);
       if (isRefresh) {
@@ -97,11 +97,15 @@ export default function TrafficReports() {
       }
       setVisibleCount(INITIAL_VISIBLE_COUNT);
     }, 1500);
-    return () => clearTimeout(timer);
   }
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(() => {
+        fetchData(true);
+    }, 15 * 60 * 1000); // 15 minutes
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleGetTips = async (report: Report) => {
@@ -178,7 +182,7 @@ export default function TrafficReports() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto space-y-4">
-          {loading ? (
+          {loading && !isRefreshing ? (
               Array.from({ length: INITIAL_VISIBLE_COUNT }).map((_, i) => <ReportSkeleton key={i} />)
           ) : visibleReports.length > 0 ? (
             visibleReports.map((report) => (

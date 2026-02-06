@@ -11,7 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 type LiveReport = TrafficReport & { id: number; time: string };
 
 const MAX_LIVE_REPORTS = 15;
-const UPDATE_INTERVAL = 5000; // 5 seconds
+const UPDATE_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
 const SeverityBadge = ({ severity }: { severity: TrafficReport['severity'] }) => {
     const variant: VariantProps<typeof badgeVariants>['variant'] = {

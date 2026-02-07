@@ -23,7 +23,7 @@ const FeatureCard = ({ icon, title, description, delay }: { icon: React.ReactNod
 
 export default function WelcomePage() {
     return (
-        <div className="min-h-screen w-full bg-background text-foreground overflow-hidden">
+        <div className="min-h-screen w-full bg-background text-foreground overflow-hidden flex flex-col">
             <div className="absolute inset-0 -z-10 h-full w-full bg-background bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
                 <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-primary/20 opacity-20 blur-[100px]"></div>
             </div>
@@ -35,7 +35,7 @@ export default function WelcomePage() {
                 </Button>
             </header>
 
-            <main className="container mx-auto px-4 py-16 md:py-24 text-center">
+            <main className="container mx-auto px-4 py-16 md:py-24 text-center flex-grow">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -61,7 +61,7 @@ export default function WelcomePage() {
                 </motion.div>
             </main>
 
-            <section className="container mx-auto px-4 pb-24">
+            <section className="container mx-auto px-4 pb-16">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     <FeatureCard
                         icon={<Activity size={28} />}
@@ -89,6 +89,12 @@ export default function WelcomePage() {
                     />
                 </div>
             </section>
+            
+            <footer className="text-center p-6 text-sm text-muted-foreground">
+                <a href="http://www.swaziapplilab.co.za" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                    &copy; {new Date().getFullYear()} Swazi Appli Lab sarl
+                </a>
+            </footer>
         </div>
     );
 }

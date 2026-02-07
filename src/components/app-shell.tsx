@@ -193,6 +193,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         {isProtectedPage ? <ProtectedContent>{children}</ProtectedContent> : children}
                     </div>
                 </main>
+                <footer className="text-center p-2 text-xs text-muted-foreground border-t">
+                    <a href="http://www.swaziapplilab.co.za" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                        &copy; {new Date().getFullYear()} Swazi Appli Lab sarl
+                    </a>
+                </footer>
             </div>
         </SidebarInset>
       </SidebarProvider>

@@ -206,7 +206,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </header>
                 <main className="flex-1 p-4 flex flex-col gap-4 overflow-hidden">
                     <NotificationPermission />
-                    <div className="flex-1 overflow-hidden h-full w-full flex">
+                    <div className="flex-1 h-full w-full flex">
                         {isProtectedPage ? <ProtectedContent>{children}</ProtectedContent> : children}
                     </div>
                 </main>

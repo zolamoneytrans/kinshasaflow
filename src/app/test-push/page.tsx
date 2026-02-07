@@ -9,7 +9,7 @@ import { sendTestPushNotificationAction } from '@/app/actions';
 import { PushSubscription } from '@/lib/types';
 import { Loader2, Send, ShieldAlert } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -118,24 +118,28 @@ export default function TestPushPage() {
             <CardTitle>Envoyer une Notification Push</CardTitle>
             <CardDescription>Rédigez un message et envoyez-le à tous les utilisateurs abonnés.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-                <Label htmlFor="title">Titre</Label>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre de la notification" disabled={isLoading} />
+          <CardContent>
+            <div className="grid gap-6">
+                <div className="space-y-2">
+                    <Label htmlFor="title">Titre</Label>
+                    <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre de la notification" disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="body">Message</Label>
+                    <Textarea id="body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Contenu de la notification" disabled={isLoading} />
+                </div>
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="body">Message</Label>
-                <Textarea id="body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Contenu de la notification" disabled={isLoading} />
-            </div>
+          </CardContent>
+          <CardFooter>
             <Button onClick={handleSendNotification} disabled={isLoading || !title} className="w-full">
               {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Envoyer à tous les utilisateurs
+              Envoyer la Notification
             </Button>
-          </CardContent>
+          </CardFooter>
         </Card>
       </div>
     </AppShell>

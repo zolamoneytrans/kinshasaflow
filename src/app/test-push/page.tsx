@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useFirebase, useUser } from '@/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { collectionGroup, getDocs, query, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { sendTestPushNotificationAction } from '@/app/actions';
 import { PushSubscription } from '@/lib/types';
@@ -35,12 +35,11 @@ export default function TestPushPage() {
     setIsLoading(true);
 
     try {
-      const subscriptionsRef = collection(firestore, 'users', user.uid, 'pushSubscriptions');
-      const q = query(subscriptionsRef);
-      const querySnapshot = await getDocs(q);
+      const subscriptionsQuery = query(collectionGroup(firestore, 'pushSubscriptions'));
+      const querySnapshot = await getDocs(subscriptionsQuery);
 
       if (querySnapshot.empty) {
-        toast({ title: "Aucun abonnement trouvé", description: "Veuillez d'abord autoriser les notifications sur un appareil.", variant: "destructive" });
+        toast({ title: "Aucun abonnement trouvé", description: "Aucun utilisateur n'est abonné aux notifications.", variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -52,23 +51,33 @@ export default function TestPushPage() {
         icon: '/icon.svg',
       });
 
+      const expiredSubscriptionRefs = [];
+
       for (const doc of querySnapshot.docs) {
         const subscription = doc.data() as PushSubscription;
         const result = await sendTestPushNotificationAction(subscription, payload);
         if (result.success) {
           notificationsSent++;
+        } else if (result.error === 'Subscription expired.') {
+            // Collect ref of expired subscription to delete later
+            expiredSubscriptionRefs.push(doc.ref);
         }
       }
 
-      if (notificationsSent > 0) {
-        toast({ title: "Notification envoyée!", description: `Envoyée à ${notificationsSent} appareil(s). Elle devrait arriver sous peu.` });
-      } else {
-        toast({ title: "Échec de l'envoi", description: "Impossible d'envoyer la notification. Veuillez vérifier la console pour les erreurs.", variant: "destructive" });
+      // Batch delete expired subscriptions
+      for (const subRef of expiredSubscriptionRefs) {
+        await deleteDoc(subRef);
       }
 
-    } catch (error) {
-      console.error("Error sending test notification:", error);
-      toast({ title: "Une erreur est survenue", description: "Impossible d'envoyer la notification de test.", variant: "destructive" });
+      if (notificationsSent > 0) {
+        toast({ title: "Notification envoyée!", description: `Envoyée à ${notificationsSent} appareil(s). ${expiredSubscriptionRefs.length > 0 ? `${expiredSubscriptionRefs.length} abonnement(s) expiré(s) supprimé(s).` : ''}` });
+      } else {
+        toast({ title: "Échec de l'envoi", description: `Impossible d'envoyer des notifications. ${expiredSubscriptionRefs.length > 0 ? `${expiredSubscriptionRefs.length} abonnement(s) expiré(s) ont été supprimés.` : 'Vérifiez qu\'il y a des abonnements actifs.'}`, variant: "destructive" });
+      }
+
+    } catch (error: any) {
+      console.error("Error sending notification:", error);
+      toast({ title: "Une erreur est survenue", description: error.message || "Impossible d'envoyer les notifications.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +116,7 @@ export default function TestPushPage() {
         <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Envoyer une Notification Push</CardTitle>
-            <CardDescription>Rédigez un message pour tester le système de notification. Ceci enverra une notification à vos appareils abonnés.</CardDescription>
+            <CardDescription>Rédigez un message et envoyez-le à tous les utilisateurs abonnés.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -118,13 +127,13 @@ export default function TestPushPage() {
                 <Label htmlFor="body">Message</Label>
                 <Textarea id="body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Contenu de la notification" disabled={isLoading} />
             </div>
-            <Button onClick={handleSendNotification} disabled={isLoading || !title || !body} className="w-full">
+            <Button onClick={handleSendNotification} disabled={isLoading || !title} className="w-full">
               {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Envoyer la Notification
+              Envoyer à tous les utilisateurs
             </Button>
           </CardContent>
         </Card>

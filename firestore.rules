@@ -50,6 +50,13 @@ service cloud.firestore {
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
+    
+    /**
+     * Checks if the signed-in user is an admin.
+     */
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'drnduwa@gmail.com';
+    }
 
     /**
      * @description   Rules for the User collection. Each document stores a user's profile.
@@ -79,10 +86,10 @@ service cloud.firestore {
        * @path          /users/{userId}/pushSubscriptions/{subscriptionId}
        */
       match /pushSubscriptions/{subscriptionId} {
-        allow get, list: if isOwner(userId);
+        allow get, list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && request.resource.data.endpoint != '';
         allow update: if false;
-        allow delete: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId) || isAdmin();
       }
     }
 

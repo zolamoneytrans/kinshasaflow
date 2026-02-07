@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -58,6 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/assistant') return 'Assistant IA';
     if (pathname === '/login') return 'Se connecter';
     if (pathname === '/signup') return "S'inscrire";
+    if (pathname === '/test-push') return 'Test Push Notifications';
     return 'Kinshasa Flow';
   }
 
@@ -74,6 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/assistant') return 'Posez des questions sur les itinéraires à Kinshasa.';
     if (pathname === '/login') return 'Accédez à votre compte pour contribuer.';
     if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
+    if (pathname === '/test-push') return 'Send a test push notification to your devices.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -171,6 +173,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/signaler-embouteillage">
                     <PlusCircle />
                     <span>Signaler</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/test-push'} tooltip={{children: "Test Push"}}>
+                  <Link href="/test-push">
+                    <Bell />
+                    <span>Test Push</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

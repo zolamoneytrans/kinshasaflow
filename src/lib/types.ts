@@ -259,3 +259,13 @@ export const videoUploadFormSchema = z.object({
     video: z.any().refine(file => file?.length == 1, "Un fichier vidéo est requis."),
 });
 export type VideoUploadFormValues = z.infer<typeof videoUploadFormSchema>;
+
+export const pushSubscriptionSchema = z.object({
+  endpoint: z.string().url(),
+  expirationTime: z.number().nullable(),
+  keys: z.object({
+    p256dh: z.string(),
+    auth: z.string(),
+  }),
+});
+export type PushSubscription = z.infer<typeof pushSubscriptionSchema>;

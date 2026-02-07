@@ -73,6 +73,17 @@ service cloud.firestore {
         allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
         allow delete: if isExistingOwner(userId);
       }
+      
+      /**
+       * @description   Rules for a user's push notification subscriptions.
+       * @path          /users/{userId}/pushSubscriptions/{subscriptionId}
+       */
+      match /pushSubscriptions/{subscriptionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.endpoint != '';
+        allow update: if false;
+        allow delete: if isExistingOwner(userId);
+      }
     }
 
     /**

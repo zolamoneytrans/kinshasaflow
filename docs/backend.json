@@ -231,6 +231,34 @@
         "createdAt",
         "likes"
       ]
+    },
+    "PushSubscription": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PushSubscription",
+      "type": "object",
+      "description": "Represents a browser push subscription for a user.",
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "expirationTime": {
+          "type": ["number", "null"]
+        },
+        "keys": {
+          "type": "object",
+          "properties": {
+            "p256dh": {
+              "type": "string"
+            },
+            "auth": {
+              "type": "string"
+            }
+          },
+          "required": ["p256dh", "auth"]
+        }
+      },
+      "required": ["endpoint", "keys"]
     }
   },
   "auth": {
@@ -362,6 +390,26 @@
             {
               "name": "commentId",
               "description": "The unique identifier for the comment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/pushSubscriptions/{subscriptionId}",
+        "definition": {
+          "entityName": "PushSubscription",
+          "schema": {
+            "$ref": "#/backend/entities/PushSubscription"
+          },
+          "description": "Stores push notification subscriptions for a user. A user can have multiple subscriptions from different devices/browsers. Accessible only by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "subscriptionId",
+              "description": "The unique identifier for the push subscription."
             }
           ]
         }

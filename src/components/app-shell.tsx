@@ -18,6 +18,7 @@ import { UserNav } from './auth/user-nav';
 import { useUser } from '@/firebase';
 import React, { useEffect } from 'react';
 import { Logo } from './logo';
+import { NotificationPermission } from './notification-permission';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -188,8 +189,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </div>
                     <UserNav />
                 </header>
-                <main className="flex-1 p-4 overflow-hidden">
-                    <div className="h-full w-full flex">
+                <main className="flex-1 p-4 flex flex-col gap-4 overflow-hidden">
+                    <NotificationPermission />
+                    <div className="flex-1 overflow-hidden h-full w-full flex">
                         {isProtectedPage ? <ProtectedContent>{children}</ProtectedContent> : children}
                     </div>
                 </main>

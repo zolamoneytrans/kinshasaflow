@@ -3,7 +3,7 @@
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
 import { askAssistant } from "@/ai/flows/assistant-flow";
 import { TrafficTipsInput, AssistantInput, PushSubscription } from "@/lib/types";
-import webpush from 'web-push';
+import * as webpush from 'web-push';
 
 export async function getTrafficTipsAction(input: TrafficTipsInput) {
     return await getTrafficTips(input);

@@ -1,3 +1,10 @@
+import { AppShell } from "@/components/app-shell";
+import TrafficMap from "@/components/traffic-map";
+
 export default function MapPage() {
-  return null;
+  return (
+    <AppShell>
+      <TrafficMap />
+    </AppShell>
+  );
 }

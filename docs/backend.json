@@ -260,6 +260,64 @@
       },
       "required": ["endpoint", "keys"]
     },
+    "Logement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Logement",
+      "type": "object",
+      "description": "Represents a short-term rental apartment.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Title of the listing."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the apartment."
+        },
+        "address": {
+          "type": "string",
+          "description": "Full address of the property."
+        },
+        "pricePerNight": {
+          "type": "number",
+          "description": "Price per night in USD."
+        },
+        "imageUrls": {
+          "type": "array",
+          "description": "List of URLs for the apartment images.",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "amenities": {
+          "type": "array",
+          "description": "List of available amenities.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the admin who added the listing."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the listing was created."
+        }
+      },
+      "required": [
+        "title",
+        "address",
+        "pricePerNight",
+        "imageUrls",
+        "ownerId",
+        "createdAt",
+        "description",
+        "amenities"
+      ]
+    },
     "Annonce": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Annonce",
@@ -460,8 +518,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/logements/{logementId}",
+        "definition": {
+          "entityName": "Logement",
+          "schema": {
+            "$ref": "#/backend/entities/Logement"
+          },
+          "description": "Stores short-term rental apartment listings. Publicly readable, but only admins can write.",
+          "params": [
+            {
+              "name": "logementId",
+              "description": "The unique identifier for the logement."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the IDGenius application and the new Kinshasa Flow traffic reporting features. It emphasizes a clear separation between private user data and public-facing community data. User-private data remains locked down, while the new `/events` collection is made public for reading to allow all users to benefit from traffic reports. Write access to `/events` and its `comments` subcollection is restricted to authenticated users (including anonymous ones) to prevent spam and ensure accountability, with rules enforcing that the `userId` field matches the creator's UID. A new `/annonces` collection has been added for official announcements, which is publicly readable and writable only by administrators."
+    "reasoning": "The Firestore structure is designed to support the IDGenius application and the new Kinshasa Flow traffic reporting features. It emphasizes a clear separation between private user data and public-facing community data. User-private data remains locked down, while the new `/events` collection is made public for reading to allow all users to benefit from traffic reports. Write access to `/events` and its `comments` subcollection is restricted to authenticated users (including anonymous ones) to prevent spam and ensure accountability, with rules enforcing that the `userId` field matches the creator's UID. A new `/annonces` collection has been added for official announcements, which is publicly readable and writable only by administrators. A `/logements` collection has also been added to store apartment listings, which are publicly readable and writable only by an admin."
   }
 }

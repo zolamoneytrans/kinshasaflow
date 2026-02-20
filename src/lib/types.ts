@@ -198,3 +198,29 @@ export const pushSubscriptionSchema = z.object({
   }),
 });
 export type PushSubscription = z.infer<typeof pushSubscriptionSchema>;
+
+// Schema for Logement
+export const logementSchema = z.object({
+  title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
+  description: z.string().min(20, "La description doit être plus détaillée."),
+  address: z.string().min(10, "L'adresse doit être plus précise."),
+  pricePerNight: z.coerce.number().positive("Le prix doit être un nombre positif."),
+  imageUrls: z.array(z.string().url()).min(1, "Au moins une image est requise."),
+  amenities: z.array(z.string()),
+  ownerId: z.string(),
+  createdAt: z.instanceof(Timestamp).or(z.any()),
+});
+export type Logement = z.infer<typeof logementSchema>;
+
+// Schema for the Add Logement form
+export const logementFormSchema = z.object({
+  title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
+  description: z.string().min(20, "La description doit être plus détaillée."),
+  address: z.string().min(10, "L'adresse doit être plus précise."),
+  pricePerNight: z.coerce.number().positive("Le prix doit être un nombre positif."),
+  amenities: z.string().min(3, "Veuillez lister quelques commodités."),
+  images: z.any()
+    .refine((files) => files?.length >= 1, "Au moins une image est requise.")
+    .refine((files) => Array.from(files).every((file: any) => file.size <= 5 * 1024 * 1024), `Chaque image doit faire moins de 5MB.`),
+});
+export type LogementFormValues = z.infer<typeof logementFormSchema>;

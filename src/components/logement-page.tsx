@@ -41,26 +41,36 @@ const AddLogementDialog = () => {
     });
 
     const onSubmit = async (data: LogementFormValues) => {
-        if (!user) {
+        if (!user || user.email !== 'drnduwa@gmail.com') {
             toast({ title: "Accès refusé", description: "Vous devez être administrateur pour ajouter un logement.", variant: "destructive" });
             return;
         }
-
+    
         setIsSubmitting(true);
-        
+    
+        const newLogementRef = doc(collection(firestore, 'logements'));
+        const logementId = newLogementRef.id;
+        const storage = getStorage(firebaseApp);
+        const imageFiles = data.images as FileList;
+        const imageUrls: string[] = [];
+    
+        // --- Sequential Image Upload ---
         try {
-            const newLogementRef = doc(collection(firestore, 'logements'));
-            const logementId = newLogementRef.id;
-            const storage = getStorage(firebaseApp);
-            const imageFiles = data.images as FileList;
-
-            const uploadPromises = Array.from(imageFiles).map(file => {
+            for (const file of Array.from(imageFiles)) {
                 const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
-                return uploadBytes(fileRef, file).then(snapshot => getDownloadURL(snapshot.ref));
-            });
-
-            const imageUrls = await Promise.all(uploadPromises);
-
+                const snapshot = await uploadBytes(fileRef, file);
+                const downloadUrl = await getDownloadURL(snapshot.ref);
+                imageUrls.push(downloadUrl);
+            }
+        } catch (error) {
+            console.error("Error during image upload:", error);
+            toast({ title: 'Erreur', description: 'Impossible de téléverser les images. Veuillez réessayer.', variant: 'destructive' });
+            setIsSubmitting(false);
+            return; // Stop execution if uploads fail
+        }
+    
+        // --- Firestore Document Creation ---
+        if (imageUrls.length === imageFiles.length) {
             const logementData = {
                 title: data.title,
                 description: data.description,
@@ -71,7 +81,7 @@ const AddLogementDialog = () => {
                 ownerId: user.uid,
                 createdAt: serverTimestamp(),
             };
-
+    
             setDoc(newLogementRef, logementData)
                 .then(() => {
                     toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
@@ -86,15 +96,13 @@ const AddLogementDialog = () => {
                         requestResourceData: logementData,
                     });
                     errorEmitter.emit('permission-error', permissionError);
-                    toast({ title: "Impossible d'ajouter le logement", description: "Veuillez vérifier les autorisations de la base de données.", variant: 'destructive' });
+                    toast({ title: "Impossible d'enregistrer le logement", description: "Veuillez vérifier les autorisations de la base de données.", variant: 'destructive' });
                 })
                 .finally(() => {
                     setIsSubmitting(false);
                 });
-
-        } catch (error) {
-            console.error("Error adding logement (storage):", error);
-            toast({ title: 'Erreur', description: 'Impossible de téléverser les images. Veuillez réessayer.', variant: 'destructive' });
+        } else {
+            toast({ title: 'Erreur', description: 'Certaines images n\'ont pas pu être téléversées.', variant: 'destructive' });
             setIsSubmitting(false);
         }
     };

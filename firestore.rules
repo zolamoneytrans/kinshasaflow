@@ -130,6 +130,23 @@ service cloud.firestore {
     }
 
     /**
+     * @description Controls access to the apartment listings. Listings are
+     *   publicly readable by any authenticated user, but can only be managed
+     *   by an administrator.
+     * @path /logements/{logementId}
+     * @allow (get, list) Any authenticated user can view listings.
+     * @allow (create, update, delete) Only admins can manage listings.
+     * @principle Separates public read access from role-based write access.
+     */
+    match /logements/{logementId} {
+        allow get: if isSignedIn();
+        allow list: if isSignedIn();
+        allow create: if isAdmin();
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+    }
+
+    /**
      * @description Secures the top-level user document. A user can create their
      *   own document and read/update it, but cannot read other users' documents.
      *   Listing users is forbidden to prevent user enumeration.
@@ -163,3 +180,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

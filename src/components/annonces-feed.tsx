@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Annonce, WithId } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Landmark, Calendar } from 'lucide-react';
@@ -63,6 +63,22 @@ export default function AnnoncesFeed() {
     }, [firestore, annoncesCollection]);
     const { data: announcements, isLoading } = useCollection<Annonce>(annoncesQuery);
 
+    const announcementsByYear = useMemo(() => {
+        if (!announcements) return {};
+        return announcements.reduce((acc, annonce) => {
+            if (annonce.createdAt) {
+                const year = annonce.createdAt.toDate().getFullYear();
+                if (!acc[year]) {
+                    acc[year] = [];
+                }
+                acc[year].push(annonce);
+            }
+            return acc;
+        }, {} as Record<number, WithId<Annonce>[]>);
+    }, [announcements]);
+
+    const years = Object.keys(announcementsByYear).sort((a, b) => parseInt(a) - parseInt(b)); // Sort years ascending: 2025, 2026
+
     return (
         <Card className="flex-1 flex flex-col overflow-hidden">
             <CardHeader>
@@ -74,12 +90,22 @@ export default function AnnoncesFeed() {
                 </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto">
-                <div className="space-y-4">
+                <div className="space-y-8">
                     {isLoading ? (
-                        Array.from({ length: 3 }).map((_, i) => <AnnonceSkeleton key={i} />)
-                    ) : announcements && announcements.length > 0 ? (
-                        announcements.map(annonce => (
-                            <AnnonceItem key={annonce.id} annonce={annonce} />
+                        Array.from({ length: 5 }).map((_, i) => <AnnonceSkeleton key={i} />)
+                    ) : years.length > 0 ? (
+                        years.map(year => (
+                            <div key={year}>
+                                <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
+                                    <span role="img" aria-label="pin">📌</span>
+                                    Annonces de {year}
+                                </h2>
+                                <div className="space-y-4">
+                                    {announcementsByYear[parseInt(year)].map(annonce => (
+                                        <AnnonceItem key={annonce.id} annonce={annonce} />
+                                    ))}
+                                </div>
+                            </div>
                         ))
                     ) : (
                         <div className="p-4 rounded-lg border bg-background text-card-foreground text-center">

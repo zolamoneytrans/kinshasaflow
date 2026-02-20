@@ -54,12 +54,14 @@ const AddLogementDialog = () => {
             const logementId = newLogementRef.id;
             const storage = getStorage(firebaseApp);
     
-            // 1. Upload images in parallel
-            const uploadPromises = Array.from(imageFiles).map(file => {
+            // 1. Upload images sequentially for reliability
+            const imageUrls: string[] = [];
+            for (const file of Array.from(imageFiles)) {
                 const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
-                return uploadBytes(fileRef, file).then(snapshot => getDownloadURL(snapshot.ref));
-            });
-            const imageUrls = await Promise.all(uploadPromises);
+                const snapshot = await uploadBytes(fileRef, file);
+                const downloadUrl = await getDownloadURL(snapshot.ref);
+                imageUrls.push(downloadUrl);
+            }
     
             // 2. Create Firestore document
             const logementData = {
@@ -73,7 +75,17 @@ const AddLogementDialog = () => {
                 createdAt: serverTimestamp(),
             };
     
-            await setDoc(newLogementRef, logementData);
+            await setDoc(newLogementRef, logementData)
+                .catch((serverError) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: newLogementRef.path,
+                        operation: 'create',
+                        requestResourceData: logementData,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                    // We throw the error to be caught by the outer try-catch block for toast notification
+                    throw new Error("Erreur de base de données. Impossible d'enregistrer le logement.");
+                });
     
             toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
             setOpen(false);
@@ -97,13 +109,8 @@ const AddLogementDialog = () => {
                     default:
                         description = `Erreur de stockage: ${error.code}`;
                 }
-            } else if (error.name === 'FirebaseError') { // Could be a Firestore error
-                description = "Erreur de base de données. Impossible d'enregistrer le logement."
-                const permissionError = new FirestorePermissionError({
-                    path: 'logements',
-                    operation: 'create',
-                });
-                errorEmitter.emit('permission-error', permissionError);
+            } else {
+                description = error.message;
             }
 
             toast({ title: 'Erreur', description, variant: 'destructive' });

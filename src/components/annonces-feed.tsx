@@ -45,27 +45,6 @@ const AnnonceSkeleton = () => (
     </div>
 );
 
-const EmptyStateContent = () => (
-    <div className="p-4 rounded-lg border bg-background text-card-foreground">
-        <h3 className="font-bold text-lg mb-4">Principales annonces en 2025 🚦</h3>
-        <h4 className="font-semibold mb-2">Tendances observées</h4>
-        <ul className="list-disc pl-5 mb-4 space-y-2 text-muted-foreground">
-            <li>
-                <span className="font-semibold text-card-foreground">Digitalisation :</span> Introduction des tickets numériques et règles tarifaires plus strictes.
-            </li>
-            <li>
-                <span className="font-semibold text-card-foreground">Diversification :</span> Développement des taxis fluviaux pour élargir les options de transport.
-            </li>
-            <li>
-                <span className="font-semibold text-card-foreground">Régulation et discipline :</span> Encadrement des camions, voitures privées et motos-taxis pour instaurer plus d’ordre dans la circulation.
-            </li>
-        </ul>
-        <p className="text-sm">
-            <span className="font-semibold">En résumé,</span> 2025 a marqué une volonté claire de Kinshasa : réduire la congestion, moderniser les systèmes de transport et intégrer les acteurs informels dans une structure plus organisée.
-        </p>
-    </div>
-)
-
 export default function AnnoncesFeed() {
     const { firestore } = useFirebase();
 
@@ -103,7 +82,9 @@ export default function AnnoncesFeed() {
                             <AnnonceItem key={annonce.id} annonce={annonce} />
                         ))
                     ) : (
-                        <EmptyStateContent />
+                        <div className="p-4 rounded-lg border bg-background text-card-foreground text-center">
+                            <p className="text-muted-foreground">Aucune annonce pour la période sélectionnée.</p>
+                        </div>
                     )}
                 </div>
             </CardContent>

@@ -45,65 +45,30 @@ const AddLogementDialog = () => {
             toast({ title: "Accès refusé", description: "Vous devez être administrateur pour ajouter un logement.", variant: "destructive" });
             return;
         }
-    
+
         setIsSubmitting(true);
-    
+
+        const newLogementRef = doc(collection(firestore, 'logements'));
+        const logementId = newLogementRef.id;
+
+        // STAGE 1: Handle image uploads.
+        let imageUrls: string[] = [];
         try {
-            // STAGE 1: Handle image uploads first. This is awaited because it's a prerequisite.
             const imageFiles = data.images as FileList;
-            const newLogementRef = doc(collection(firestore, 'logements'));
-            const logementId = newLogementRef.id;
             const storage = getStorage(firebaseApp);
-    
-            const uploadPromises = Array.from(imageFiles).map((file) => {
+            
+            const uploadPromises = Array.from(imageFiles).map(file => {
                 const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
                 return uploadBytes(fileRef, file).then(snapshot => getDownloadURL(snapshot.ref));
             });
-    
-            const imageUrls = await Promise.all(uploadPromises);
-    
-            // STAGE 2: If image uploads are successful, proceed to create the Firestore document.
-            const logementData = {
-                title: data.title,
-                description: data.description,
-                address: data.address,
-                pricePerNight: data.pricePerNight,
-                amenities: data.amenities.split(',').map(a => a.trim()).filter(a => a),
-                imageUrls,
-                ownerId: user.uid,
-                createdAt: serverTimestamp(),
-            };
-    
-            // DO NOT await setDoc. Use .then() and .catch() to handle the outcome
-            // This prevents the UI thread from being blocked.
-            setDoc(newLogementRef, logementData)
-                .then(() => {
-                    // Success callback for Firestore write
-                    toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
-                    setOpen(false);
-                    form.reset();
-                })
-                .catch((serverError) => {
-                    // Failure callback for Firestore write
-                    const permissionError = new FirestorePermissionError({
-                        path: newLogementRef.path,
-                        operation: 'create',
-                        requestResourceData: logementData,
-                    });
-                    errorEmitter.emit('permission-error', permissionError);
-                    
-                    toast({ title: 'Erreur de base de données', description: 'Impossible d\'enregistrer le logement. Vérifiez les permissions.', variant: 'destructive' });
-                })
-                .finally(() => {
-                    // This is guaranteed to run after the setDoc promise resolves or rejects.
-                    setIsSubmitting(false);
-                });
-    
+
+            imageUrls = await Promise.all(uploadPromises);
+
         } catch (error: any) {
-            // This 'catch' block is now dedicated to handling failures from STAGE 1 (image uploads).
+            console.error("Image upload error:", error);
             let description = 'Une erreur est survenue lors du téléversement des images. Veuillez réessayer.';
             if (error.code && error.code.startsWith('storage/')) {
-                switch (error.code) {
+                 switch (error.code) {
                     case 'storage/unauthorized':
                         description = "Permission de téléversement refusée. Vérifiez les règles de Firebase Storage.";
                         break;
@@ -115,7 +80,41 @@ const AddLogementDialog = () => {
                 }
             }
             toast({ title: 'Erreur de téléversement', description, variant: 'destructive' });
-            setIsSubmitting(false); // Stop loading on image upload error.
+            setIsSubmitting(false);
+            return; // Stop execution if image upload fails
+        }
+
+        // STAGE 2: Create Firestore document.
+        const logementData = {
+            title: data.title,
+            description: data.description,
+            address: data.address,
+            pricePerNight: data.pricePerNight,
+            amenities: data.amenities.split(',').map(a => a.trim()).filter(a => a),
+            imageUrls,
+            ownerId: user.uid,
+            createdAt: serverTimestamp(),
+        };
+
+        try {
+            await setDoc(newLogementRef, logementData);
+
+            toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
+            setOpen(false);
+            form.reset();
+
+        } catch (serverError: any) {
+            console.error("Firestore write error:", serverError);
+            const permissionError = new FirestorePermissionError({
+                path: newLogementRef.path,
+                operation: 'create',
+                requestResourceData: logementData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            
+            toast({ title: 'Erreur de base de données', description: 'Impossible d\'enregistrer le logement. Vérifiez les permissions.', variant: 'destructive' });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 

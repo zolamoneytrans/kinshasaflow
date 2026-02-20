@@ -48,29 +48,20 @@ const AddLogementDialog = () => {
     
         setIsSubmitting(true);
     
-        const newLogementRef = doc(collection(firestore, 'logements'));
-        const logementId = newLogementRef.id;
-        const storage = getStorage(firebaseApp);
-        const imageFiles = data.images as FileList;
-        const imageUrls: string[] = [];
-    
-        // --- Sequential Image Upload ---
         try {
-            for (const file of Array.from(imageFiles)) {
-                const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
-                const snapshot = await uploadBytes(fileRef, file);
-                const downloadUrl = await getDownloadURL(snapshot.ref);
-                imageUrls.push(downloadUrl);
-            }
-        } catch (error) {
-            console.error("Error during image upload:", error);
-            toast({ title: 'Erreur', description: 'Impossible de téléverser les images. Veuillez réessayer.', variant: 'destructive' });
-            setIsSubmitting(false);
-            return; // Stop execution if uploads fail
-        }
+            const imageFiles = data.images as FileList;
+            const newLogementRef = doc(collection(firestore, 'logements'));
+            const logementId = newLogementRef.id;
+            const storage = getStorage(firebaseApp);
     
-        // --- Firestore Document Creation ---
-        if (imageUrls.length === imageFiles.length) {
+            // 1. Upload images in parallel
+            const uploadPromises = Array.from(imageFiles).map(file => {
+                const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
+                return uploadBytes(fileRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+            });
+            const imageUrls = await Promise.all(uploadPromises);
+    
+            // 2. Create Firestore document
             const logementData = {
                 title: data.title,
                 description: data.description,
@@ -82,27 +73,41 @@ const AddLogementDialog = () => {
                 createdAt: serverTimestamp(),
             };
     
-            setDoc(newLogementRef, logementData)
-                .then(() => {
-                    toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
-                    setOpen(false);
-                    form.reset();
-                })
-                .catch((error) => {
-                    console.error("Firestore write error:", error);
-                    const permissionError = new FirestorePermissionError({
-                        path: newLogementRef.path,
-                        operation: 'create',
-                        requestResourceData: logementData,
-                    });
-                    errorEmitter.emit('permission-error', permissionError);
-                    toast({ title: "Impossible d'enregistrer le logement", description: "Veuillez vérifier les autorisations de la base de données.", variant: 'destructive' });
-                })
-                .finally(() => {
-                    setIsSubmitting(false);
+            await setDoc(newLogementRef, logementData);
+    
+            toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
+            setOpen(false);
+            form.reset();
+
+        } catch (error: any) {
+            console.error("Error adding logement:", error);
+
+            // Default error message
+            let description = 'Une erreur est survenue. Veuillez réessayer.';
+
+            // Check if it's a Firebase Storage error
+            if (error.code && error.code.startsWith('storage/')) {
+                 switch (error.code) {
+                    case 'storage/unauthorized':
+                        description = "Permission de téléversement refusée. Vérifiez les règles de Firebase Storage.";
+                        break;
+                    case 'storage/canceled':
+                         description = "Le téléversement a été annulé.";
+                         break;
+                    default:
+                        description = `Erreur de stockage: ${error.code}`;
+                }
+            } else if (error.name === 'FirebaseError') { // Could be a Firestore error
+                description = "Erreur de base de données. Impossible d'enregistrer le logement."
+                const permissionError = new FirestorePermissionError({
+                    path: 'logements',
+                    operation: 'create',
                 });
-        } else {
-            toast({ title: 'Erreur', description: 'Certaines images n\'ont pas pu être téléversées.', variant: 'destructive' });
+                errorEmitter.emit('permission-error', permissionError);
+            }
+
+            toast({ title: 'Erreur', description, variant: 'destructive' });
+        } finally {
             setIsSubmitting(false);
         }
     };

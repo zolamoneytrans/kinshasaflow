@@ -54,7 +54,7 @@ const AddLogementDialog = () => {
             const logementId = newLogementRef.id;
             const storage = getStorage(firebaseApp);
     
-            // 1. Upload images sequentially for reliability
+            // Stage 1: Image Uploads
             const imageUrls: string[] = [];
             for (const file of Array.from(imageFiles)) {
                 const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
@@ -63,7 +63,7 @@ const AddLogementDialog = () => {
                 imageUrls.push(downloadUrl);
             }
     
-            // 2. Create Firestore document
+            // Stage 2: Firestore Document Creation
             const logementData = {
                 title: data.title,
                 description: data.description,
@@ -75,7 +75,12 @@ const AddLogementDialog = () => {
                 createdAt: serverTimestamp(),
             };
     
-            await setDoc(newLogementRef, logementData)
+            setDoc(newLogementRef, logementData)
+                .then(() => {
+                    toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
+                    setOpen(false);
+                    form.reset();
+                })
                 .catch((serverError) => {
                     const permissionError = new FirestorePermissionError({
                         path: newLogementRef.path,
@@ -83,39 +88,28 @@ const AddLogementDialog = () => {
                         requestResourceData: logementData,
                     });
                     errorEmitter.emit('permission-error', permissionError);
-                    // We throw the error to be caught by the outer try-catch block for toast notification
-                    throw new Error("Erreur de base de données. Impossible d'enregistrer le logement.");
+                })
+                .finally(() => {
+                    setIsSubmitting(false);
                 });
     
-            toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
-            setOpen(false);
-            form.reset();
-
         } catch (error: any) {
-            console.error("Error adding logement:", error);
-
-            // Default error message
-            let description = 'Une erreur est survenue. Veuillez réessayer.';
-
-            // Check if it's a Firebase Storage error
+            // This catch block now primarily handles errors from the image upload stage.
+            let description = 'Une erreur est survenue lors du téléversement des images. Veuillez réessayer.';
             if (error.code && error.code.startsWith('storage/')) {
-                 switch (error.code) {
+                switch (error.code) {
                     case 'storage/unauthorized':
                         description = "Permission de téléversement refusée. Vérifiez les règles de Firebase Storage.";
                         break;
                     case 'storage/canceled':
-                         description = "Le téléversement a été annulé.";
-                         break;
+                        description = "Le téléversement a été annulé.";
+                        break;
                     default:
                         description = `Erreur de stockage: ${error.code}`;
                 }
-            } else {
-                description = error.message;
             }
-
-            toast({ title: 'Erreur', description, variant: 'destructive' });
-        } finally {
-            setIsSubmitting(false);
+            toast({ title: 'Erreur de téléversement', description, variant: 'destructive' });
+            setIsSubmitting(false); // Ensure spinner stops on upload failure
         }
     };
 

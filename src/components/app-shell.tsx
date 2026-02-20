@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -54,6 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/police-routiere') return 'Police Routière';
     if (pathname === '/routes') return 'État des Routes';
     if (pathname === '/annonces') return 'Annonces Officielles';
+    if (pathname === '/logement') return 'Logement (Courte durée)';
     if (pathname === '/signaler-embouteillage') return 'Signaler un Embouteillage';
     if (pathname === '/evenements') return 'Événements';
     if (pathname === '/videos') return 'Vidéos';
@@ -71,6 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/police-routiere') return 'Signalements de la présence policière à Kinshasa';
     if (pathname === '/routes') return 'Statistiques sur les infrastructures routières';
     if (pathname === '/annonces') return 'Mises à jour du gouvernement pour les automobilistes';
+    if (pathname === '/logement') return 'Trouvez un appartement de type RBNB à Kinshasa.';
     if (pathname === '/signaler-embouteillage') return 'Signalez un incident pour aider les autres conducteurs';
     if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
     if (pathname === '/videos') return 'Un aperçu de la vie à Kinshasa en vidéos.';
@@ -136,6 +138,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/annonces">
                     <Landmark />
                     <span>Annonces</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/logement'} tooltip={{children: "Logement"}}>
+                  <Link href="/logement">
+                    <Hotel />
+                    <span>Logement</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

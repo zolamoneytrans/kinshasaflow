@@ -1,32 +1,40 @@
 /**
- * Core Philosophy: This ruleset enforces a strict user-ownership model for user-specific data, while
- * allowing broader access for public-facing data like traffic events.
+ * Core Philosophy: This ruleset implements a security model that combines role-based access control (RBAC) with
+ * a strict user-ownership model. It provides public read access to shared resources (templates) for all authenticated
+ * users while ensuring that user-generated data is private and accessible only by its creator. Administrative
+ * privileges are managed through a dedicated role-lookup collection.
  *
- * Data Structure: The data is organized into three main top-level collections:
- * 1. `/users`: Contains private user documents and their subcollections.
- * 2. `/idTemplates`: A public, read-only collection of templates available to all authenticated users.
- * 3. `/events`: A public collection of user-reported traffic incidents.
+ * Data Structure: The data is organized into three main areas:
+ * 1. /id_templates/{templateId}: A top-level collection of ID card templates, readable by all signed-in users.
+ * 2. /users/{userId}/generated_ids/{generatedId}: User-specific data nested under a path that includes the owner's UID.
+ *    This enforces a clear ownership hierarchy.
+ * 3. /roles_admin/{userId}: A lookup collection where the existence of a document signifies a user has admin rights.
  *
  * Key Security Decisions:
- * - User data is private: Access to `/users/{userId}` and all its subcollections is restricted to the
- *   authenticated user whose UID matches the `{userId}` in the path.
- * - No user listing: To protect user privacy, it is impossible to list all documents in the `/users` collection.
- * - Templates are read-only for non-admins: The `/idTemplates` collection is intended to be managed by administrators.
- *   Write operations are disabled for regular users.
- * - Events are publicly readable: All users (authenticated or not) can read event data to stay informed.
- * - Event creation is for authenticated users: Any signed-in user can report an event.
- * - Event comments are publicly readable but writes are restricted: Similar to events, comments can be read by
- *   any user, but only created by authenticated users, with ownership enforced.
+ * - Admin Access: Administrative privileges are determined by the existence of a document in the /roles_admin collection.
+ *   This "Existence over Content" pattern is highly performant as it relies on a fast `exists()` call instead of a slow `get()`.
+ * - User Data Privacy: User-generated IDs are stored in a subcollection under their unique user ID (/users/{userId}/...).
+ *   This path-based ownership prevents any user from accessing, or even knowing about, another user's private data.
+ * - User Enumeration: Listing documents in the top-level /users collection is explicitly disallowed to prevent scraping user data.
+ * - Prototyping Flexibility: Data validation is strictly limited to fields essential for authorization (e.g., `creatorUserId`).
+ *   Other data shapes are not enforced, allowing the front-end application schema to evolve rapidly without rule changes.
  *
- * Denormalization for Authorization: The `GeneratedId`, `EventReport`, and `Comment` documents contain a `userId` field.
- * The rules enforce on creation that this field matches the creator's UID. This ensures a permanent and
- * easily verifiable link to the owner without needing extra database reads.
+ * Denormalization for Authorization:
+ * - The `GeneratedID` documents under `/users/{userId}/generated_ids/{generatedId}` contain a `creatorUserId` field.
+ *   This field is validated against the `{userId}` in the path, creating a robust and performant ownership check that does not
+ *   require any extra document reads (`get()` calls).
+ *
+ * Structural Segregation:
+ * - Publicly readable templates (`id_templates`) are in a separate top-level collection from private, user-owned data
+ *   (`generated_ids`). This separation ensures that list operations are simple, secure, and performant, as security
+ *   does not depend on filtering documents based on an internal field.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to improve readability and maintainability of rules.
+    // Helper Functions
+    // =================================
 
     /**
      * Checks if a user is authenticated.
@@ -36,134 +44,122 @@ service cloud.firestore {
     }
 
     /**
-     * Checks if the currently authenticated user's UID matches the provided userId.
-     * This is the primary function for enforcing document ownership.
+     * Checks if the requesting user's UID matches the provided userId.
+     * This is the foundation of the user-ownership model.
      */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
     /**
-     * Checks for ownership on an existing document. Used for update and delete
-     * operations to prevent acting on non-existent data.
+     * Checks if the document being accessed already exists in Firestore.
+     * Crucial for protecting against writes on non-existent documents.
      */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-    
-    /**
-     * Checks if the signed-in user is an admin.
-     */
-    function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'drnduwa@gmail.com';
+    function isExistingDoc() {
+      return resource != null;
     }
 
     /**
-     * @description   Rules for the User collection. Each document stores a user's profile.
-     * @path          /users/{userId}
+     * A convenience function that combines an ownership check with an
+     * existence check. Used for all state-changing operations (update, delete).
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && isExistingDoc();
+    }
+
+    /**
+     * Checks if the requesting user has administrative privileges.
+     * This is determined by the existence of their UID as a document
+     * in the /roles_admin collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * On create, validates that the new 'GeneratedID' document contains a
+     * 'creatorUserId' field that correctly matches the user's ID from the path.
+     */
+    function hasValidGeneratedIdDataOnCreate(userId) {
+      return request.resource.data.creatorUserId == userId;
+    }
+
+    /**
+     * On update, ensures the 'creatorUserId' field cannot be changed.
+     * This locks in the document's ownership permanently.
+     */
+    function isImmutableCreatorId() {
+      return request.resource.data.creatorUserId == resource.data.creatorUserId;
+    }
+
+    // Collection Rules
+    // =================================
+
+    /**
+     * @description Controls access to the admin role lookup collection.
+     *   This collection should be completely inaccessible to clients. Its only
+     *   purpose is for server-side `exists()` checks in other rules.
+     * @path /roles_admin/{userId}
+     * @allow (get) No one. A user's admin status is a server-side secret.
+     * @deny (create) A non-admin user trying to make themselves an admin.
+     * @principle Prevents any client-side read or write access to the role-management collection.
+     */
+    match /roles_admin/{userId} {
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to ID card templates. Templates are public
+     *   for any signed-in user to read, but can only be created, modified,
+     *   or deleted by an administrator.
+     * @path /id_templates/{templateId}
+     * @allow (get) An authenticated user reading a specific template.
+     * @deny (create) A non-admin user trying to create a new template.
+     * @principle Implements a "Public Read with Role-Based Write" access pattern.
+     */
+    match /id_templates/{templateId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin() && isExistingDoc();
+    }
+
+    /**
+     * @description Secures the top-level user document. A user can create their
+     *   own document and read/update it, but cannot read other users' documents.
+     *   Listing users is forbidden to prevent user enumeration.
+     * @path /users/{userId}
+     * @allow (create) A new user signing up and creating their own user profile document.
+     * @deny (list) An attacker trying to query the entire /users collection.
+     * @principle Enforces self-service for user profiles while preventing user data leakage.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false; // CRITICAL: Prevent listing of all users.
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if false; // Deleting user documents is typically a privileged server-side action.
+    }
+
+    /**
+     * @description Secures the user-generated ID cards. These are private and
+     *   can only be accessed by the user who created them.
+     * @path /users/{userId}/generated_ids/{generatedId}
+     * @allow (create) An authenticated user creating a new ID card for themselves.
+     * @deny (get) A user trying to access an ID card from another user's subcollection.
+     * @principle Enforces strict data ownership using path-based security and validates relational integrity.
+     */
+    match /users/{userId}/generated_ids/{generatedId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasValidGeneratedIdDataOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isImmutableCreatorId();
       allow delete: if isExistingOwner(userId);
-
-      /**
-       * @description   Rules for a user's generated IDs.
-       * @path          /users/{userId}/generatedIds/{generatedId}
-       */
-      match /generatedIds/{generatedId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
-      }
-      
-      /**
-       * @description   Rules for a user's push notification subscriptions.
-       * @path          /users/{userId}/pushSubscriptions/{subscriptionId}
-       */
-      match /pushSubscriptions/{subscriptionId} {
-        allow get, list: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) && request.resource.data.endpoint != '';
-        allow update: if false;
-        allow delete: if isExistingOwner(userId) || isAdmin();
-      }
-    }
-
-    /**
-     * @description   Rules for the ID Templates collection. Templates are public and read-only for all signed-in users.
-     * @path          /idTemplates/{idTemplateId}
-     */
-    match /idTemplates/{idTemplateId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if false; // Writes are disabled; templates are managed by admins.
-      allow update: if false; // Writes are disabled; templates are managed by admins.
-      allow delete: if false; // Writes are disabled; templates are managed by admins.
-    }
-
-    /**
-     * @description   Rules for the Events collection. Events are publicly readable.
-     * @path          /events/{eventId}
-     */
-    match /events/{eventId} {
-      allow get, list: if true; // Publicly readable by anyone
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;
-
-      /**
-       * @description   Rules for the comments subcollection within an event.
-       * @path          /events/{eventId}/comments/{commentId}
-       */
-      match /comments/{commentId} {
-        allow get, list: if isSignedIn();
-        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        // Allow users to update or delete their own comments
-        allow update, delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;
-      }
-    }
-    
-    /**
-     * @description   Rules for the Videos collection.
-     * @path          /videos/{videoId}
-     */
-    match /videos/{videoId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid; // for likes
-      allow delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;
-
-      /**
-       * @description   Rules for the comments subcollection within a video.
-       * @path          /videos/{videoId}/comments/{commentId}
-       */
-      match /comments/{commentId} {
-        allow get, list: if isSignedIn();
-        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;
-      }
-    }
-    
-    /**
-     * @description   Rules for the Announcements collection. Publicly readable, admin-only write.
-     * @path          /annonces/{annonceId}
-     */
-    match /annonces/{annonceId} {
-      allow read: if true;
-      allow list: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    
-    /**
-     * @description   Rules for the Logements collection. Publicly readable, admin-only write.
-     * @path          /logements/{logementId}
-     */
-    match /logements/{logementId} {
-      allow read: if true;
-      allow write: if isAdmin();
     }
   }
 }

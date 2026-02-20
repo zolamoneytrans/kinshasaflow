@@ -1,541 +1,177 @@
 {
   "entities": {
-    "IdTemplate": {
+    "IDTemplate": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "IdTemplate",
+      "title": "IDTemplate",
       "type": "object",
-      "description": "Represents a template for generating IDs, such as student, employee, or membership cards.",
+      "description": "Defines the structure, available input fields, and QR code configuration for a specific type of identification card (e.g., Student ID, Employee Badge).",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the ID template."
+          "description": "Unique identifier for the IDTemplate entity."
         },
         "name": {
           "type": "string",
-          "description": "Name of the ID template (e.g., 'Student ID', 'Employee Badge')."
+          "description": "Descriptive name of the ID template (e.g., 'Student ID Card', 'Company Employee Badge')."
         },
         "description": {
           "type": "string",
-          "description": "A detailed description of the ID template and its purpose."
+          "description": "A brief explanation of the template's purpose and the type of information it's designed to hold."
         },
-        "fields": {
+        "availableFieldNames": {
           "type": "array",
-          "description": "List of required and optional fields for this template (e.g., name, address, date of birth).",
+          "description": "A list of programmatic names for fields that can be used with this template (e.g., 'fullName', 'dateOfBirth', 'studentId'). These names correspond to keys expected in the 'cardData' of a 'GeneratedID'.",
           "items": {
             "type": "string"
           }
         },
-        "layout": {
+        "qrCodeFieldNames": {
+          "type": "array",
+          "description": "A list of programmatic names for fields whose values should be concatenated and included in the generated QR code for IDs based on this template.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
           "type": "string",
-          "description": "Defines the layout of the ID template using a data structure like JSON or string.",
-          "format": "string"
+          "description": "Timestamp indicating when the ID template was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the ID template was last updated.",
+          "format": "date-time"
         }
       },
       "required": [
         "id",
         "name",
         "description",
-        "fields",
-        "layout"
+        "availableFieldNames",
+        "qrCodeFieldNames",
+        "createdAt",
+        "updatedAt"
       ]
     },
-    "GeneratedId": {
+    "GeneratedID": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GeneratedId",
+      "title": "GeneratedID",
       "type": "object",
-      "description": "Represents a generated ID for a user based on a selected template.",
+      "description": "Represents a single instance of a user-generated identification card, based on a specific template and containing individual information.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the generated ID."
+          "description": "Unique identifier for the GeneratedID entity."
         },
         "templateId": {
           "type": "string",
-          "description": "Reference to IdTemplate. (Relationship: IdTemplate 1:N GeneratedId)"
+          "description": "Reference to the IDTemplate entity that defines the structure and type of this ID. (Relationship: IDTemplate 1:N GeneratedID)"
         },
-        "userId": {
+        "creatorUserId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N GeneratedId)"
+          "description": "Reference to the unique identifier of the user who created this ID. (Assumes an external authentication system)."
         },
-        "creationDate": {
+        "cardData": {
           "type": "string",
-          "description": "Date and time when the ID was generated.",
-          "format": "date-time"
-        },
-        "fieldValues": {
-          "type": "string",
-          "description": "A JSON string containing the values entered by the user for the template fields.",
-          "format": "string"
+          "description": "A JSON string containing the key-value pairs of all user-inputted information for this specific ID (e.g., '{\"fullName\": \"Alice Smith\", \"dateOfBirth\": \"1990-01-01\", \"studentId\": \"S12345\"}'). The keys correspond to 'availableFieldNames' in the associated IDTemplate."
         },
         "photoUrl": {
           "type": "string",
-          "description": "URL of the uploaded photo for the ID.",
-          "format": "uri"
+          "description": "URL or path to the uploaded and AI-verified photo associated with this ID."
         },
-        "qrCodeData": {
+        "qrCodeContent": {
           "type": "string",
-          "description": "Data encoded in the QR code associated with the ID.",
-          "format": "string"
+          "description": "The actual string content that is encoded into the QR code for this ID."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the generated ID (e.g., 'draft', 'finalized', 'archived')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this ID was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this ID was last updated.",
+          "format": "date-time"
         }
       },
       "required": [
         "id",
         "templateId",
-        "userId",
-        "creationDate",
-        "fieldValues",
+        "creatorUserId",
+        "cardData",
         "photoUrl",
-        "qrCodeData"
-      ]
-    },
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the IDGenius application.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the user.",
-          "format": "email"
-        },
-        "name": {
-          "type": "string",
-          "description": "Full name of the user."
-        }
-      },
-      "required": [
-        "id",
-        "email",
-        "name"
-      ]
-    },
-    "EventReport": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "EventReport",
-      "type": "object",
-      "description": "Represents a user-submitted traffic event or incident.",
-      "properties": {
-        "location": {
-          "type": "string",
-          "description": "The geographical location of the event."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the event."
-        },
-        "severity": {
-          "type": "string",
-          "description": "The severity level of the event.",
-          "enum": ["low", "medium", "high"]
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who submitted the report."
-        },
-        "user": {
-          "type": "string",
-          "description": "The display name of the user who submitted the report."
-        },
-        "userAvatar": {
-          "type": "string",
-          "description": "URL to the avatar of the user who submitted the report."
-        },
-        "picture": {
-          "type": "string",
-          "description": "URL of an image related to the event, if provided.",
-          "format": "uri"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "The timestamp when the event was created.",
-          "format": "date-time"
-        }
-      },
-      "required": ["location", "description", "severity", "userId", "user", "userAvatar", "createdAt"]
-    },
-    "Comment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Comment",
-      "type": "object",
-      "description": "Represents a comment made by a user on an event report.",
-      "properties": {
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who wrote the comment."
-        },
-        "author": {
-          "type": "string",
-          "description": "The display name of the user who wrote the comment."
-        },
-        "avatar": {
-          "type": "string",
-          "description": "URL to the avatar of the user who wrote the comment."
-        },
-        "text": {
-          "type": "string",
-          "description": "The content of the comment."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "The timestamp when the comment was created.",
-          "format": "date-time"
-        }
-      },
-      "required": ["userId", "author", "avatar", "text", "createdAt"]
-    },
-    "Video": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Video",
-      "type": "object",
-      "description": "Represents a user-uploaded video.",
-      "properties": {
-        "title": {
-          "type": "string"
-        },
-        "videoUrl": {
-          "type": "string",
-          "format": "uri"
-        },
-        "thumbnailUrl": {
-          "type": "string",
-          "format": "uri"
-        },
-        "userId": {
-          "type": "string"
-        },
-        "user": {
-          "type": "string"
-        },
-        "userAvatar": {
-          "type": "string",
-          "format": "uri"
-        },
-        "likes": {
-          "type": "number"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "title",
-        "videoUrl",
-        "userId",
-        "user",
+        "qrCodeContent",
+        "status",
         "createdAt",
-        "likes"
-      ]
-    },
-    "PushSubscription": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PushSubscription",
-      "type": "object",
-      "description": "Represents a browser push subscription for a user.",
-      "properties": {
-        "endpoint": {
-          "type": "string",
-          "format": "uri"
-        },
-        "expirationTime": {
-          "type": ["number", "null"]
-        },
-        "keys": {
-          "type": "object",
-          "properties": {
-            "p256dh": {
-              "type": "string"
-            },
-            "auth": {
-              "type": "string"
-            }
-          },
-          "required": ["p256dh", "auth"]
-        }
-      },
-      "required": ["endpoint", "keys"]
-    },
-    "Logement": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Logement",
-      "type": "object",
-      "description": "Represents a short-term rental apartment.",
-      "properties": {
-        "title": {
-          "type": "string",
-          "description": "Title of the listing."
-        },
-        "description": {
-          "type": "string",
-          "description": "Detailed description of the apartment."
-        },
-        "address": {
-          "type": "string",
-          "description": "Full address of the property."
-        },
-        "pricePerNight": {
-          "type": "number",
-          "description": "Price per night in USD."
-        },
-        "imageUrls": {
-          "type": "array",
-          "description": "List of URLs for the apartment images.",
-          "items": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "amenities": {
-          "type": "array",
-          "description": "List of available amenities.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "The UID of the admin who added the listing."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp of when the listing was created."
-        }
-      },
-      "required": [
-        "title",
-        "address",
-        "pricePerNight",
-        "imageUrls",
-        "ownerId",
-        "createdAt",
-        "description",
-        "amenities"
-      ]
-    },
-    "Annonce": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Annonce",
-      "type": "object",
-      "description": "Represents an official announcement for users.",
-      "properties": {
-        "title": {
-          "type": "string",
-          "description": "The title of the announcement."
-        },
-        "content": {
-          "type": "string",
-          "description": "The main content of the announcement."
-        },
-        "source": {
-          "type": "string",
-          "description": "The source of the announcement (e.g., 'Hôtel de Ville')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "The timestamp when the announcement was created.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "title",
-        "content",
-        "source",
-        "createdAt"
+        "updatedAt"
       ]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous",
-      "google.com"
+      "anonymous"
     ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
+        "path": "/id_templates/{templateId}",
         "definition": {
-          "entityName": "User",
+          "entityName": "IDTemplate",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/backend/entities/IDTemplate"
           },
-          "description": "Stores user profile information.  User documents are accessible only to the user and admins (admin check not modeled here).",
+          "description": "Collection storing definitions of various ID card templates. Accessible for reading by all authenticated users, and for writing only by administrators. No denormalized authorization fields needed beyond global read/admin write.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier for the user."
+              "name": "templateId",
+              "description": "Unique identifier for the ID template."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/generatedIds/{generatedId}",
+        "path": "/users/{userId}/generated_ids/{generatedId}",
         "definition": {
-          "entityName": "GeneratedId",
+          "entityName": "GeneratedID",
           "schema": {
-            "$ref": "#/backend/entities/GeneratedId"
+            "$ref": "#/backend/entities/GeneratedID"
           },
-          "description": "Stores generated ID information for each user. Organized as a subcollection of the user document to ensure that only the user can access these documents. Includes denormalized 'userId' for authorization independence.",
+          "description": "Subcollection storing individual ID cards generated by a specific user. Includes denormalized 'creatorUserId' field for authorization independence, matching the path's '{userId}'.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "Unique identifier of the user who owns these generated IDs."
             },
             {
               "name": "generatedId",
-              "description": "The unique identifier for the generated ID."
+              "description": "Unique identifier for a specific generated ID card."
             }
           ]
         }
       },
       {
-        "path": "/idTemplates/{idTemplateId}",
+        "path": "/roles_admin/{userId}",
         "definition": {
-          "entityName": "IdTemplate",
+          "entityName": "AdminRole",
           "schema": {
-            "$ref": "#/backend/entities/IdTemplate"
+            "$ref": "#/backend/entities/User"
           },
-          "description": "Stores ID templates.  Templates are intended to be created and modified by admins (admin check not modeled here).",
-          "params": [
-            {
-              "name": "idTemplateId",
-              "description": "The unique identifier for the ID template."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/events/{eventId}",
-        "definition": {
-          "entityName": "EventReport",
-          "schema": {
-            "$ref": "#/backend/entities/EventReport"
-          },
-          "description": "Stores user-submitted traffic event reports. These are public and can be read by anyone, but can only be created by authenticated users.",
-          "params": [
-            {
-              "name": "eventId",
-              "description": "The unique identifier for the event report."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/events/{eventId}/comments/{commentId}",
-        "definition": {
-          "entityName": "Comment",
-          "schema": {
-            "$ref": "#/backend/entities/Comment"
-          },
-          "description": "Stores comments for a specific event report. Comments are publicly readable but can only be created by authenticated users.",
-          "params": [
-            {
-              "name": "eventId",
-              "description": "The unique identifier for the parent event report."
-            },
-            {
-              "name": "commentId",
-              "description": "The unique identifier for the comment."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/videos/{videoId}",
-        "definition": {
-          "entityName": "Video",
-          "schema": {
-            "$ref": "#/backend/entities/Video"
-          },
-          "description": "Stores user-uploaded videos. Publicly readable, but only the owner can create/delete.",
-          "params": [
-            {
-              "name": "videoId",
-              "description": "The unique identifier for the video."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/videos/{videoId}/comments/{commentId}",
-        "definition": {
-          "entityName": "Comment",
-          "schema": {
-            "$ref": "#/backend/entities/Comment"
-          },
-          "description": "Stores comments for a specific video. Comments are publicly readable but can only be created by authenticated users.",
-          "params": [
-            {
-              "name": "videoId",
-              "description": "The unique identifier for the parent video."
-            },
-            {
-              "name": "commentId",
-              "description": "The unique identifier for the comment."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/pushSubscriptions/{subscriptionId}",
-        "definition": {
-          "entityName": "PushSubscription",
-          "schema": {
-            "$ref": "#/backend/entities/PushSubscription"
-          },
-          "description": "Stores push notification subscriptions for a user. A user can have multiple subscriptions from different devices/browsers. Accessible only by the user.",
+          "description": "Collection used for 'Existence over Content' based access control, indicating users with administrative privileges. Only the document ID is relevant for authorization checks in security rules.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "subscriptionId",
-              "description": "The unique identifier for the push subscription."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/annonces/{annonceId}",
-        "definition": {
-          "entityName": "Annonce",
-          "schema": {
-            "$ref": "#/backend/entities/Annonce"
-          },
-          "description": "Stores official announcements. Publicly readable, but only admins can write.",
-          "params": [
-            {
-              "name": "annonceId",
-              "description": "The unique identifier for the announcement."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/logements/{logementId}",
-        "definition": {
-          "entityName": "Logement",
-          "schema": {
-            "$ref": "#/backend/entities/Logement"
-          },
-          "description": "Stores short-term rental apartment listings. Publicly readable, but only admins can write.",
-          "params": [
-            {
-              "name": "logementId",
-              "description": "The unique identifier for the logement."
+              "description": "Unique identifier of a user with administrative privileges."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the IDGenius application and the new Kinshasa Flow traffic reporting features. It emphasizes a clear separation between private user data and public-facing community data. User-private data remains locked down, while the new `/events` collection is made public for reading to allow all users to benefit from traffic reports. Write access to `/events` and its `comments` subcollection is restricted to authenticated users (including anonymous ones) to prevent spam and ensure accountability, with rules enforcing that the `userId` field matches the creator's UID. A new `/annonces` collection has been added for official announcements, which is publicly readable and writable only by administrators. A `/logements` collection has also been added to store apartment listings, which are publicly readable and writable only by an admin."
+    "reasoning": "The proposed Firestore structure prioritizes Authorization Independence and Structural Segregation to ensure robust, debuggable security rules and scalable queries. \n\n1.  **ID Templates (`/id_templates/{templateId}`):** This top-level collection stores definitions of various ID card templates. It's designed for global read access by all authenticated users, allowing them to browse and select templates. Write access is restricted to administrators, managed via a dedicated `/roles_admin/{userId}` collection. This structure achieves **Authorization Independence** as access to templates does not depend on any parent document. It supports **QAPs** by allowing simple `list` operations for all authenticated users to view available templates, without needing client-side filtering or complex security rules.\n\n2.  **Generated IDs (`/users/{userId}/generated_ids/{generatedId}`):** This subcollection is nested under a user-specific path (`/users/{userId}`). Each document here represents a unique ID card generated by a specific user. This follows the **Path-Based Ownership** and **Hierarchical Paths for User-Owned Data** principles, making the owner (`creatorUserId`) explicit both in the document's content and its path. Crucially, the `creatorUserId` field within the `GeneratedID` document **denormalizes** the authorization context, directly matching the `{userId}` wildcard in the path. This eliminates the need for `get()` calls to a parent `user` document to determine ownership, thereby ensuring **Authorization Independence**. This structure also supports **QAPs** effectively: a user can only list their own generated IDs by querying their specific subcollection (`/users/currentUserId/generated_ids`), making the `list` operation inherently secure and efficient. The `status` field (e.g., 'draft', 'finalized') within the `GeneratedID` document provides **Explicit State Modeling**, allowing internal workflow changes without altering the security posture of the collection.\n\n3.  **Admin Roles (`/roles_admin/{userId}`):** This is a top-level collection used for **Global Roles (DBAC)**, specifically employing the **Existence over Content** pattern. An admin user's UID will exist as a document ID in this collection. This allows Firestore Security Rules to check for administrative privileges using a simple `exists()` call (e.g., `allow write: if exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))`) without requiring `get()` calls, further reinforcing **Authorization Independence** and simplifying rule logic. This collection is not intended for direct app interaction but solely for rules evaluation."
   }
 }

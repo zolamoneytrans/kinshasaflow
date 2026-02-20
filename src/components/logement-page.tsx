@@ -62,7 +62,7 @@ const AddLogementDialog = () => {
     
             const imageUrls = await Promise.all(uploadPromises);
     
-            // Stage 2: Firestore Document Creation
+            // Stage 2: Prepare Firestore Document
             const logementData = {
                 title: data.title,
                 description: data.description,
@@ -74,26 +74,31 @@ const AddLogementDialog = () => {
                 createdAt: serverTimestamp(),
             };
     
+            // Stage 3: Firestore Document Creation (non-blocking pattern)
             setDoc(newLogementRef, logementData)
                 .then(() => {
+                    // SUCCESS
                     toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
                     setOpen(false);
                     form.reset();
+                    setIsSubmitting(false); // Stop loading on success
                 })
                 .catch((serverError) => {
+                    // FIREBASE PERMISSION ERROR
                     const permissionError = new FirestorePermissionError({
                         path: newLogementRef.path,
                         operation: 'create',
                         requestResourceData: logementData,
                     });
                     errorEmitter.emit('permission-error', permissionError);
-                })
-                .finally(() => {
-                    setIsSubmitting(false);
+                    
+                    toast({ title: 'Erreur de base de données', description: 'Impossible d\'enregistrer le logement. Vérifiez les permissions.', variant: 'destructive' });
+                    
+                    setIsSubmitting(false); // Stop loading on Firestore error
                 });
     
         } catch (error: any) {
-            // This catch block now primarily handles errors from the image upload stage.
+            // IMAGE UPLOAD ERROR
             let description = 'Une erreur est survenue lors du téléversement des images. Veuillez réessayer.';
             if (error.code && error.code.startsWith('storage/')) {
                 switch (error.code) {
@@ -108,7 +113,7 @@ const AddLogementDialog = () => {
                 }
             }
             toast({ title: 'Erreur de téléversement', description, variant: 'destructive' });
-            setIsSubmitting(false);
+            setIsSubmitting(false); // Stop loading on image upload error
         }
     };
 

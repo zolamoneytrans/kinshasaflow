@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { APIProvider, Map } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, TrafficLayer } from '@vis.gl/react-google-maps';
 
 const API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
@@ -26,8 +26,9 @@ export default function TrafficMap() {
                     defaultZoom={15}
                     defaultCenter={congestedAreaPosition}
                     className="w-full h-full"
-                    trafficLayer={true}
-                />
+                >
+                    <TrafficLayer />
+                </Map>
             </APIProvider>
         </div>
     );

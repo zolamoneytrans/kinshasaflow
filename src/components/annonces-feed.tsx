@@ -1,83 +1,57 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { Annonce, WithId } from '@/lib/types';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Landmark, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, where, Timestamp } from 'firebase/firestore';
+import { Landmark, Calendar, TrendingUp } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
-const AnnonceItem = ({ annonce }: { annonce: WithId<Annonce> }) => {
-    const formattedTime = annonce.createdAt ? format(annonce.createdAt.toDate(), 'd MMMM yyyy', { locale: fr }) : '...';
+const announcements = {
+  2025: [
+    {
+      date: "19 mai 2025",
+      title: "Réforme de la circulation",
+      details: "Restrictions pour camions et véhicules privés afin de réduire les embouteillages chroniques."
+    },
+    {
+      date: "27 novembre 2025",
+      title: "Modernisation du transport public",
+      details: "Mise en place de taxis fluviaux, billetterie numérique, règles tarifaires renforcées et lutte contre les conducteurs non autorisés."
+    },
+    {
+      date: "1er décembre 2025",
+      title: "Collaboration avec les motocyclistes (Fenamo)",
+      details: "Partenariat avec la Fédération nationale des motos-taxis pour restaurer discipline et solidarité dans le secteur."
+    }
+  ],
+  2026: [
+    {
+      date: "9 février 2026",
+      title: "Projet de 1 000 bus Transco",
+      details: "Acquisition prévue de 1 000 bus Foton via un partenariat public-privé pour renforcer le transport collectif."
+    },
+    {
+      date: "Début 2026 (suite des annonces de fin 2025)",
+      title: "Transport électrique",
+      details: "Lancement d’un projet ambitieux : 10 000 taxis, 100 000 motos et 500 bus électriques pour moderniser la mobilité et réduire les embouteillages."
+    }
+  ]
+};
 
+const AnnonceItem = ({ annonce }: { annonce: { date: string; title: string; details: string } }) => {
     return (
         <div className="p-4 rounded-lg border bg-background transition-colors">
             <h3 className="font-semibold text-card-foreground mb-2">{annonce.title}</h3>
-            <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">{annonce.content}</p>
-            <div className="flex justify-between items-center text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                    <Landmark className="h-4 w-4" />
-                    <span>{annonce.source}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>Publié le {formattedTime}</span>
-                </div>
+            <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">{annonce.details}</p>
+            <div className="flex items-center text-xs text-muted-foreground">
+                <Calendar className="h-4 w-4 mr-2" />
+                <span>Publié le {annonce.date}</span>
             </div>
         </div>
     );
 };
 
-const AnnonceSkeleton = () => (
-    <div className="p-4 rounded-lg border space-y-3">
-        <Skeleton className="h-5 w-3/4" />
-        <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-        </div>
-        <div className="flex justify-between mt-2">
-            <Skeleton className="h-4 w-1/3" />
-            <Skeleton className="h-4 w-1/4" />
-        </div>
-    </div>
-);
-
 export default function AnnoncesFeed() {
-    const { firestore } = useFirebase();
-
-    const annoncesCollection = useMemoFirebase(() => collection(firestore, 'annonces'), [firestore]);
-    const annoncesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        // Filter for announcements from January 1st, 2025 to December 31st, 2026
-        const startDate = new Date('2025-01-01T00:00:00Z');
-        const endDate = new Date('2027-01-01T00:00:00Z'); // up to, but not including, Jan 1 2027
-        return query(
-            annoncesCollection,
-            where('createdAt', '>=', Timestamp.fromDate(startDate)),
-            where('createdAt', '<', Timestamp.fromDate(endDate)),
-            orderBy('createdAt', 'desc')
-        );
-    }, [firestore, annoncesCollection]);
-    const { data: announcements, isLoading } = useCollection<Annonce>(annoncesQuery);
-
-    const announcementsByYear = useMemo(() => {
-        if (!announcements) return {};
-        return announcements.reduce((acc, annonce) => {
-            if (annonce.createdAt) {
-                const year = annonce.createdAt.toDate().getFullYear();
-                if (!acc[year]) {
-                    acc[year] = [];
-                }
-                acc[year].push(annonce);
-            }
-            return acc;
-        }, {} as Record<number, WithId<Annonce>[]>);
-    }, [announcements]);
-
-    const years = Object.keys(announcementsByYear).sort((a, b) => parseInt(a) - parseInt(b)); // Sort years ascending: 2025, 2026
+    const years = Object.keys(announcements).sort((a, b) => parseInt(a) - parseInt(b));
 
     return (
         <Card className="flex-1 flex flex-col overflow-hidden">
@@ -85,33 +59,46 @@ export default function AnnoncesFeed() {
                 <CardTitle>
                     <div className="flex items-center gap-2">
                         <Landmark className="text-primary" />
-                        Annonces Officielles
+                        Annonces Officielles (2025-2026)
                     </div>
                 </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto">
                 <div className="space-y-8">
-                    {isLoading ? (
-                        Array.from({ length: 5 }).map((_, i) => <AnnonceSkeleton key={i} />)
-                    ) : years.length > 0 ? (
-                        years.map(year => (
-                            <div key={year}>
-                                <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
-                                    <span role="img" aria-label="pin">📌</span>
-                                    Annonces de {year}
-                                </h2>
-                                <div className="space-y-4">
-                                    {announcementsByYear[parseInt(year)].map(annonce => (
-                                        <AnnonceItem key={annonce.id} annonce={annonce} />
-                                    ))}
-                                </div>
+                    {years.map(year => (
+                        <div key={year}>
+                            <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
+                                <span role="img" aria-label="pin">📌</span>
+                                Annonces de {year}
+                            </h2>
+                            <div className="space-y-4">
+                                {announcements[year as keyof typeof announcements].map((annonce, index) => (
+                                    <AnnonceItem key={index} annonce={annonce} />
+                                ))}
                             </div>
-                        ))
-                    ) : (
-                        <div className="p-4 rounded-lg border bg-background text-card-foreground text-center">
-                            <p className="text-muted-foreground">Aucune annonce pour la période sélectionnée.</p>
                         </div>
-                    )}
+                    ))}
+
+                    <Separator className="my-8" />
+                    
+                    <div>
+                        <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
+                            <TrendingUp className="text-primary" />
+                            Évolution entre 2025 et 2026
+                        </h2>
+                        <div className="p-4 rounded-lg border bg-accent/50 text-accent-foreground space-y-4">
+                           <p>
+                             <strong>2025 :</strong> Accent sur la régulation, la discipline et la diversification (taxis fluviaux, encadrement des motos-taxis).
+                           </p>
+                           <p>
+                             <strong>2026 :</strong> Passage à des projets de grande envergure, avec une forte orientation vers la <strong>modernisation écologique</strong> (bus électriques, taxis et motos électriques) et l’expansion massive du transport collectif.
+                           </p>
+                           <Separator />
+                           <p className="font-semibold">
+                            En clair, Kinshasa est passée d’une phase de <strong>réorganisation et discipline</strong> en 2025 à une phase de <strong>modernisation et transition énergétique</strong> en 2026.
+                           </p>
+                        </div>
+                    </div>
                 </div>
             </CardContent>
         </Card>

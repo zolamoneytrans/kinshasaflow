@@ -9,7 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirebase, useUser, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, serverTimestamp, where, Timestamp } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -168,7 +168,12 @@ export default function AnnoncesFeed() {
     const { user } = useUser();
 
     const annoncesCollection = useMemoFirebase(() => collection(firestore, 'annonces'), [firestore]);
-    const annoncesQuery = useMemoFirebase(() => query(annoncesCollection, orderBy('createdAt', 'desc')), [annoncesCollection]);
+    const annoncesQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        // Filter for announcements from January 1st, 2025 onwards
+        const startDate = new Date('2025-01-01T00:00:00Z');
+        return query(annoncesCollection, where('createdAt', '>=', Timestamp.fromDate(startDate)), orderBy('createdAt', 'desc'));
+    }, [firestore, annoncesCollection]);
     const { data: announcements, isLoading } = useCollection<Annonce>(annoncesQuery);
 
     const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;

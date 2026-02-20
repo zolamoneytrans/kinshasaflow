@@ -55,13 +55,12 @@ const AddLogementDialog = () => {
             const storage = getStorage(firebaseApp);
     
             // Stage 1: Image Uploads
-            const imageUrls: string[] = [];
-            for (const file of Array.from(imageFiles)) {
+            const uploadPromises = Array.from(imageFiles).map((file) => {
                 const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
-                const snapshot = await uploadBytes(fileRef, file);
-                const downloadUrl = await getDownloadURL(snapshot.ref);
-                imageUrls.push(downloadUrl);
-            }
+                return uploadBytes(fileRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+            });
+    
+            const imageUrls = await Promise.all(uploadPromises);
     
             // Stage 2: Firestore Document Creation
             const logementData = {
@@ -109,7 +108,7 @@ const AddLogementDialog = () => {
                 }
             }
             toast({ title: 'Erreur de téléversement', description, variant: 'destructive' });
-            setIsSubmitting(false); // Ensure spinner stops on upload failure
+            setIsSubmitting(false);
         }
     };
 

@@ -68,12 +68,10 @@ service cloud.firestore {
     }
 
     /**
-     * Checks if the requesting user has administrative privileges.
-     * This is determined by the existence of their UID as a document
-     * in the /roles_admin collection.
+     * Checks if the requesting user has administrative privileges by their email.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && request.auth.token.email == 'drnduwa@gmail.com';
     }
 
     /**
@@ -105,11 +103,7 @@ service cloud.firestore {
      * @principle Prevents any client-side read or write access to the role-management collection.
      */
     match /roles_admin/{userId} {
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow read, write: if false;
     }
 
     /**
@@ -139,11 +133,8 @@ service cloud.firestore {
      * @principle Separates public read access from role-based write access.
      */
     match /logements/{logementId} {
-        allow get: if isSignedIn();
-        allow list: if isSignedIn();
-        allow create: if isAdmin();
-        allow update: if isAdmin();
-        allow delete: if isAdmin();
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
     }
 
     /**
@@ -180,5 +171,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

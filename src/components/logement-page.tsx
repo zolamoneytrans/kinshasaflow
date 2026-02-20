@@ -87,7 +87,7 @@ const AddLogementDialog = () => {
                         requestResourceData: logementData,
                     });
                     errorEmitter.emit('permission-error', permissionError);
-                    toast({ title: 'Erreur de base de données', description: "Impossible d'enregistrer le logement.", variant: 'destructive' });
+                    toast({ title: "Impossible d'ajouter le logement", description: "Veuillez vérifier les autorisations de la base de données.", variant: 'destructive' });
                 })
                 .finally(() => {
                     setIsSubmitting(false);
@@ -249,7 +249,7 @@ const LogementSkeleton = () => (
 export default function LogementPage() {
     const { user } = useUser();
     const { firestore } = useFirebase();
-    const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    const isAdmin = user?.email === 'drnduwa@gmail.com';
 
     const logementsCollection = useMemoFirebase(() => collection(firestore, 'logements'), [firestore]);
     const logementsQuery = useMemoFirebase(() => query(logementsCollection, orderBy('createdAt', 'desc')), [logementsCollection]);

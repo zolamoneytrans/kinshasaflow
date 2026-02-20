@@ -55,7 +55,7 @@ service cloud.firestore {
      * Checks if the signed-in user is an admin.
      */
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'admin@kinshasaflow.online';
+      return request.auth != null && request.auth.token.email == 'drnduwa@gmail.com';
     }
 
     /**
@@ -152,7 +152,8 @@ service cloud.firestore {
      * @path          /annonces/{annonceId}
      */
     match /annonces/{annonceId} {
-      allow read, list: if true;
+      allow read: if true;
+      allow list: if true;
       allow create, update, delete: if isAdmin();
     }
     

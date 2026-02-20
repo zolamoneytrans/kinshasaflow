@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useUser();
 
-  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const isAdmin = user?.email === 'drnduwa@gmail.com';
   
   const getPageTitle = () => {
     if (pathname === '/reports') return 'Rapports de trafic';

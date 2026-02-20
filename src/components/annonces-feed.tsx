@@ -4,14 +4,14 @@ import React from 'react';
 import { Annonce, WithId } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Landmark, Calendar } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, where, Timestamp } from 'firebase/firestore';
 
 const AnnonceItem = ({ annonce }: { annonce: WithId<Annonce> }) => {
-    const formattedTime = annonce.createdAt ? formatDistanceToNow(annonce.createdAt.toDate(), { addSuffix: true, locale: fr }) : '...';
+    const formattedTime = annonce.createdAt ? format(annonce.createdAt.toDate(), 'd MMMM yyyy', { locale: fr }) : '...';
 
     return (
         <div className="p-4 rounded-lg border bg-background transition-colors">
@@ -24,7 +24,7 @@ const AnnonceItem = ({ annonce }: { annonce: WithId<Annonce> }) => {
                 </div>
                 <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    <span>Publié {formattedTime}</span>
+                    <span>Publié le {formattedTime}</span>
                 </div>
             </div>
         </div>
@@ -72,9 +72,15 @@ export default function AnnoncesFeed() {
     const annoncesCollection = useMemoFirebase(() => collection(firestore, 'annonces'), [firestore]);
     const annoncesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        // Filter for announcements from January 1st, 2025 onwards
+        // Filter for announcements from January 1st, 2025 to December 31st, 2026
         const startDate = new Date('2025-01-01T00:00:00Z');
-        return query(annoncesCollection, where('createdAt', '>=', Timestamp.fromDate(startDate)), orderBy('createdAt', 'desc'));
+        const endDate = new Date('2027-01-01T00:00:00Z'); // up to, but not including, Jan 1 2027
+        return query(
+            annoncesCollection,
+            where('createdAt', '>=', Timestamp.fromDate(startDate)),
+            where('createdAt', '<', Timestamp.fromDate(endDate)),
+            orderBy('createdAt', 'desc')
+        );
     }, [firestore, annoncesCollection]);
     const { data: announcements, isLoading } = useCollection<Annonce>(annoncesQuery);
 

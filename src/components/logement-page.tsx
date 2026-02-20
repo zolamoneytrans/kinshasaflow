@@ -48,24 +48,21 @@ const AddLogementDialog = () => {
 
         setIsSubmitting(true);
         
-        const newLogementRef = doc(collection(firestore, 'logements'));
-        const logementId = newLogementRef.id;
-
-        let logementData: Omit<Logement, 'createdAt'> & { createdAt: any };
-
         try {
+            const newLogementRef = doc(collection(firestore, 'logements'));
+            const logementId = newLogementRef.id;
             const storage = getStorage(firebaseApp);
             const imageFiles = data.images as FileList;
 
-            const imageUrls = await Promise.all(
-                Array.from(imageFiles).map(async (file) => {
-                    const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
-                    await uploadBytes(fileRef, file);
-                    return getDownloadURL(fileRef);
-                })
-            );
+            const imageUrls: string[] = [];
+            for (const file of Array.from(imageFiles)) {
+                const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
+                await uploadBytes(fileRef, file);
+                const downloadUrl = await getDownloadURL(fileRef);
+                imageUrls.push(downloadUrl);
+            }
 
-            logementData = {
+            const logementData = {
                 title: data.title,
                 description: data.description,
                 address: data.address,
@@ -90,6 +87,7 @@ const AddLogementDialog = () => {
                         requestResourceData: logementData,
                     });
                     errorEmitter.emit('permission-error', permissionError);
+                    toast({ title: 'Erreur de base de données', description: "Impossible d'enregistrer le logement.", variant: 'destructive' });
                 })
                 .finally(() => {
                     setIsSubmitting(false);

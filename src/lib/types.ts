@@ -229,5 +229,23 @@ export const logementFormSchema = z.object({
 });
 export type LogementFormValues = z.infer<typeof logementFormSchema>;
 
+// Schema for Transport Subscription
+export const transportSubscriptionFormSchema = z.object({
+  residence: z.string().min(3, "Veuillez indiquer votre commune de résidence."),
+  workplace: z.string().min(3, "Veuillez indiquer votre lieu de travail."),
+  departureTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Veuillez entrer une heure valide (HH:MM)."),
+  returnTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Veuillez entrer une heure valide (HH:MM)."),
+});
+export type TransportSubscriptionFormValues = z.infer<typeof transportSubscriptionFormSchema>;
+
+export const transportSubscriptionSchema = transportSubscriptionFormSchema.extend({
+    userId: z.string(),
+    transportType: z.enum(['corporate', 'carpool', 'private_taxi', 'minibus']),
+    status: z.enum(['pending', 'active', 'cancelled']),
+    createdAt: z.instanceof(Timestamp).or(z.any()),
+});
+export type TransportSubscription = z.infer<typeof transportSubscriptionSchema>;
+
+
 // Custom error for Firestore permissions, to be used with the global error handler
 export { FirestorePermissionError } from '@/firebase/errors';

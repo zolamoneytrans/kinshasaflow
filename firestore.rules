@@ -90,6 +90,13 @@ service cloud.firestore {
       return request.resource.data.creatorUserId == resource.data.creatorUserId;
     }
 
+    /**
+     * On create, validates that the new subscription request belongs to the user creating it.
+     */
+    function hasValidSubscriptionDataOnCreate(userId) {
+      return request.resource.data.userId == userId;
+    }
+
     // Collection Rules
     // =================================
 
@@ -152,22 +159,33 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       allow update: if isExistingOwner(userId);
       allow delete: if false; // Deleting user documents is typically a privileged server-side action.
-    }
 
-    /**
-     * @description Secures the user-generated ID cards. These are private and
-     *   can only be accessed by the user who created them.
-     * @path /users/{userId}/generated_ids/{generatedId}
-     * @allow (create) An authenticated user creating a new ID card for themselves.
-     * @deny (get) A user trying to access an ID card from another user's subcollection.
-     * @principle Enforces strict data ownership using path-based security and validates relational integrity.
-     */
-    match /users/{userId}/generated_ids/{generatedId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && hasValidGeneratedIdDataOnCreate(userId);
-      allow update: if isExistingOwner(userId) && isImmutableCreatorId();
-      allow delete: if isExistingOwner(userId);
+      /**
+       * @description Secures the user-generated ID cards. These are private and
+       *   can only be accessed by the user who created them.
+       * @path /users/{userId}/generated_ids/{generatedId}
+       * @allow (create) An authenticated user creating a new ID card for themselves.
+       * @deny (get) A user trying to access an ID card from another user's subcollection.
+       * @principle Enforces strict data ownership using path-based security and validates relational integrity.
+       */
+      match /generated_ids/{generatedId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasValidGeneratedIdDataOnCreate(userId);
+        allow update: if isExistingOwner(userId) && isImmutableCreatorId();
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Secures user transport subscription requests. This data is private.
+       * @path /users/{userId}/transport_subscriptions/{subscriptionId}
+       * @allow (create) An authenticated user creating a subscription request for themselves.
+       * @principle Enforces strict data ownership for user subscription data.
+       */
+      match /transport_subscriptions/{subscriptionId} {
+        allow read, update, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && hasValidSubscriptionDataOnCreate(userId);
+      }
     }
   }
 }

@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { useUser, useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, setDoc, doc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Logement, logementFormSchema, LogementFormValues } from '@/lib/types';
+import { Logement, logementFormSchema, LogementFormValues, FirestorePermissionError } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,12 +47,15 @@ const AddLogementDialog = () => {
         }
 
         setIsSubmitting(true);
+        
+        const newLogementRef = doc(collection(firestore, 'logements'));
+        const logementId = newLogementRef.id;
+
+        let logementData: Omit<Logement, 'createdAt'> & { createdAt: any };
+
         try {
             const storage = getStorage(firebaseApp);
             const imageFiles = data.images as FileList;
-            
-            const newLogementRef = doc(collection(firestore, 'logements'));
-            const logementId = newLogementRef.id;
 
             const imageUrls = await Promise.all(
                 Array.from(imageFiles).map(async (file) => {
@@ -62,7 +65,7 @@ const AddLogementDialog = () => {
                 })
             );
 
-            const logementData: Omit<Logement, 'createdAt'> & { createdAt: any } = {
+            logementData = {
                 title: data.title,
                 description: data.description,
                 address: data.address,
@@ -73,15 +76,28 @@ const AddLogementDialog = () => {
                 createdAt: serverTimestamp(),
             };
 
-            await setDoc(newLogementRef, logementData);
+            setDoc(newLogementRef, logementData)
+                .then(() => {
+                    toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
+                    setOpen(false);
+                    form.reset();
+                })
+                .catch((error) => {
+                    console.error("Firestore write error:", error);
+                    const permissionError = new FirestorePermissionError({
+                        path: newLogementRef.path,
+                        operation: 'create',
+                        requestResourceData: logementData,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                })
+                .finally(() => {
+                    setIsSubmitting(false);
+                });
 
-            toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
-            setOpen(false);
-            form.reset();
         } catch (error) {
-            console.error("Error adding logement:", error);
-            toast({ title: 'Erreur', description: 'Impossible d\'ajouter le logement. Veuillez réessayer.', variant: 'destructive' });
-        } finally {
+            console.error("Error adding logement (storage):", error);
+            toast({ title: 'Erreur', description: 'Impossible de téléverser les images. Veuillez réessayer.', variant: 'destructive' });
             setIsSubmitting(false);
         }
     };

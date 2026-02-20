@@ -74,7 +74,11 @@ export const annonceSchema = z.object({
 });
 export type Annonce = z.infer<typeof annonceSchema>;
 
-export const annonceFormSchema = annonceSchema.omit({ createdAt: true });
+export const annonceFormSchema = z.object({
+    title: z.string().min(5, "Le titre doit faire au moins 5 caractères."),
+    content: z.string().min(10, "Le contenu doit faire au moins 10 caractères."),
+    source: z.string().min(3, "La source doit faire au moins 3 caractères."),
+});
 export type AnnonceFormValues = z.infer<typeof annonceFormSchema>;
 
 
@@ -224,3 +228,6 @@ export const logementFormSchema = z.object({
     .refine((files) => Array.from(files).every((file: any) => file.size <= 5 * 1024 * 1024), `Chaque image doit faire moins de 5MB.`),
 });
 export type LogementFormValues = z.infer<typeof logementFormSchema>;
+
+// Custom error for Firestore permissions, to be used with the global error handler
+export { FirestorePermissionError } from '@/firebase/errors';

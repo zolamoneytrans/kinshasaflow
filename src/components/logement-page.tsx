@@ -54,13 +54,12 @@ const AddLogementDialog = () => {
             const storage = getStorage(firebaseApp);
             const imageFiles = data.images as FileList;
 
-            const imageUrls: string[] = [];
-            for (const file of Array.from(imageFiles)) {
+            const uploadPromises = Array.from(imageFiles).map(file => {
                 const fileRef = storageRef(storage, `logements/${logementId}/${file.name}`);
-                await uploadBytes(fileRef, file);
-                const downloadUrl = await getDownloadURL(fileRef);
-                imageUrls.push(downloadUrl);
-            }
+                return uploadBytes(fileRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+            });
+
+            const imageUrls = await Promise.all(uploadPromises);
 
             const logementData = {
                 title: data.title,

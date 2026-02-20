@@ -3,7 +3,7 @@
 import React from 'react';
 import { APIProvider, Map } from '@vis.gl/react-google-maps';
 
-const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+const API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
 // Coordinates for a known congested area in Kinshasa, Rond-point Victoire
 const congestedAreaPosition = { lat: -4.330, lng: 15.313 };

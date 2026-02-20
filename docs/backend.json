@@ -259,6 +259,37 @@
         }
       },
       "required": ["endpoint", "keys"]
+    },
+    "Annonce": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Annonce",
+      "type": "object",
+      "description": "Represents an official announcement for users.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the announcement."
+        },
+        "content": {
+          "type": "string",
+          "description": "The main content of the announcement."
+        },
+        "source": {
+          "type": "string",
+          "description": "The source of the announcement (e.g., 'Hôtel de Ville')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the announcement was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "title",
+        "content",
+        "source",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -413,8 +444,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/annonces/{annonceId}",
+        "definition": {
+          "entityName": "Annonce",
+          "schema": {
+            "$ref": "#/backend/entities/Annonce"
+          },
+          "description": "Stores official announcements. Publicly readable, but only admins can write.",
+          "params": [
+            {
+              "name": "annonceId",
+              "description": "The unique identifier for the announcement."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the IDGenius application and the new Kinshasa Flow traffic reporting features. It emphasizes a clear separation between private user data and public-facing community data. User-private data remains locked down, while the new `/events` collection is made public for reading to allow all users to benefit from traffic reports. Write access to `/events` and its `comments` subcollection is restricted to authenticated users (including anonymous ones) to prevent spam and ensure accountability, with rules enforcing that the `userId` field matches the creator's UID."
+    "reasoning": "The Firestore structure is designed to support the IDGenius application and the new Kinshasa Flow traffic reporting features. It emphasizes a clear separation between private user data and public-facing community data. User-private data remains locked down, while the new `/events` collection is made public for reading to allow all users to benefit from traffic reports. Write access to `/events` and its `comments` subcollection is restricted to authenticated users (including anonymous ones) to prevent spam and ensure accountability, with rules enforcing that the `userId` field matches the creator's UID. A new `/annonces` collection has been added for official announcements, which is publicly readable and writable only by administrators."
   }
 }

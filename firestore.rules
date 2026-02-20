@@ -146,5 +146,14 @@ service cloud.firestore {
         allow update, delete: if isExistingOwner(request.auth.uid) && resource.data.userId == request.auth.uid;
       }
     }
+    
+    /**
+     * @description   Rules for the Announcements collection. Publicly readable, admin-only write.
+     * @path          /annonces/{annonceId}
+     */
+    match /annonces/{annonceId} {
+      allow read, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
   }
 }

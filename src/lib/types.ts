@@ -65,88 +65,17 @@ export const AssistantOutputSchema = z.object({
 export type AssistantOutput = z.infer<typeof AssistantOutputSchema>;
 
 
-// New schema for Announcements
+// Schema for Announcements
 export const annonceSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  content: z.string(),
-  publishedAt: z.string(),
-  source: z.string(),
+  title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
+  content: z.string().min(10, "Le contenu doit comporter au moins 10 caractères."),
+  source: z.string().min(3, "La source doit comporter au moins 3 caractères."),
+  createdAt: z.instanceof(Timestamp).or(z.any()), // Allow server timestamp
 });
 export type Annonce = z.infer<typeof annonceSchema>;
 
-export const dummyAnnouncements: Annonce[] = [
-  {
-    id: 1,
-    title: 'Nouvelles régulations sur le stationnement au centre-ville',
-    content: "À partir du 1er septembre, de nouvelles zones de stationnement payant seront mises en place dans la commune de la Gombe pour désengorger les artères principales. Les résidents peuvent demander des vignettes à tarif préférentiel.",
-    publishedAt: "2024-08-15",
-    source: "Hôtel de Ville de Kinshasa"
-  },
-  {
-    id: 2,
-    title: 'Fermeture temporaire du Boulevard Lumumba pour travaux',
-    content: "Le tronçon du Boulevard Lumumba entre la 1ère et la 7ème rue Limete sera fermé à la circulation du 20 au 25 août pour des travaux de réfection de la chaussée. Des déviations seront mises en place par les avenues environnantes.",
-    publishedAt: "2024-08-12",
-    source: "Ministère des Infrastructures et Travaux Publics"
-  },
-  {
-    id: 3,
-    title: 'Campagne de contrôle technique obligatoire pour les taxis',
-    content: "Tous les véhicules à usage de taxi sont priés de se présenter pour un contrôle technique obligatoire avant le 30 septembre. Les véhicules non conformes seront immobilisés.",
-    publishedAt: "2024-08-10",
-    source: "Police de Circulation Routière (PCR)"
-  },
-  {
-    id: 4,
-    title: 'Introduction de nouvelles plaques d\'immatriculation',
-    content: "Le programme de remplacement des plaques d'immatriculation débutera en octobre. Les modalités de remplacement seront communiquées prochainement. Les anciennes plaques resteront valides pendant une période de transition de 6 mois.",
-    publishedAt: "2024-08-05",
-    source: "Direction Générale des Impôts (DGI)"
-  },
-  {
-    id: 5,
-    title: 'Journée sans voiture prévue pour le centre-ville',
-    content: "Dans le cadre de la semaine de la mobilité, la commune de la Gombe sera entièrement piétonne le dimanche 22 septembre. Seuls les véhicules d'urgence et de transport en commun seront autorisés.",
-    publishedAt: "2024-09-01",
-    source: "Hôtel de Ville de Kinshasa"
-  },
-  {
-    id: 6,
-    title: "Mise en place de radars de vitesse sur le Boulevard Lumumba",
-    content: "De nouveaux radars automatiques seront activés à partir du 15 septembre sur plusieurs sections du Boulevard Lumumba pour lutter contre les excès de vitesse. La tolérance sera de 10 km/h au-dessus de la limite autorisée.",
-    publishedAt: "2024-09-03",
-    source: "Commission Nationale de Prévention Routière"
-  },
-  {
-    id: 7,
-    title: "Interdiction de circulation des poids lourds en journée",
-    content: "Pour fluidifier le trafic, la circulation des camions de plus de 10 tonnes sera interdite de 6h à 20h dans le centre-ville à compter du 1er octobre. Des zones de transit et de déchargement nocturne sont à l'étude.",
-    publishedAt: "2024-09-05",
-    source: "Ministère des Transports"
-  },
-  {
-    id: 8,
-    title: "Réaménagement du rond-point Victoire",
-    content: "Des travaux de réaménagement du rond-point Victoire débuteront le 10 septembre pour une durée estimée de 3 mois. La circulation sera fortement perturbée. Il est conseillé d'éviter le secteur.",
-    publishedAt: "2024-09-02",
-    source: "Ministère des Infrastructures et Travaux Publics"
-  },
-  {
-    id: 9,
-    title: "Application mobile pour le paiement des vignettes",
-    content: "Une nouvelle application mobile sera lancée fin septembre pour permettre le paiement dématérialisé de la vignette automobile, évitant ainsi les longues files d'attente aux guichets de la DGI.",
-    publishedAt: "2024-08-28",
-    source: "Direction Générale des Impôts (DGI)"
-  },
-  {
-    id: 10,
-    title: "Sensibilisation au respect des passages pour piétons",
-    content: "La PCR lance une grande campagne de sensibilisation 'Priorité Piéton'. Des contrôles renforcés auront lieu aux abords des écoles et des marchés pour sanctionner le non-respect des passages cloutés.",
-    publishedAt: "2024-08-25",
-    source: "Police de Circulation Routière (PCR)"
-  }
-];
+export const annonceFormSchema = annonceSchema.omit({ createdAt: true });
+export type AnnonceFormValues = z.infer<typeof annonceFormSchema>;
 
 
 // Dummy data for components that haven't been migrated to Firebase yet

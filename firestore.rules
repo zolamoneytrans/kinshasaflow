@@ -11,8 +11,7 @@
  * 3. /roles_admin/{userId}: A lookup collection where the existence of a document signifies a user has admin rights.
  *
  * Key Security Decisions:
- * - Admin Access: Administrative privileges are determined by the existence of a document in the /roles_admin collection.
- *   This "Existence over Content" pattern is highly performant as it relies on a fast `exists()` call instead of a slow `get()`.
+ * - Admin Access: Administrative privileges are determined by the user's email address.
  * - User Data Privacy: User-generated IDs are stored in a subcollection under their unique user ID (/users/{userId}/...).
  *   This path-based ownership prevents any user from accessing, or even knowing about, another user's private data.
  * - User Enumeration: Listing documents in the top-level /users collection is explicitly disallowed to prevent scraping user data.
@@ -97,6 +96,18 @@ service cloud.firestore {
       return request.resource.data.userId == userId;
     }
 
+    // Collection Group Rules
+    // =================================
+    
+    /**
+     * @description Allows the admin to perform a collection group query to list all transport subscriptions.
+     * This is essential for the admin dashboard.
+     * @path /{path=**}/transport_subscriptions/{subscriptionId}
+     */
+    match /{path=**}/transport_subscriptions/{subscriptionId} {
+        allow list: if isAdmin();
+    }
+
     // Collection Rules
     // =================================
 
@@ -177,17 +188,17 @@ service cloud.firestore {
       }
 
       /**
-       * @description Secures user transport subscription requests. This data is private
-       *   to the user, but can be read and updated by an admin. A `collectionGroup` query
-       *   by an admin is also permitted.
+       * @description Secures user transport subscription requests for direct access.
+       * A user can list their own subscriptions. An admin can perform broader queries
+       * via the collection group rule.
        * @path /users/{userId}/transport_subscriptions/{subscriptionId}
        * @principle Enforces strict data ownership while allowing for admin oversight.
        */
       match /transport_subscriptions/{subscriptionId} {
         // A user can access their own subscription, and an admin can access any.
         allow get, update, delete: if isOwner(userId) || isAdmin();
-        // A user can list THEIR OWN subscriptions. An admin can list ALL via a collection group query.
-        allow list: if isOwner(userId) || isAdmin();
+        // A user can list THEIR OWN subscriptions.
+        allow list: if isOwner(userId);
         // A user can create a subscription for themselves.
         allow create: if isOwner(userId) && hasValidSubscriptionDataOnCreate(userId);
       }

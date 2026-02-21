@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Bus, Car, Users, Building, Loader2, Home, Briefcase, Clock, FilePlus, UserCheck, DollarSign, Timer, CarTaxiFront, Info, X, Mail, Phone, MapPin } from 'lucide-react';
+import { Bus, Car, Users, Building, Loader2, Home, Briefcase, Clock, FilePlus, UserCheck, DollarSign, Timer, CarTaxiFront, Info, X, Mail, Phone, MapPin, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const containerVariants = {

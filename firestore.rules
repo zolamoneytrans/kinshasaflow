@@ -144,6 +144,12 @@ service cloud.firestore {
         allow write: if isAdmin();
     }
 
+    // This rule specifically enables the admin's collection group query on subscriptions.
+    // It allows an admin to list all documents across all 'transport_subscriptions' collections.
+    match /{path=**}/transport_subscriptions/{subscriptionId} {
+      allow list: if isAdmin();
+    }
+
     /**
      * @description Secures the top-level user document. A user can create their
      *   own document and read/update it, but cannot read other users' documents.
@@ -184,7 +190,11 @@ service cloud.firestore {
        * @principle Enforces strict data ownership while allowing for admin oversight.
        */
       match /transport_subscriptions/{subscriptionId} {
-        allow read, delete: if isOwner(userId) || isAdmin();
+        // GET is allowed for the owner or an admin.
+        // LIST is only allowed for the owner on their own collection.
+        // The admin's collection group LIST is handled by the broader rule above.
+        allow get, delete: if isOwner(userId) || isAdmin();
+        allow list: if isOwner(userId);
         allow create: if isOwner(userId) && hasValidSubscriptionDataOnCreate(userId);
         allow update: if isOwner(userId) || isAdmin();
       }

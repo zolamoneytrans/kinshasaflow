@@ -177,6 +177,35 @@
           "type": "string",
           "description": "The UID of the subscribing user."
         },
+        "fullName": {
+          "type": "string",
+          "description": "User's full name."
+        },
+        "phone": {
+          "type": "string",
+          "description": "User's phone number."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "address": {
+          "type": "string",
+          "description": "User's full street address of residence."
+        },
+        "district": {
+          "type": "string",
+          "description": "User's district (quartier) of residence."
+        },
+        "city": {
+          "type": "string",
+          "description": "User's city (commune) of residence."
+        },
+        "workplace": {
+          "type": "string",
+          "description": "User's place of work (company name or area)."
+        },
         "transportType": {
           "type": "string",
           "description": "Type of transport service subscribed to.",
@@ -186,14 +215,6 @@
             "mini_bus",
             "entreprise"
           ]
-        },
-        "residence": {
-          "type": "string",
-          "description": "User's commune or area of residence."
-        },
-        "workplace": {
-          "type": "string",
-          "description": "User's place of work (commune or area)."
         },
         "departureTime": {
           "type": "string",
@@ -255,9 +276,14 @@
       },
       "required": [
         "userId",
-        "transportType",
-        "residence",
+        "fullName",
+        "phone",
+        "email",
+        "address",
+        "district",
+        "city",
         "workplace",
+        "transportType",
         "departureTime",
         "returnTime",
         "status",

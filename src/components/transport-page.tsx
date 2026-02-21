@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Bus, Car, Users, Building, Loader2, Home, Briefcase, Clock, FilePlus, UserCheck, DollarSign, Timer, CarTaxiFront, Info, X } from 'lucide-react';
+import { Bus, Car, Users, Building, Loader2, Home, Briefcase, Clock, FilePlus, UserCheck, DollarSign, Timer, CarTaxiFront, Info, X, Mail, Phone, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const containerVariants = {
@@ -81,8 +81,35 @@ const SubscriptionForm = ({ setDialogOpen }: { setDialogOpen: (open: boolean) =>
 
     const form = useForm<TransportSubscriptionFormValues>({
         resolver: zodResolver(transportSubscriptionFormSchema),
-        defaultValues: { residence: '', workplace: '', departureTime: '', returnTime: '' },
+        defaultValues: {
+            fullName: user?.displayName || '',
+            email: user?.email || '',
+            phone: '',
+            address: '',
+            district: '',
+            city: '',
+            workplace: '',
+            departureTime: '',
+            returnTime: '',
+        },
     });
+    
+    useEffect(() => {
+        if (user) {
+            form.reset({
+                fullName: user.displayName || '',
+                email: user.email || '',
+                phone: user.phoneNumber || '',
+                address: '',
+                district: '',
+                city: '',
+                workplace: '',
+                departureTime: '',
+                returnTime: '',
+            });
+        }
+    }, [user, form]);
+
 
     async function onSubmit(data: TransportSubscriptionFormValues) {
         if (!user) {
@@ -94,9 +121,9 @@ const SubscriptionForm = ({ setDialogOpen }: { setDialogOpen: (open: boolean) =>
             const subscriptionData = {
                 ...data,
                 userId: user.uid,
-                transportType: 'entreprise',
+                transportType: 'entreprise', // Defaulting to 'entreprise' as per model
                 status: 'pending',
-                price: 150,
+                price: 150, // Default price
                 createdAt: serverTimestamp(),
             };
             const subscriptionsCollection = collection(firestore, 'users', user.uid, 'transport_subscriptions');
@@ -114,37 +141,88 @@ const SubscriptionForm = ({ setDialogOpen }: { setDialogOpen: (open: boolean) =>
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="residence" render={({ field }) => (
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="space-y-4">
+                    <h4 className="text-lg font-medium">Informations Personnelles</h4>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="fullName" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel className="flex items-center gap-1"><User className="h-4 w-4"/>Nom Complet</FormLabel>
+                              <FormControl><Input placeholder="Ex: John Doe" {...field} /></FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                      <FormField control={form.control} name="phone" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel className="flex items-center gap-1"><Phone className="h-4 w-4"/>Téléphone</FormLabel>
+                              <FormControl><Input placeholder="Ex: 0812345678" {...field} /></FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                    </div>
+                    <FormField control={form.control} name="email" render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="flex items-center gap-1"><Home className="h-4 w-4"/> Commune de résidence</FormLabel>
-                            <FormControl><Input placeholder="Ex: Limete" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="workplace" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center gap-1"><Briefcase className="h-4 w-4"/>Lieu de travail</FormLabel>
-                            <FormControl><Input placeholder="Ex: Gombe" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="departureTime" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center gap-1"><Clock className="h-4 w-4"/>Heure de départ</FormLabel>
-                            <FormControl><Input type="time" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="returnTime" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center gap-1"><Clock className="h-4 w-4"/>Heure de retour</FormLabel>
-                            <FormControl><Input type="time" {...field} /></FormControl>
+                            <FormLabel className="flex items-center gap-1"><Mail className="h-4 w-4"/>Email</FormLabel>
+                            <FormControl><Input type="email" placeholder="Ex: john.doe@example.com" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
                 </div>
+
+                <div className="space-y-4">
+                    <h4 className="text-lg font-medium">Adresse de Résidence</h4>
+                    <FormField control={form.control} name="address" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-1"><MapPin className="h-4 w-4"/>Adresse</FormLabel>
+                            <FormControl><Input placeholder="Ex: 123, Av. de la Justice" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="district" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Quartier</FormLabel>
+                                <FormControl><Input placeholder="Ex: Royal" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="city" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Commune</FormLabel>
+                                <FormControl><Input placeholder="Ex: Gombe" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
+                </div>
+
+                 <div className="space-y-4">
+                    <h4 className="text-lg font-medium">Informations sur le Trajet</h4>
+                    <FormField control={form.control} name="workplace" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-1"><Briefcase className="h-4 w-4"/>Lieu de travail</FormLabel>
+                            <FormControl><Input placeholder="Ex: Immeuble ABC, Gombe" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="departureTime" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-1"><Clock className="h-4 w-4"/>Heure de départ</FormLabel>
+                                <FormControl><Input type="time" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="returnTime" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-1"><Clock className="h-4 w-4"/>Heure de retour</FormLabel>
+                                <FormControl><Input type="time" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
+                </div>
+
                 <Button type="submit" disabled={isSubmitting} className="w-full">
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Envoyer ma demande
@@ -161,7 +239,7 @@ const SubscriptionDialog = () => {
             <DialogTrigger asChild>
                 <Button><FilePlus className="mr-2 h-4 w-4" />S'abonner</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px]">
+            <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Demande d'abonnement</DialogTitle>
                     <DialogDescription>Remplissez ce formulaire pour être ajouté à notre liste d'attente. Nous vous regrouperons avec d'autres personnes ayant des trajets similaires.</DialogDescription>
@@ -253,7 +331,7 @@ const SubscriptionStatus = ({ subscription }: { subscription: WithId<TransportSu
                 {subscription?.status === 'active' && (
                     <div className="grid md:grid-cols-2 gap-4 text-sm">
                         <div className="space-y-2">
-                            <p><strong>Trajet:</strong> {subscription.residence} ↔ {subscription.workplace}</p>
+                            <p><strong>Trajet:</strong> {subscription.city} ↔ {subscription.workplace}</p>
                             <p><strong>Heures:</strong> {subscription.departureTime} → {subscription.returnTime}</p>
                             <p><strong>Chauffeur:</strong> {subscription.driverName || 'Non assigné'}</p>
                             <p><strong>Tel. Chauffeur:</strong> {subscription.driverPhone || 'N/A'}</p>
@@ -266,10 +344,60 @@ const SubscriptionStatus = ({ subscription }: { subscription: WithId<TransportSu
                         </div>
                     </div>
                 )}
+                 {subscription?.status === 'rejected' && subscription.rejectionReason && 
+                    <Alert variant="destructive" className="text-left">
+                        <AlertTitle>Raison du rejet</AlertTitle>
+                        <AlertDescription>{subscription.rejectionReason}</AlertDescription>
+                    </Alert>
+                 }
             </CardContent>
         </Card>
     );
 }
+
+const SubscriptionAction = ({ subscription, isLoading }: { subscription: WithId<TransportSubscription> | undefined, isLoading: boolean}) => {
+    const { user } = useUser();
+
+    if (isLoading) {
+        return <Skeleton className="h-24 w-full" />;
+    }
+
+    if (!user) {
+        return (
+            <Card className="text-center">
+                <CardHeader>
+                    <CardTitle>Connectez-vous pour vous abonner</CardTitle>
+                    <CardDescription>Pour gérer votre abonnement, veuillez d'abord vous connecter ou créer un compte.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button asChild><Link href="/login">Se connecter</Link></Button>
+                </CardContent>
+            </Card>
+        );
+    }
+    
+    if (!subscription || ['rejected', 'cancelled'].includes(subscription.status)) {
+        return (
+            <Card className="text-center">
+                <CardHeader>
+                    <CardTitle>Prêt à commencer ?</CardTitle>
+                    <CardDescription>
+                        {!subscription
+                            ? "Vous n'avez pas d'abonnement en cours. Faites une demande pour commencer."
+                            : "Votre abonnement précédent n'est plus actif. Faites une nouvelle demande."}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <SubscriptionDialog />
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // If there's a subscription in any other state (pending, approved, active), show its status.
+    return <SubscriptionStatus subscription={subscription} />;
+}
+
 
 export default function TransportPage() {
     const { user, isUserLoading } = useUser();
@@ -281,8 +409,6 @@ export default function TransportPage() {
     const subscription = subscriptions?.[0] as WithId<TransportSubscription> | undefined;
 
     const isLoading = isUserLoading || isSubscriptionLoading;
-    const canSubscribe = !subscription || ['rejected', 'cancelled'].includes(subscription.status);
-    const hasActiveSubscription = subscription && !['rejected', 'cancelled'].includes(subscription.status);
 
     return (
         <div className="w-full h-full overflow-y-auto pr-2">
@@ -295,7 +421,7 @@ export default function TransportPage() {
 
                 <motion.section variants={itemVariants} className="p-6 rounded-lg bg-card border">
                      <h3 className="font-semibold text-lg mb-1">Modèle d'abonnement</h3>
-                     <p className="text-muted-foreground">Un paiement mensuel unique via Mobile Money pour des trajets quotidiens (aller-retour) assurés.</p>
+                     <p className="text-muted-foreground">Un paiement mensuel unique  via Mobile Money pour des trajets quotidiens (aller-retour) assurés.</p>
                 </motion.section>
 
                 <motion.section variants={itemVariants}>
@@ -317,48 +443,9 @@ export default function TransportPage() {
 
                 <motion.section variants={itemVariants}>
                     <h2 className="text-2xl font-bold text-center mb-6">Mon Abonnement</h2>
-                    {isLoading ? (
-                        <Skeleton className="h-48 w-full" />
-                    ) : user ? (
-                        hasActiveSubscription ? (
-                            <SubscriptionStatus subscription={subscription} />
-                        ) : (
-                            <Card className="text-center">
-                                <CardHeader>
-                                    <CardTitle>Prêt à commencer ?</CardTitle>
-                                    <CardDescription>
-                                        {canSubscribe && !subscription
-                                            ? "Vous n'avez pas d'abonnement en cours. Faites une demande pour commencer."
-                                            : "Votre abonnement précédent n'est plus actif. Faites une nouvelle demande."}
-                                    </CardDescription>
-                                     {subscription?.status === 'rejected' && subscription.rejectionReason && 
-                                        <Alert variant="destructive" className="text-left">
-                                            <AlertTitle>Raison du rejet</AlertTitle>
-                                            <AlertDescription>{subscription.rejectionReason}</AlertDescription>
-                                        </Alert>
-                                     }
-                                </CardHeader>
-                                <CardContent>
-                                    <SubscriptionDialog />
-                                </CardContent>
-                            </Card>
-                        )
-                    ) : (
-                         <Card className="text-center">
-                            <CardHeader>
-                                <CardTitle>Connectez-vous pour vous abonner</CardTitle>
-                                <CardDescription>Pour gérer votre abonnement, veuillez d'abord vous connecter ou créer un compte.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Button asChild><Link href="/login">Se connecter</Link></Button>
-                            </CardContent>
-                        </Card>
-                    )}
+                    <SubscriptionAction subscription={subscription} isLoading={isLoading} />
                 </motion.section>
             </motion.div>
         </div>
     );
 }
-    
-
-    

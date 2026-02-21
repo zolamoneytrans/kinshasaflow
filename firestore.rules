@@ -177,14 +177,16 @@ service cloud.firestore {
       }
 
       /**
-       * @description Secures user transport subscription requests. This data is private.
+       * @description Secures user transport subscription requests. This data is private
+       *   to the user, but can be read and updated by an admin.
        * @path /users/{userId}/transport_subscriptions/{subscriptionId}
        * @allow (create) An authenticated user creating a subscription request for themselves.
-       * @principle Enforces strict data ownership for user subscription data.
+       * @principle Enforces strict data ownership while allowing for admin oversight.
        */
       match /transport_subscriptions/{subscriptionId} {
-        allow read, update, delete: if isOwner(userId);
+        allow read, delete: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && hasValidSubscriptionDataOnCreate(userId);
+        allow update: if isOwner(userId) || isAdmin();
       }
     }
   }

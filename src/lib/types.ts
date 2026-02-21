@@ -231,8 +231,13 @@ export type LogementFormValues = z.infer<typeof logementFormSchema>;
 
 // Schema for Transport Subscription Form
 export const transportSubscriptionFormSchema = z.object({
-  residence: z.string().min(3, "Veuillez indiquer votre commune de résidence."),
-  workplace: z.string().min(3, "Veuillez indiquer votre lieu de travail."),
+  fullName: z.string().min(3, "Le nom complet est requis."),
+  phone: z.string().min(9, "Un numéro de téléphone valide est requis."),
+  email: z.string().email("L'adresse e-mail n'est pas valide."),
+  address: z.string().min(5, "L'adresse de résidence est requise."),
+  district: z.string().min(3, "Le quartier de résidence est requis."),
+  city: z.string().min(3, "La commune de résidence est requise."),
+  workplace: z.string().min(3, "Le lieu de travail est requis."),
   departureTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Veuillez entrer une heure valide (HH:MM)."),
   returnTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Veuillez entrer une heure valide (HH:MM)."),
 });

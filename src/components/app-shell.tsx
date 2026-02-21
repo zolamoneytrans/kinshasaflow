@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -13,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarHeader,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { UserNav } from './auth/user-nav';
 import { useUser } from '@/firebase';
@@ -64,6 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/map') return 'Carte du Trafic';
     if (pathname === '/login') return 'Se connecter';
     if (pathname === '/signup') return "S'inscrire";
+    if (pathname.startsWith('/admin')) return 'Tableau de Bord Admin';
     return 'Kinshasa Flow';
   }
 
@@ -83,6 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/map') return 'Visualisez le trafic en temps réel à Kinshasa.';
     if (pathname === '/login') return 'Accédez à votre compte pour contribuer.';
     if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
+    if (pathname === '/admin/transport') return 'Gérer les abonnements au transport.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -207,6 +210,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              {isAdmin && (
+                <>
+                  <SidebarSeparator className="my-2" />
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/admin')} tooltip={{children: "Admin Transport"}}>
+                      <Link href="/admin/transport">
+                        <Shield />
+                        <span>Admin Transport</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
             </SidebarMenu>
           </SidebarContent>
         </Sidebar>

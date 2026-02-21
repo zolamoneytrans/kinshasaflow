@@ -9,6 +9,7 @@ import { collection, query, orderBy, limit, serverTimestamp, doc, updateDoc } fr
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { differenceInDays, addDays } from 'date-fns';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -93,9 +94,9 @@ const SubscriptionForm = ({ setDialogOpen }: { setDialogOpen: (open: boolean) =>
             const subscriptionData = {
                 ...data,
                 userId: user.uid,
-                transportType: 'entreprise', // Defaulting to this as it's the main featured one
+                transportType: 'entreprise',
                 status: 'pending',
-                price: 150, // Default price
+                price: 150,
                 createdAt: serverTimestamp(),
             };
             const subscriptionsCollection = collection(firestore, 'users', user.uid, 'transport_subscriptions');
@@ -171,17 +172,10 @@ const SubscriptionDialog = () => {
     );
 };
 
-const SubscriptionStatus = () => {
-    const { user, isUserLoading } = useUser();
-    const { firestore } = useFirebase();
+const SubscriptionStatus = ({ subscription }: { subscription: WithId<TransportSubscription> | undefined }) => {
+    const { user, firestore } = useFirebase();
     const { toast } = useToast();
     const [isPaying, setIsPaying] = useState(false);
-
-    const subscriptionsCollection = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'transport_subscriptions') : null, [firestore, user]);
-    const subscriptionsQuery = useMemoFirebase(() => subscriptionsCollection ? query(subscriptionsCollection, orderBy('createdAt', 'desc'), limit(1)) : null, [subscriptionsCollection]);
-    const { data: subscriptions, isLoading: isSubscriptionLoading } = useCollection<TransportSubscription>(subscriptionsQuery);
-    const subscription = subscriptions?.[0] as WithId<TransportSubscription> | undefined;
-
     const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
     useEffect(() => {
@@ -219,26 +213,9 @@ const SubscriptionStatus = () => {
             setIsPaying(false);
         }
     };
-
-    if (isUserLoading || isSubscriptionLoading) {
-        return <Skeleton className="h-48 w-full" />;
-    }
-
-    if (!subscription) {
-        return (
-            <Card className="text-center">
-                <CardHeader>
-                    <CardTitle>Aucun Abonnement Actif</CardTitle>
-                    <CardDescription>Vous n'avez pas d'abonnement en cours. Faites une demande pour commencer.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <SubscriptionDialog />
-                </CardContent>
-            </Card>
-        );
-    }
     
     const StatusBadge = () => {
+        if (!subscription) return null;
         const statusConfig = {
             pending: { variant: "secondary", label: "En attente", icon: Timer },
             approved: { variant: "default", label: "Approuvé", icon: UserCheck },
@@ -259,10 +236,9 @@ const SubscriptionStatus = () => {
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
-                {subscription.status === 'pending' && <Alert><Timer className="h-4 w-4" /><AlertTitle>Demande en cours d'examen</AlertTitle><AlertDescription>Votre demande est en cours de traitement. Nous vous notifierons dès qu'elle sera approuvée.</AlertDescription></Alert>}
-                {subscription.status === 'rejected' && <Alert variant="destructive"><X className="h-4 w-4" /><AlertTitle>Demande Rejetée</AlertTitle><AlertDescription>{subscription.rejectionReason || "Votre demande n'a pas pu être approuvée pour le moment. Veuillez contacter le support pour plus d'informations."}</AlertDescription></Alert>}
+                {subscription?.status === 'pending' && <Alert><Timer className="h-4 w-4" /><AlertTitle>Demande en cours d'examen</AlertTitle><AlertDescription>Votre demande est en cours de traitement. Nous vous notifierons dès qu'elle sera approuvée.</AlertDescription></Alert>}
                 
-                {subscription.status === 'approved' && (
+                {subscription?.status === 'approved' && (
                   <Alert variant="default">
                       <DollarSign className="h-4 w-4" />
                       <AlertTitle>Abonnement Approuvé !</AlertTitle>
@@ -274,7 +250,7 @@ const SubscriptionStatus = () => {
                   </Alert>
                 )}
                 
-                {subscription.status === 'active' && (
+                {subscription?.status === 'active' && (
                     <div className="grid md:grid-cols-2 gap-4 text-sm">
                         <div className="space-y-2">
                             <p><strong>Trajet:</strong> {subscription.residence} ↔ {subscription.workplace}</p>
@@ -291,16 +267,23 @@ const SubscriptionStatus = () => {
                     </div>
                 )}
             </CardContent>
-            {['rejected', 'cancelled'].includes(subscription.status) && (
-                <CardFooter>
-                    <SubscriptionDialog />
-                </CardFooter>
-            )}
         </Card>
     );
 }
 
 export default function TransportPage() {
+    const { user, isUserLoading } = useUser();
+    const { firestore } = useFirebase();
+
+    const subscriptionsCollection = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'transport_subscriptions') : null, [firestore, user]);
+    const subscriptionsQuery = useMemoFirebase(() => subscriptionsCollection ? query(subscriptionsCollection, orderBy('createdAt', 'desc'), limit(1)) : null, [subscriptionsCollection]);
+    const { data: subscriptions, isLoading: isSubscriptionLoading } = useCollection<TransportSubscription>(subscriptionsQuery);
+    const subscription = subscriptions?.[0] as WithId<TransportSubscription> | undefined;
+
+    const isLoading = isUserLoading || isSubscriptionLoading;
+    const canSubscribe = !subscription || ['rejected', 'cancelled'].includes(subscription.status);
+    const hasActiveSubscription = subscription && !['rejected', 'cancelled'].includes(subscription.status);
+
     return (
         <div className="w-full h-full overflow-y-auto pr-2">
             <motion.div className="max-w-6xl mx-auto space-y-12 py-4" variants={containerVariants} initial="hidden" animate="visible">
@@ -334,11 +317,48 @@ export default function TransportPage() {
 
                 <motion.section variants={itemVariants}>
                     <h2 className="text-2xl font-bold text-center mb-6">Mon Abonnement</h2>
-                    <SubscriptionStatus />
+                    {isLoading ? (
+                        <Skeleton className="h-48 w-full" />
+                    ) : user ? (
+                        hasActiveSubscription ? (
+                            <SubscriptionStatus subscription={subscription} />
+                        ) : (
+                            <Card className="text-center">
+                                <CardHeader>
+                                    <CardTitle>Prêt à commencer ?</CardTitle>
+                                    <CardDescription>
+                                        {canSubscribe && !subscription
+                                            ? "Vous n'avez pas d'abonnement en cours. Faites une demande pour commencer."
+                                            : "Votre abonnement précédent n'est plus actif. Faites une nouvelle demande."}
+                                    </CardDescription>
+                                     {subscription?.status === 'rejected' && subscription.rejectionReason && 
+                                        <Alert variant="destructive" className="text-left">
+                                            <AlertTitle>Raison du rejet</AlertTitle>
+                                            <AlertDescription>{subscription.rejectionReason}</AlertDescription>
+                                        </Alert>
+                                     }
+                                </CardHeader>
+                                <CardContent>
+                                    <SubscriptionDialog />
+                                </CardContent>
+                            </Card>
+                        )
+                    ) : (
+                         <Card className="text-center">
+                            <CardHeader>
+                                <CardTitle>Connectez-vous pour vous abonner</CardTitle>
+                                <CardDescription>Pour gérer votre abonnement, veuillez d'abord vous connecter ou créer un compte.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Button asChild><Link href="/login">Se connecter</Link></Button>
+                            </CardContent>
+                        </Card>
+                    )}
                 </motion.section>
-
             </motion.div>
         </div>
     );
 }
+    
+
     

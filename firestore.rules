@@ -147,7 +147,7 @@ service cloud.firestore {
     // This rule specifically enables the admin's collection group query on subscriptions.
     // It allows an admin to list all documents across all 'transport_subscriptions' collections.
     match /{path=**}/transport_subscriptions/{subscriptionId} {
-      allow list: if isAdmin();
+      allow read: if isAdmin();
     }
 
     /**
@@ -191,10 +191,9 @@ service cloud.firestore {
        */
       match /transport_subscriptions/{subscriptionId} {
         // GET is allowed for the owner or an admin.
-        // LIST is only allowed for the owner on their own collection.
-        // The admin's collection group LIST is handled by the broader rule above.
+        // LIST is allowed for the owner on their own collection OR for an admin querying any collection.
         allow get, delete: if isOwner(userId) || isAdmin();
-        allow list: if isOwner(userId);
+        allow list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && hasValidSubscriptionDataOnCreate(userId);
         allow update: if isOwner(userId) || isAdmin();
       }

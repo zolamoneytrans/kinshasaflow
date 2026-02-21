@@ -101,11 +101,11 @@ service cloud.firestore {
     
     /**
      * @description Allows the admin to perform a collection group query to list all transport subscriptions.
-     * This is essential for the admin dashboard.
+     * This is essential for the admin dashboard and does not conflict with user-specific rules.
      * @path /{path=**}/transport_subscriptions/{subscriptionId}
      */
     match /{path=**}/transport_subscriptions/{subscriptionId} {
-        allow list: if isAdmin();
+        allow get, list: if isAdmin();
     }
 
     // Collection Rules
@@ -189,17 +189,20 @@ service cloud.firestore {
 
       /**
        * @description Secures user transport subscription requests for direct access.
-       * A user can list their own subscriptions. An admin can perform broader queries
-       * via the collection group rule.
+       *   This rule handles permissions for both individual users and admins on specific
+       *   documents or user-specific queries.
        * @path /users/{userId}/transport_subscriptions/{subscriptionId}
        * @principle Enforces strict data ownership while allowing for admin oversight.
        */
       match /transport_subscriptions/{subscriptionId} {
-        // A user can access their own subscription, and an admin can access any.
+        // GET/UPDATE/DELETE: A user can access their own subscription, and an admin can access any.
         allow get, update, delete: if isOwner(userId) || isAdmin();
-        // A user can list THEIR OWN subscriptions. An admin can also list all via collection group.
+        
+        // LIST: A user can list THEIR OWN subscriptions. An admin can also list any user's
+        // subscriptions, which resolves conflicts with collection group queries.
         allow list: if isOwner(userId) || isAdmin();
-        // A user can create a subscription for themselves.
+        
+        // CREATE: Only a user can create a subscription for themselves.
         allow create: if isOwner(userId) && hasValidSubscriptionDataOnCreate(userId);
       }
     }

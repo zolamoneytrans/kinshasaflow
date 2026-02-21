@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useUser, useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collectionGroup, query, orderBy, where, Query } from 'firebase/firestore';
 import { WithId, TransportSubscription } from '@/lib/types';
@@ -70,15 +70,30 @@ export default function TransportAdminDashboard() {
     const { firestore } = useFirebase();
     const [activeTab, setActiveTab] = useState<string>('pending');
     
+    // Fetch all subscriptions without server-side filtering/sorting to avoid complex index requirements.
     const subscriptionsQuery = useMemoFirebase(() => {
-        const baseQuery = collectionGroup(firestore, 'transport_subscriptions');
-        if (activeTab === 'all') {
-            return query(baseQuery, orderBy('createdAt', 'desc'));
-        }
-        return query(baseQuery, where('status', '==', activeTab), orderBy('createdAt', 'desc'));
-    }, [firestore, activeTab]);
+        if (!firestore) return null;
+        return collectionGroup(firestore, 'transport_subscriptions');
+    }, [firestore]);
 
-    const { data: subscriptions, isLoading } = useCollection<TransportSubscription>(subscriptionsQuery);
+    const { data: allSubscriptions, isLoading } = useCollection<TransportSubscription>(subscriptionsQuery);
+
+    // Perform filtering and sorting on the client-side.
+    const subscriptions = useMemo(() => {
+        if (!allSubscriptions) return null;
+        
+        const filtered = activeTab === 'all'
+            ? allSubscriptions
+            : allSubscriptions.filter(sub => sub.status === activeTab);
+
+        // Sort by creation date descending.
+        return filtered.sort((a, b) => {
+            const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+            const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+            return dateB.getTime() - dateA.getTime();
+        });
+
+    }, [allSubscriptions, activeTab]);
     
     const subscriptionsWithPath = subscriptions?.map(sub => ({
         ...sub,
@@ -111,7 +126,7 @@ export default function TransportAdminDashboard() {
                                         {subscriptions && activeTab === tab.value && (
                                             <Badge variant="secondary" className="ml-2">{subscriptions.length}</Badge>
                                         )}
-                                    </TabsTrigger>
+                                     </TabsTrigger>
                                 ))}
                             </TabsList>
                             <div className="mt-4 border rounded-md">

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { TransportSubscription, transportSubscriptionFormSchema, TransportSubscriptionFormValues, WithId } from '@/lib/types';
 import { useFirebase, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { differenceInDays, addDays } from 'date-fns';
@@ -174,11 +174,13 @@ const SubscriptionDialog = () => {
 const SubscriptionStatus = () => {
     const { user, isUserLoading } = useUser();
     const { firestore } = useFirebase();
+    const { toast } = useToast();
+    const [isPaying, setIsPaying] = useState(false);
 
     const subscriptionsCollection = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'transport_subscriptions') : null, [firestore, user]);
     const subscriptionsQuery = useMemoFirebase(() => subscriptionsCollection ? query(subscriptionsCollection, orderBy('createdAt', 'desc'), limit(1)) : null, [subscriptionsCollection]);
     const { data: subscriptions, isLoading: isSubscriptionLoading } = useCollection<TransportSubscription>(subscriptionsQuery);
-    const subscription = subscriptions?.[0];
+    const subscription = subscriptions?.[0] as WithId<TransportSubscription> | undefined;
 
     const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
@@ -190,6 +192,33 @@ const SubscriptionStatus = () => {
             setDaysRemaining(remaining > 0 ? remaining : 0);
         }
     }, [subscription]);
+
+    const handlePayment = async () => {
+        if (!subscription || !user) return;
+        
+        setIsPaying(true);
+        const subDocRef = doc(firestore, 'users', user.uid, 'transport_subscriptions', subscription.id);
+        
+        try {
+            await updateDoc(subDocRef, {
+                status: 'active',
+                subscriptionDate: serverTimestamp()
+            });
+            toast({
+                title: "Paiement réussi !",
+                description: "Votre abonnement est maintenant actif.",
+            });
+        } catch (error) {
+            console.error("Error activating subscription:", error);
+            toast({
+                title: "Erreur de paiement",
+                description: "Impossible d'activer votre abonnement. Veuillez réessayer.",
+                variant: 'destructive',
+            });
+        } finally {
+            setIsPaying(false);
+        }
+    };
 
     if (isUserLoading || isSubscriptionLoading) {
         return <Skeleton className="h-48 w-full" />;
@@ -232,7 +261,18 @@ const SubscriptionStatus = () => {
             <CardContent className="space-y-4">
                 {subscription.status === 'pending' && <Alert><Timer className="h-4 w-4" /><AlertTitle>Demande en cours d'examen</AlertTitle><AlertDescription>Votre demande est en cours de traitement. Nous vous notifierons dès qu'elle sera approuvée.</AlertDescription></Alert>}
                 {subscription.status === 'rejected' && <Alert variant="destructive"><X className="h-4 w-4" /><AlertTitle>Demande Rejetée</AlertTitle><AlertDescription>{subscription.rejectionReason || "Votre demande n'a pas pu être approuvée pour le moment. Veuillez contacter le support pour plus d'informations."}</AlertDescription></Alert>}
-                {subscription.status === 'approved' && <Alert variant="default"><DollarSign className="h-4 w-4" /><AlertTitle>Abonnement Approuvé !</AlertTitle><AlertDescription>Votre abonnement a été approuvé. Veuillez procéder au paiement de ${subscription.price} pour l'activer.</AlertDescription><Button className="mt-4 w-full"><DollarSign className="mr-2 h-4 w-4" /> Payer ${subscription.price}</Button></Alert>}
+                
+                {subscription.status === 'approved' && (
+                  <Alert variant="default">
+                      <DollarSign className="h-4 w-4" />
+                      <AlertTitle>Abonnement Approuvé !</AlertTitle>
+                      <AlertDescription>Votre abonnement a été approuvé. Veuillez procéder au paiement de ${subscription.price} pour l'activer.</AlertDescription>
+                      <Button className="mt-4 w-full" onClick={handlePayment} disabled={isPaying}>
+                          {isPaying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DollarSign className="mr-2 h-4 w-4" />}
+                           Payer ${subscription.price}
+                      </Button>
+                  </Alert>
+                )}
                 
                 {subscription.status === 'active' && (
                     <div className="grid md:grid-cols-2 gap-4 text-sm">
@@ -301,3 +341,4 @@ export default function TransportPage() {
         </div>
     );
 }
+    

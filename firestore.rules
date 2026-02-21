@@ -197,8 +197,8 @@ service cloud.firestore {
       match /transport_subscriptions/{subscriptionId} {
         // A user can access their own subscription, and an admin can access any.
         allow get, update, delete: if isOwner(userId) || isAdmin();
-        // A user can list THEIR OWN subscriptions.
-        allow list: if isOwner(userId);
+        // A user can list THEIR OWN subscriptions. An admin can also list all via collection group.
+        allow list: if isOwner(userId) || isAdmin();
         // A user can create a subscription for themselves.
         allow create: if isOwner(userId) && hasValidSubscriptionDataOnCreate(userId);
       }

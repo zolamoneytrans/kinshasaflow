@@ -127,7 +127,7 @@ const SubscriptionForm = ({ setDialogOpen }: { setDialogOpen: (open: boolean) =>
                             <FormLabel className="flex items-center gap-1"><Briefcase className="h-4 w-4"/>Lieu de travail</FormLabel>
                             <FormControl><Input placeholder="Ex: Gombe" {...field} /></FormControl>
                             <FormMessage />
-                        </Item>
+                        </FormItem>
                     )} />
                     <FormField control={form.control} name="departureTime" render={({ field }) => (
                         <FormItem>
@@ -141,7 +141,7 @@ const SubscriptionForm = ({ setDialogOpen }: { setDialogOpen: (open: boolean) =>
                             <FormLabel className="flex items-center gap-1"><Clock className="h-4 w-4"/>Heure de retour</FormLabel>
                             <FormControl><Input type="time" {...field} /></FormControl>
                             <FormMessage />
-                        </Item>
+                        </FormItem>
                     )} />
                 </div>
                 <Button type="submit" disabled={isSubmitting} className="w-full">

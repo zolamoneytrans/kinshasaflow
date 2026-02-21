@@ -229,7 +229,7 @@ export const logementFormSchema = z.object({
 });
 export type LogementFormValues = z.infer<typeof logementFormSchema>;
 
-// Schema for Transport Subscription
+// Schema for Transport Subscription Form
 export const transportSubscriptionFormSchema = z.object({
   residence: z.string().min(3, "Veuillez indiquer votre commune de résidence."),
   workplace: z.string().min(3, "Veuillez indiquer votre lieu de travail."),
@@ -238,10 +238,19 @@ export const transportSubscriptionFormSchema = z.object({
 });
 export type TransportSubscriptionFormValues = z.infer<typeof transportSubscriptionFormSchema>;
 
+// Schema for Transport Subscription document in Firestore
 export const transportSubscriptionSchema = transportSubscriptionFormSchema.extend({
     userId: z.string(),
-    transportType: z.enum(['corporate', 'carpool', 'private_taxi', 'minibus']),
-    status: z.enum(['pending', 'active', 'cancelled']),
+    transportType: z.enum(['covoiturage', 'taxi_prive', 'mini_bus', 'entreprise']),
+    status: z.enum(['pending', 'approved', 'active', 'rejected', 'cancelled']),
+    price: z.number().positive().optional(),
+    rejectionReason: z.string().optional(),
+    subscriptionDate: z.instanceof(Timestamp).or(z.any()).optional(),
+    carType: z.string().optional(),
+    carColor: z.string().optional(),
+    licensePlate: z.string().optional(),
+    driverName: z.string().optional(),
+    driverPhone: z.string().optional(),
     createdAt: z.instanceof(Timestamp).or(z.any()),
 });
 export type TransportSubscription = z.infer<typeof transportSubscriptionSchema>;

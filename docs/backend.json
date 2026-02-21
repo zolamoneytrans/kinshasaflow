@@ -171,7 +171,7 @@
     "TransportSubscription": {
       "title": "Transport Subscription",
       "type": "object",
-      "description": "Represents a user's subscription to an organized transport service.",
+      "description": "Represents a user's subscription to an organized transport service, including details about the service, payment, and vehicle.",
       "properties": {
         "userId": {
           "type": "string",
@@ -181,7 +181,10 @@
           "type": "string",
           "description": "Type of transport service subscribed to.",
           "enum": [
-            "corporate"
+            "covoiturage",
+            "taxi_prive",
+            "mini_bus",
+            "entreprise"
           ]
         },
         "residence": {
@@ -202,13 +205,47 @@
         },
         "status": {
           "type": "string",
-          "description": "The current status of the subscription request.",
+          "description": "The current status of the subscription.",
           "enum": [
             "pending",
+            "approved",
             "active",
-            "waitlisted",
+            "rejected",
             "cancelled"
           ]
+        },
+        "price": {
+          "type": "number",
+          "description": "The monthly subscription price in USD, set by the admin."
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "Reason for rejection, if status is 'rejected'."
+        },
+        "subscriptionDate": {
+          "type": "string",
+          "description": "Timestamp when the subscription becomes active (after payment).",
+          "format": "date-time"
+        },
+        "carType": {
+          "type": "string",
+          "description": "The type/model of the assigned vehicle."
+        },
+        "carColor": {
+          "type": "string",
+          "description": "The color of the assigned vehicle."
+        },
+        "licensePlate": {
+          "type": "string",
+          "description": "The license plate of the assigned vehicle."
+        },
+        "driverName": {
+          "type": "string",
+          "description": "The name of the assigned driver."
+        },
+        "driverPhone": {
+          "type": "string",
+          "description": "The phone number of the assigned driver."
         },
         "createdAt": {
           "type": "string",

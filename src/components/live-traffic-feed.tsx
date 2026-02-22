@@ -3,9 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { TrafficReport, dummyReports } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge, badgeVariants } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { Clock, Activity } from 'lucide-react';
-import { type VariantProps } from 'class-variance-authority';
 import { AnimatePresence, motion } from 'framer-motion';
 
 type LiveReport = TrafficReport & { id: number; time: string };
@@ -14,19 +13,15 @@ const MAX_LIVE_REPORTS = 15;
 const UPDATE_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
 const SeverityBadge = ({ severity }: { severity: TrafficReport['severity'] }) => {
-    const variant: VariantProps<typeof badgeVariants>['variant'] = {
-        low: 'success',
-        medium: 'secondary',
-        high: 'destructive',
-    }[severity];
-    
-    const severityText = {
-        low: 'Faible',
-        medium: 'Moyen',
-        high: 'Élevé'
-    }[severity];
+    const severityMap = {
+        low: { variant: 'success', text: 'Faible' },
+        medium: { variant: 'secondary', text: 'Moyen' },
+        high: { variant: 'destructive', text: 'Élevé' },
+    } as const;
 
-    return <Badge variant={variant}>{severityText}</Badge>;
+    const { variant, text } = severityMap[severity];
+
+    return <Badge variant={variant}>{text}</Badge>;
 }
 
 const LiveReportItem = ({ report }: { report: LiveReport }) => (

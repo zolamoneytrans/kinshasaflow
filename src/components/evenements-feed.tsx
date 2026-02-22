@@ -25,19 +25,15 @@ import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
 const SeverityBadge = ({ severity }: { severity: EventReport['severity'] }) => {
-    const variant: VariantProps<typeof badgeVariants>['variant'] = {
-        low: 'success',
-        medium: 'secondary',
-        high: 'destructive',
-    }[severity];
-    
-    const severityText = {
-        low: 'Faible',
-        medium: 'Moyen',
-        high: 'Élevé'
-    }[severity];
+    const severityMap = {
+        low: { variant: 'success', text: 'Faible' },
+        medium: { variant: 'secondary', text: 'Moyen' },
+        high: { variant: 'destructive', text: 'Élevé' },
+    } as const;
 
-    return <Badge variant={variant}>{severityText}</Badge>;
+    const { variant, text } = severityMap[severity];
+
+    return <Badge variant={variant}>{text}</Badge>;
 }
 
 const Comment = ({ comment }: { comment: WithId<CommentType> }) => {

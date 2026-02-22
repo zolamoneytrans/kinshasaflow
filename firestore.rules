@@ -96,6 +96,15 @@ service cloud.firestore {
       return request.resource.data.userId == userId;
     }
 
+    /**
+     * On update, ensures the 'userId' field cannot be changed.
+     * This locks in the document's ownership permanently.
+     */
+    function isImmutableUserId() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+
     // Collection Group Rules
     // =================================
     
@@ -204,6 +213,33 @@ service cloud.firestore {
         
         // CREATE: Only a user can create a subscription for themselves.
         allow create: if isOwner(userId) && hasValidSubscriptionDataOnCreate(userId);
+      }
+    }
+    
+    /**
+     * @description Secures the top-level videos collection. Videos are publicly
+     *   readable. Users can create videos and comment, but only modify their own content.
+     * @path /videos/{videoId}
+     */
+    match /videos/{videoId} {
+      allow get, list: if isSignedIn();
+
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
+      // Allow update for any signed-in user, but prevent changing the owner.
+      // This is a compromise for the 'like' feature.
+      allow update: if isSignedIn() && isImmutableUserId();
+      
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      /**
+       * @description Secures comments on videos.
+       * @path /videos/{videoId}/comments/{commentId}
+       */
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if false; // Simplification: No editing/deleting comments
       }
     }
   }

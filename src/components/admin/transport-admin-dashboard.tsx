@@ -5,7 +5,8 @@ import { collectionGroup, query, orderBy, where, Query } from 'firebase/firestor
 import { WithId, TransportSubscription } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
+import { type VariantProps } from 'class-variance-authority';
 import { Button } from '@/components/ui/button';
 import { Loader2, Shield, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -37,13 +38,16 @@ const ProtectedAdmin = ({ children }: { children: React.ReactNode }) => {
 const SubscriptionRow = ({ subscription }: { subscription: WithId<TransportSubscription> & { path: string } }) => {
     const [dialogOpen, setDialogOpen] = useState(false);
 
-    const statusConfig = {
+    const statusMap: Record<string, { variant: VariantProps<typeof badgeVariants>['variant'], label: string }> = {
         pending: { variant: "secondary", label: "En attente" },
         approved: { variant: "default", label: "Approuvé" },
         active: { variant: "success", label: "Actif" },
         rejected: { variant: "destructive", label: "Rejeté" },
         cancelled: { variant: "destructive", label: "Annulé" },
-    }[subscription.status] || { variant: "secondary", label: "Inconnu" };
+    };
+
+    const statusConfig = statusMap[subscription.status] ?? { variant: "secondary", label: "Inconnu" };
+
 
     return (
         <TableRow>

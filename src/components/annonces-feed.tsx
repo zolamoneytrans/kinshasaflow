@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Landmark, Calendar, TrendingUp } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-const announcements = {
+const announcements: Record<string, { date: string; title: string; details: string; }[]> = {
   2025: [
     {
       date: "19 mai 2025",
@@ -72,7 +72,7 @@ export default function AnnoncesFeed() {
                                 Annonces de {year}
                             </h2>
                             <div className="space-y-4">
-                                {announcements[year as keyof typeof announcements].map((annonce, index) => (
+                                {announcements[year].map((annonce, index) => (
                                     <AnnonceItem key={index} annonce={annonce} />
                                 ))}
                             </div>

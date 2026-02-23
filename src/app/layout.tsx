@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "Naviguez facilement dans le trafic de Kinshasa.",
   icons: {
     icon: '/icon.svg',
-    apple: '/icon.svg',
+    apple: '/apple-touch-icon.png',
   }
 };
 
@@ -30,6 +30,7 @@ export default function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
         <meta name="theme-color" content="#f7f9fb" />
         <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />

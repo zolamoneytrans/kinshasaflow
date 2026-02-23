@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Activity, Bot, Megaphone, Siren } from 'lucide-react';
+import { Activity, Bot, Megaphone, Siren, Download } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
+import React, { useState, useEffect } from 'react';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -40,6 +41,34 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, titl
 );
 
 export default function WelcomePage() {
+    const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e: Event) => {
+            e.preventDefault();
+            setInstallPrompt(e);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        };
+    }, []);
+
+    const handleInstallClick = () => {
+        if (!installPrompt) return;
+        installPrompt.prompt();
+        installPrompt.userChoice.then((choiceResult: { outcome: string }) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            } else {
+                console.log('User dismissed the install prompt');
+            }
+            setInstallPrompt(null);
+        });
+    };
+
     return (
         <div className="min-h-screen w-full bg-background text-foreground overflow-hidden flex flex-col">
             <div className="absolute inset-0 -z-10 h-full w-full bg-background bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
@@ -74,7 +103,7 @@ export default function WelcomePage() {
                     <motion.p variants={itemVariants} className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-10">
                         Recevez des mises à jour sur le trafic en temps réel, signalez les incidents et utilisez notre assistant IA pour trouver le meilleur itinéraire. Roulez plus intelligemment avec Kinshasa Flow.
                     </motion.p>
-                    <motion.div variants={itemVariants} className="flex justify-center">
+                    <motion.div variants={itemVariants} className="flex flex-wrap justify-center gap-4">
                         <motion.div
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -83,6 +112,17 @@ export default function WelcomePage() {
                                 <Link href="/reports">Entrer dans l'application</Link>
                             </Button>
                         </motion.div>
+                        {installPrompt && (
+                             <motion.div
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <Button onClick={handleInstallClick} size="lg" variant="outline" className="text-lg py-7 px-8">
+                                    <Download className="mr-2 h-5 w-5" />
+                                    Installer l'app
+                                </Button>
+                            </motion.div>
+                        )}
                     </motion.div>
                 </motion.div>
             </main>

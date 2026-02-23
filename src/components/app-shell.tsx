@@ -123,6 +123,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/map'} tooltip={{children: "Carte"}}>
+                  <Link href="/map">
+                    <Map />
+                    <span>Carte</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}}>
                   <Link href="/police-routiere">
                     <Siren />
@@ -191,14 +199,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/assistant">
                     <Bot />
                     <span>Assistant</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/map'} tooltip={{children: "Carte"}}>
-                  <Link href="/map">
-                    <Map />
-                    <span>Carte</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

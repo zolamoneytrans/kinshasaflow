@@ -18,6 +18,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { Phone, Building, DollarSign, BedDouble, PlusCircle, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -66,15 +67,26 @@ const AddLogementDialog = () => {
 
         } catch (error: any) {
             console.error("Image upload error:", error);
+
+            // Handle the specific retryable error with a custom toast and retry action
+            if (error?.code === 'storage/retry-limit-exceeded') {
+                toast({
+                    title: 'Erreur de Téléversement',
+                    description: "La limite de tentatives a été dépassée. Ceci est généralement dû à des règles de sécurité Firebase Storage qui bloquent l'accès. Veuillez vérifier vos règles puis réessayez.",
+                    variant: 'destructive',
+                    duration: 20000,
+                    action: <ToastAction altText="Réessayer le téléversement" onClick={() => onSubmit(data)}>Réessayer</ToastAction>,
+                });
+                setIsSubmitting(false); // Stop loading state to allow retry
+                return;
+            }
+
+            // Handle other general errors
             let description = 'Une erreur est survenue lors du téléversement des images. Veuillez réessayer.';
-            // Firebase Storage errors have a 'code' property.
             if (error && typeof error === 'object' && 'code' in error) {
                 switch (error.code) {
                     case 'storage/unauthorized':
                         description = "Permission de téléversement refusée. Veuillez vérifier que vos règles de sécurité Firebase Storage autorisent l'écriture pour les administrateurs.";
-                        break;
-                    case 'storage/retry-limit-exceeded':
-                        description = "La limite de tentatives a été dépassée. Ceci est généralement dû à des règles de sécurité Firebase Storage qui bloquent l'accès. Veuillez vérifier que vos règles autorisent bien l'écriture sur le chemin 'logements/'.";
                         break;
                     case 'storage/canceled':
                         description = "Le téléversement a été annulé.";
@@ -88,7 +100,7 @@ const AddLogementDialog = () => {
             }
             toast({ title: 'Étape 1/2 Échouée : Erreur de téléversement des images', description, variant: 'destructive', duration: 10000 });
             setIsSubmitting(false);
-            return; // Stop execution if image upload fails
+            return; // Stop execution for non-retryable errors
         }
 
         // STAGE 2: Create Firestore document.

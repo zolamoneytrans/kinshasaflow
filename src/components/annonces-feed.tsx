@@ -5,34 +5,49 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Landmark, Calendar, TrendingUp } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-const announcements: Record<string, { date: string; title: string; details: string; }[]> = {
-  2025: [
-    {
-      date: "19 mai 2025",
-      title: "Réforme de la circulation",
-      details: "Restrictions pour camions et véhicules privés afin de réduire les embouteillages chroniques."
-    },
-    {
-      date: "27 novembre 2025",
-      title: "Modernisation du transport public",
-      details: "Mise en place de taxis fluviaux, billetterie numérique, règles tarifaires renforcées et lutte contre les conducteurs non autorisés."
-    },
-    {
-      date: "1er décembre 2025",
-      title: "Collaboration avec les motocyclistes (Fenamo)",
-      details: "Partenariat avec la Fédération nationale des motos-taxis pour restaurer discipline et solidarité dans le secteur."
-    }
-  ],
-  2026: [
+const announcements: Record<string, { date: string; title: string; details: string }[]> = {
+  '2026': [
     {
       date: "9 février 2026",
-      title: "Projet de 1 000 bus Transco",
-      details: "Acquisition prévue de 1 000 bus Foton via un partenariat public-privé pour renforcer le transport collectif."
+      title: "Acquisition de 1 000 bus TRANSCO",
+      details: "Le gouvernement a annoncé un projet d'acquisition de 1 000 nouveaux bus de marque Foton via un partenariat public-privé pour renforcer le réseau de la société TRANSCO."
     },
     {
-      date: "Début 2026 (suite des annonces de fin 2025)",
-      title: "Transport électrique",
-      details: "Lancement d’un projet ambitieux : 10 000 taxis, 100 000 motos et 500 bus électriques pour moderniser la mobilité et réduire les embouteillages."
+      date: "26 janvier 2026",
+      title: "Déploiement de 3 000 agents de régulation",
+      details: "Lancement d'une mission de grande envergure avec 3 000 agents mixtes pour lutter contre les embouteillages et contrôler la conformité des véhicules (permis, assurances, contrôle technique)."
+    },
+    {
+      date: "19 janvier 2026",
+      title: "Restrictions horaires pour les poids lourds",
+      details: "Le gouverneur a instauré une interdiction de circuler pour les véhicules de plus de 20 tonnes de 22h00 à 05h00 les lundis, mardis et mercredis sur certains axes majeurs comme la Route Nationale 1."
+    },
+    {
+      date: "15 janvier 2026",
+      title: "Réflexion scientifique sur la mobilité",
+      details: "L'Université de Kinshasa (UNIKIN) a organisé un atelier pour proposer des solutions académiques et techniques aux problèmes de saturation du trafic urbain."
+    }
+  ],
+  '2025': [
+    {
+      date: "29 décembre 2025",
+      title: "Partenariat pour les véhicules électriques",
+      details: "Signature d'un accord entre la ville de Kinshasa et le groupe Vingroup pour le déploiement de taxis et bus électriques VinFast, incluant la mise en place de bornes de recharge."
+    },
+    {
+      date: "8 septembre 2025",
+      title: "Reprise du train Kinshasa-Matadi",
+      details: "Annonce de la reprise officielle du trafic ferroviaire entre Kinshasa et le port de Matadi par la SCTP (ex-ONATRA) pour désengorger la route."
+    },
+    {
+      date: "12 mai 2025",
+      title: "Avancement du projet MetroKin",
+      details: "Confirmation du lancement de la première phase du train urbain (25 km reliant la Gare Centrale à l'aéroport de N'Djili). Le projet prévoit de transporter 520 000 passagers par jour."
+    },
+    {
+      date: "10 mars 2025",
+      title: "Alternance de sens unique sur Nguma",
+      details: "Mise en place de mesures de circulation alternée sur les avenues Nguma et de la Tourisme pour fluidifier le trafic pendant les heures de pointe."
     }
   ]
 };
@@ -51,7 +66,7 @@ const AnnonceItem = ({ annonce }: { annonce: { date: string; title: string; deta
 };
 
 export default function AnnoncesFeed() {
-    const years = Object.keys(announcements).sort((a, b) => parseInt(a) - parseInt(b));
+    const years = Object.keys(announcements).sort((a, b) => parseInt(b) - parseInt(a));
 
     return (
         <Card className="flex-1 flex flex-col overflow-hidden">
@@ -88,14 +103,14 @@ export default function AnnoncesFeed() {
                         </h2>
                         <div className="p-4 rounded-lg border bg-accent/50 text-accent-foreground space-y-4">
                            <p>
-                             <strong>2025 :</strong> Accent sur la régulation, la discipline et la diversification (taxis fluviaux, encadrement des motos-taxis).
+                             <strong>2025 :</strong> L'année a été marquée par des projets d'infrastructure majeurs (MetroKin, reprise du train Kinshasa-Matadi) et l'introduction de solutions de mobilité modernes (véhicules électriques, circulation alternée) pour désengorger la ville.
                            </p>
                            <p>
-                             <strong>2026 :</strong> Passage à des projets de grande envergure, avec une forte orientation vers la <strong>modernisation écologique</strong> (bus électriques, taxis et motos électriques) et l’expansion massive du transport collectif.
+                             <strong>2026 :</strong> L'accent est mis sur la régulation et le renforcement. Des mesures strictes (restrictions pour poids lourds, déploiement d'agents) sont combinées à une expansion massive du transport en commun (1 000 bus TRANSCO) pour maîtriser le trafic.
                            </p>
                            <Separator />
                            <p className="font-semibold">
-                            En clair, Kinshasa est passée d’une phase de <strong>réorganisation et discipline</strong> en 2025 à une phase de <strong>modernisation et transition énergétique</strong> en 2026.
+                            En clair, Kinshasa évolue d'une phase d'investissement dans de <strong>nouvelles infrastructures</strong> en 2025 vers une phase de <strong>régulation et de renforcement de l'existant</strong> en 2026.
                            </p>
                         </div>
                     </div>

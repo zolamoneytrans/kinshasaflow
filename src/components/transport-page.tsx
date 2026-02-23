@@ -294,15 +294,27 @@ const SubscriptionStatus = ({ subscription }: { subscription: WithId<TransportSu
     
     const StatusBadge = () => {
         if (!subscription) return null;
-        const statusConfig = {
+    
+        const statusConfigMap = {
             pending: { variant: "secondary", label: "En attente", icon: Timer },
             approved: { variant: "default", label: "Approuvé", icon: UserCheck },
             active: { variant: "success", label: "Actif", icon: UserCheck },
             rejected: { variant: "destructive", label: "Rejeté", icon: X },
             cancelled: { variant: "destructive", label: "Annulé", icon: X },
-        }[subscription.status] || { variant: "secondary", label: "Inconnu", icon: Info };
+        } as const;
+    
+        // The status from the subscription is guaranteed to be one of the keys by our Zod schema
+        const statusConfig = statusConfigMap[subscription.status];
         
-        return <Badge variant={statusConfig.variant} className="flex items-center gap-1.5"><statusConfig.icon className="h-3 w-3"/>{statusConfig.label}</Badge>;
+        // Destructure for cleaner access in JSX
+        const { variant, label, icon: Icon } = statusConfig;
+    
+        return (
+            <Badge variant={variant} className="flex items-center gap-1.5">
+                <Icon className="h-3 w-3" />
+                {label}
+            </Badge>
+        );
     };
 
     return (
@@ -449,3 +461,5 @@ export default function TransportPage() {
         </div>
     );
 }
+
+    

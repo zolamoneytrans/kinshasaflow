@@ -13,12 +13,12 @@ const roadStatsData = {
     repaired: 45,
   },
   damagedStreets: [
-    { name: "Boulevard Lumumba", status: "Réparation urgente requise", severity: "high" },
-    { name: "Avenue Kasa-Vubu", status: "Dommages modérés", severity: "medium" },
-    { name: "Route de Matadi", status: "Plusieurs nids-de-poule signalés", severity: "medium" },
-    { name: "7ème Rue, Limete", status: "En cours de réparation", severity: "low" },
-    { name: "Avenue de l'Université", status: "Affaissement de la chaussée", severity: "high" },
-    { name: "Croisement Victoire", status: "Nid-de-poule géant", severity: "high" },
+    { name: "Boulevard Lumumba", status: "Réparation urgente requise", severity: "high" as const },
+    { name: "Avenue Kasa-Vubu", status: "Dommages modérés", severity: "medium" as const },
+    { name: "Route de Matadi", status: "Plusieurs nids-de-poule signalés", severity: "medium" as const },
+    { name: "7ème Rue, Limete", status: "En cours de réparation", severity: "low" as const },
+    { name: "Avenue de l'Université", status: "Affaissement de la chaussée", severity: "high" as const },
+    { name: "Croisement Victoire", status: "Nid-de-poule géant", severity: "high" as const },
   ],
   bridges: [
     { name: "Pont Matete", status: "Opérationnel", ok: true },
@@ -27,20 +27,16 @@ const roadStatsData = {
   ],
 };
 
-const SeverityBadge = ({ severity }: { severity: string }) => {
-    const variant = {
-        low: 'success',
-        medium: 'secondary',
-        high: 'destructive',
-    }[severity] as VariantProps<typeof badgeVariants>['variant'];
+const SeverityBadge = ({ severity }: { severity: 'low' | 'medium' | 'high' }) => {
+    const severityMap = {
+        low: { variant: 'success', text: 'Faible' },
+        medium: { variant: 'secondary', text: 'Moyen' },
+        high: { variant: 'destructive', text: 'Élevé' }
+    } as const;
 
-    const severityText = {
-        low: 'Faible',
-        medium: 'Moyen',
-        high: 'Élevé'
-    }[severity];
+    const { variant, text } = severityMap[severity];
 
-    return <Badge variant={variant}>{severityText}</Badge>;
+    return <Badge variant={variant}>{text}</Badge>;
 }
 
 export default function RoutesStats() {

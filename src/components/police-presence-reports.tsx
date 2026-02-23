@@ -9,19 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const ReportTypeBadge = ({ type }: { type: PoliceReport['type'] }) => {
-    const typeText = {
-        control: 'Contrôle',
-        traffic_management: 'Gestion du trafic',
-        incident: 'Incident'
-    }[type];
+    const typeMap = {
+        control: { variant: 'secondary', text: 'Contrôle' },
+        traffic_management: { variant: 'default', text: 'Gestion du trafic' },
+        incident: { variant: 'destructive', text: 'Incident' }
+    } as const;
     
-    const variant = {
-        control: 'secondary',
-        traffic_management: 'default',
-        incident: 'destructive'
-    }[type] as "secondary" | "default" | "destructive";
+    const { variant, text } = typeMap[type];
 
-    return <Badge variant={variant}>{typeText}</Badge>;
+    return <Badge variant={variant}>{text}</Badge>;
 }
 
 const PoliceReportItem = ({ report }: { report: PoliceReport & { id: number; time: string } }) => (

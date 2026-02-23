@@ -67,19 +67,23 @@ const AddLogementDialog = () => {
         } catch (error: any) {
             console.error("Image upload error:", error);
             let description = 'Une erreur est survenue lors du téléversement des images. Veuillez réessayer.';
-            if (error.code && error.code.startsWith('storage/')) {
-                 switch (error.code) {
+            // Firebase Storage errors have a 'code' property.
+            if (error && typeof error === 'object' && 'code' in error) {
+                switch (error.code) {
                     case 'storage/unauthorized':
-                        description = "Permission de téléversement refusée. Vérifiez les règles de Firebase Storage.";
+                        description = "Permission de téléversement refusée. Veuillez vérifier les règles de sécurité de Firebase Storage.";
                         break;
                     case 'storage/canceled':
                         description = "Le téléversement a été annulé.";
                         break;
+                    case 'storage/object-not-found':
+                         description = "Fichier non trouvé. Un problème est survenu.";
+                        break;
                     default:
-                        description = `Erreur de stockage: ${error.code}`;
+                        description = `Erreur de stockage non gérée: ${error.code}`;
                 }
             }
-            toast({ title: 'Erreur de téléversement', description, variant: 'destructive' });
+            toast({ title: 'Étape 1/2 Échouée : Erreur de téléversement des images', description, variant: 'destructive' });
             setIsSubmitting(false);
             return; // Stop execution if image upload fails
         }
@@ -112,7 +116,7 @@ const AddLogementDialog = () => {
             });
             errorEmitter.emit('permission-error', permissionError);
             
-            toast({ title: 'Erreur de base de données', description: 'Impossible d\'enregistrer le logement. Vérifiez les permissions.', variant: 'destructive' });
+            toast({ title: 'Étape 2/2 Échouée : Erreur de base de données', description: 'Impossible d\'enregistrer le logement. Vérifiez les permissions.', variant: 'destructive' });
         } finally {
             setIsSubmitting(false);
         }

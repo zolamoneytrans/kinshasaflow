@@ -51,10 +51,6 @@ function Calendar({
         day_hidden: "invisible",
         ...classNames,
       }}
-      components={{
-        IconLeft: ChevronLeft,
-        IconRight: ChevronRight,
-      }}
       {...props}
     />
   )

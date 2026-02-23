@@ -109,14 +109,15 @@ const AddLogementDialog = () => {
 
         } catch (serverError: any) {
             console.error("Firestore write error:", serverError);
+            // Create a detailed, contextual error object
             const permissionError = new FirestorePermissionError({
                 path: newLogementRef.path,
                 operation: 'create',
                 requestResourceData: logementData,
             });
+            // Emit the error globally. This will be caught by FirebaseErrorListener,
+            // which will throw it to show the Next.js error overlay for debugging.
             errorEmitter.emit('permission-error', permissionError);
-            
-            toast({ title: 'Étape 2/2 Échouée : Erreur de base de données', description: 'Impossible d\'enregistrer le logement. Vérifiez les permissions.', variant: 'destructive' });
         } finally {
             setIsSubmitting(false);
         }

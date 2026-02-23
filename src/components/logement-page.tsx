@@ -71,7 +71,10 @@ const AddLogementDialog = () => {
             if (error && typeof error === 'object' && 'code' in error) {
                 switch (error.code) {
                     case 'storage/unauthorized':
-                        description = "Permission de téléversement refusée. Veuillez vérifier les règles de sécurité de Firebase Storage.";
+                        description = "Permission de téléversement refusée. Veuillez vérifier que vos règles de sécurité Firebase Storage autorisent l'écriture pour les administrateurs.";
+                        break;
+                    case 'storage/retry-limit-exceeded':
+                        description = "La limite de tentatives a été dépassée. Ceci est généralement dû à des règles de sécurité Firebase Storage qui bloquent l'accès. Veuillez vérifier que vos règles autorisent bien l'écriture sur le chemin 'logements/'.";
                         break;
                     case 'storage/canceled':
                         description = "Le téléversement a été annulé.";
@@ -83,7 +86,7 @@ const AddLogementDialog = () => {
                         description = `Erreur de stockage non gérée: ${error.code}`;
                 }
             }
-            toast({ title: 'Étape 1/2 Échouée : Erreur de téléversement des images', description, variant: 'destructive' });
+            toast({ title: 'Étape 1/2 Échouée : Erreur de téléversement des images', description, variant: 'destructive', duration: 10000 });
             setIsSubmitting(false);
             return; // Stop execution if image upload fails
         }

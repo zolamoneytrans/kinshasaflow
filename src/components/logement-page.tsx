@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useUser, useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, setDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -681,5 +682,3 @@ export default function LogementPage() {
         </div>
     );
 }
-
-    

@@ -208,7 +208,7 @@ export const logementSchema = z.object({
   title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
   description: z.string().min(20, "La description doit être plus détaillée."),
   address: z.string().min(10, "L'adresse doit être plus précise."),
-  pricePerNight: z.coerce.number().positive("Le prix doit être un nombre positif."),
+  pricePerMonth: z.coerce.number().positive("Le prix doit être un nombre positif."),
   imageUrls: z.array(z.string().url()).min(1, "Au moins une image est requise."),
   amenities: z.array(z.string()),
   ownerId: z.string(),
@@ -221,7 +221,7 @@ export const logementFormSchema = z.object({
   title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
   description: z.string().min(20, "La description doit être plus détaillée."),
   address: z.string().min(10, "L'adresse doit être plus précise."),
-  pricePerNight: z.coerce.number().positive("Le prix doit être un nombre positif."),
+  pricePerMonth: z.coerce.number().positive("Le prix doit être un nombre positif."),
   amenities: z.string().min(3, "Veuillez lister quelques commodités."),
   images: z.any()
     .refine((files) => files?.length >= 1, "Au moins une image est requise.")
@@ -234,7 +234,7 @@ export const editLogementFormSchema = z.object({
   title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
   description: z.string().min(20, "La description doit être plus détaillée."),
   address: z.string().min(10, "L'adresse doit être plus précise."),
-  pricePerNight: z.coerce.number().positive("Le prix doit être un nombre positif."),
+  pricePerMonth: z.coerce.number().positive("Le prix doit être un nombre positif."),
   amenities: z.string().min(3, "Veuillez lister quelques commodités."),
 });
 export type EditLogementFormValues = z.infer<typeof editLogementFormSchema>;
@@ -273,3 +273,31 @@ export type TransportSubscription = z.infer<typeof transportSubscriptionSchema>;
 
 // Custom error for Firestore permissions, to be used with the global error handler
 export { FirestorePermissionError } from '@/firebase/errors';
+
+// Schema for Logement Application
+export const logementApplicationSchema = z.object({
+  logementId: z.string(),
+  logementTitle: z.string(),
+  applicantId: z.string(),
+  name: z.string().min(2, "Le nom est requis."),
+  address: z.string().min(5, "L'adresse est requise."),
+  email: z.string().email("L'email est invalide."),
+  phone: z.string().min(9, "Le téléphone est invalide."),
+  country: z.string().min(2, "Le pays est requis."),
+  city: z.string().min(2, "La ville est requise."),
+  whatsapp: z.string().optional(),
+  status: z.enum(['pending', 'approved', 'rejected']),
+  createdAt: z.instanceof(Timestamp).or(z.any()),
+});
+export type LogementApplication = z.infer<typeof logementApplicationSchema>;
+
+export const logementApplicationFormSchema = logementApplicationSchema.omit({
+  logementId: true,
+  logementTitle: true,
+  applicantId: true,
+  status: true,
+  createdAt: true,
+});
+export type LogementApplicationFormValues = z.infer<typeof logementApplicationFormSchema>;
+
+    

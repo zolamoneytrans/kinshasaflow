@@ -7,7 +7,7 @@ import { collection, query, orderBy, serverTimestamp, setDoc, doc, deleteDoc, up
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Logement, logementFormSchema, LogementFormValues, FirestorePermissionError, editLogementFormSchema, EditLogementFormValues } from '@/lib/types';
+import { Logement, logementFormSchema, LogementFormValues, FirestorePermissionError, editLogementFormSchema, EditLogementFormValues, LogementApplication, LogementApplicationFormValues, logementApplicationFormSchema } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,7 @@ const AddLogementDialog = () => {
             title: '',
             description: '',
             address: '',
-            pricePerNight: 0,
+            pricePerMonth: 0,
             amenities: '',
             images: undefined,
         },
@@ -110,7 +110,7 @@ const AddLogementDialog = () => {
             title: data.title,
             description: data.description,
             address: data.address,
-            pricePerNight: data.pricePerNight,
+            pricePerMonth: data.pricePerMonth,
             amenities: data.amenities.split(',').map(a => a.trim()).filter(a => a),
             imageUrls,
             ownerId: user.uid,
@@ -175,9 +175,9 @@ const AddLogementDialog = () => {
                                 <FormMessage />
                             </FormItem>
                         )} />
-                         <FormField control={form.control} name="pricePerNight" render={({ field }) => (
+                         <FormField control={form.control} name="pricePerMonth" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Prix par nuit (USD)</FormLabel>
+                                <FormLabel>Prix par mois (USD)</FormLabel>
                                 <FormControl><Input type="number" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -221,7 +221,7 @@ const EditLogementDialog = ({ open, onOpenChange, logement }: { open: boolean, o
             title: logement.title,
             description: logement.description,
             address: logement.address,
-            pricePerNight: logement.pricePerNight,
+            pricePerMonth: logement.pricePerMonth,
             amenities: logement.amenities.join(', '),
         },
     });
@@ -231,7 +231,7 @@ const EditLogementDialog = ({ open, onOpenChange, logement }: { open: boolean, o
             title: logement.title,
             description: logement.description,
             address: logement.address,
-            pricePerNight: logement.pricePerNight,
+            pricePerMonth: logement.pricePerMonth,
             amenities: logement.amenities.join(', '),
         });
     }, [logement, form, open]);
@@ -293,9 +293,9 @@ const EditLogementDialog = ({ open, onOpenChange, logement }: { open: boolean, o
                                 <FormMessage />
                             </FormItem>
                         )} />
-                         <FormField control={form.control} name="pricePerNight" render={({ field }) => (
+                         <FormField control={form.control} name="pricePerMonth" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Prix par nuit (USD)</FormLabel>
+                                <FormLabel>Prix par mois (USD)</FormLabel>
                                 <FormControl><Input type="number" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -336,6 +336,130 @@ const AdminDashboard = () => (
         </Card>
     </motion.div>
 );
+
+// --- Logement Application Dialog ---
+const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
+    const [open, setOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { toast } = useToast();
+    const { user, firestore } = useFirebase();
+    const router = useRouter();
+
+    const form = useForm<LogementApplicationFormValues>({
+        resolver: zodResolver(logementApplicationFormSchema),
+        defaultValues: {
+            name: user?.displayName || '',
+            email: user?.email || '',
+            address: '',
+            phone: '',
+            country: '',
+            city: '',
+            whatsapp: '',
+        },
+    });
+    
+    useEffect(() => {
+        if(user) {
+            form.reset({
+                name: user.displayName || '',
+                email: user.email || '',
+                phone: user.phoneNumber || '',
+                address: '',
+                country: '',
+                city: '',
+                whatsapp: '',
+            })
+        }
+    }, [user, form]);
+
+    const onSubmit = async (data: LogementApplicationFormValues) => {
+        if (!user) {
+            toast({ title: "Connexion requise", description: "Vous devez être connecté pour postuler.", variant: "destructive" });
+            return router.push('/login');
+        }
+
+        setIsSubmitting(true);
+        const applicationData: Omit<LogementApplication, 'createdAt'> = {
+            ...data,
+            logementId: logement.id,
+            logementTitle: logement.title,
+            applicantId: user.uid,
+            status: 'pending',
+        };
+
+        const newApplicationRef = doc(collection(firestore, 'logement_applications'));
+
+        try {
+            await setDoc(newApplicationRef, { ...applicationData, createdAt: serverTimestamp() });
+            toast({
+                title: "Candidature envoyée !",
+                description: "Votre demande a été soumise. Le propriétaire vous contactera bientôt."
+            });
+            setOpen(false);
+            form.reset();
+        } catch (error) {
+            console.error("Error submitting application:", error);
+            const permissionError = new FirestorePermissionError({
+                path: newApplicationRef.path,
+                operation: 'create',
+                requestResourceData: applicationData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button>Postuler</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Postuler pour : {logement.title}</DialogTitle>
+                    <DialogDescription>Veuillez remplir vos informations. Le propriétaire vous contactera.</DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                        <div className="grid md:grid-cols-2 gap-4">
+                             <FormField control={form.control} name="name" render={({ field }) => (
+                                <FormItem><FormLabel>Nom</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                             <FormField control={form.control} name="phone" render={({ field }) => (
+                                <FormItem><FormLabel>Téléphone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
+                        <FormField control={form.control} name="email" render={({ field }) => (
+                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="address" render={({ field }) => (
+                            <FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <div className="grid md:grid-cols-2 gap-4">
+                             <FormField control={form.control} name="city" render={({ field }) => (
+                                <FormItem><FormLabel>Ville</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                             <FormField control={form.control} name="country" render={({ field }) => (
+                                <FormItem><FormLabel>Pays</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
+                         <FormField control={form.control} name="whatsapp" render={({ field }) => (
+                            <FormItem><FormLabel>WhatsApp (Optionnel)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Envoyer la candidature
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 // --- Logement Card ---
 const LogementCard = ({ logement }: { logement: Logement & { id: string } }) => {
@@ -451,9 +575,9 @@ const LogementCard = ({ logement }: { logement: Logement & { id: string } }) => 
             <CardFooter className="bg-muted/50 p-4 flex justify-between items-center">
                 <div className="font-bold text-lg flex items-center gap-2">
                     <DollarSign className="h-5 w-5" />
-                    {logement.pricePerNight} <span className="text-sm font-normal text-muted-foreground">/ nuit</span>
+                    {logement.pricePerMonth} <span className="text-sm font-normal text-muted-foreground">/ mois</span>
                 </div>
-                <Button>Réserver</Button>
+                <ApplyDialog logement={logement} />
             </CardFooter>
         </Card>
         <EditLogementDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} logement={logement} />
@@ -557,3 +681,5 @@ export default function LogementPage() {
         </div>
     );
 }
+
+    

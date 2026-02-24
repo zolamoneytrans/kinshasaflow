@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useUser, useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, setDoc, doc } from 'firebase/firestore';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, query, orderBy, serverTimestamp, setDoc, doc, deleteDoc } from 'firebase/firestore';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Logement, logementFormSchema, LogementFormValues, FirestorePermissionError } from '@/lib/types';
@@ -13,13 +13,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { Phone, Building, DollarSign, BedDouble, PlusCircle, Loader2 } from 'lucide-react';
+import { Phone, Building, DollarSign, BedDouble, PlusCircle, Loader2, MoreVertical, Trash2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // --- Add Logement Dialog (for Admin) ---
@@ -69,10 +71,10 @@ const AddLogementDialog = () => {
             console.error("Image upload error:", error);
 
             // Handle the specific retryable error with a custom toast and retry action
-            if (error?.code === 'storage/retry-limit-exceeded') {
+            if (error?.code === 'storage/retry-limit-exceeded' || error?.code === 'storage/unknown') {
                 toast({
                     title: 'Erreur de Téléversement',
-                    description: "La limite de tentatives a été dépassée. Ceci est généralement dû à des règles de sécurité Firebase Storage qui bloquent l'accès. Veuillez vérifier vos règles puis réessayez.",
+                    description: "La limite de tentatives a été dépassée ou une erreur inconnue est survenue. Ceci est généralement dû à des règles de sécurité Firebase Storage qui bloquent l'accès. Veuillez vérifier vos règles puis réessayez.",
                     variant: 'destructive',
                     duration: 20000,
                     action: <ToastAction altText="Réessayer le téléversement" onClick={() => onSubmit(data)}>Réessayer</ToastAction>,
@@ -223,42 +225,119 @@ const AdminDashboard = () => (
 );
 
 // --- Logement Card ---
-const LogementCard = ({ logement }: { logement: Logement & { id: string } }) => (
-    <Card className="overflow-hidden flex flex-col">
-        <Carousel className="w-full">
-            <CarouselContent>
-                {logement.imageUrls.map((url, index) => (
-                    <CarouselItem key={index}>
-                        <div className="relative aspect-video bg-muted">
-                            <Image src={url} alt={logement.title} fill className="object-cover" data-ai-hint="apartment interior" />
-                        </div>
-                    </CarouselItem>
-                ))}
-            </CarouselContent>
-            {logement.imageUrls.length > 1 && <>
-                <CarouselPrevious className="left-2" />
-                <CarouselNext className="right-2" />
-            </>}
-        </Carousel>
-        <CardHeader>
-            <CardTitle>{logement.title}</CardTitle>
-            <CardDescription className="flex items-center gap-1 pt-1"><Building className="h-4 w-4" /> {logement.address}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex-1">
-            <p className="text-sm text-muted-foreground mb-4">{logement.description}</p>
-            <div className="flex flex-wrap gap-2">
-                {logement.amenities.map(amenity => <Badge key={amenity} variant="secondary">{amenity}</Badge>)}
-            </div>
-        </CardContent>
-        <CardFooter className="bg-muted/50 p-4 flex justify-between items-center">
-            <div className="font-bold text-lg flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                {logement.pricePerNight} <span className="text-sm font-normal text-muted-foreground">/ nuit</span>
-            </div>
-            <Button>Réserver</Button>
-        </CardFooter>
-    </Card>
-);
+const LogementCard = ({ logement }: { logement: Logement & { id: string } }) => {
+    const { user } = useUser();
+    const { firestore, firebaseApp } = useFirebase();
+    const { toast } = useToast();
+    const isAdmin = user?.email === 'drnduwa@gmail.com';
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        if (!isAdmin) return;
+
+        setIsDeleting(true);
+        try {
+            const storage = getStorage(firebaseApp);
+
+            // Delete associated images from Firebase Storage
+            const imageDeletePromises = logement.imageUrls.map(url => {
+                const imageRef = storageRef(storage, url);
+                return deleteObject(imageRef);
+            });
+            await Promise.all(imageDeletePromises);
+
+            // Delete the document from Firestore
+            await deleteDoc(doc(firestore, 'logements', logement.id));
+
+            toast({
+                title: "Succès",
+                description: "Le logement a été supprimé.",
+            });
+        } catch (error) {
+            console.error("Error deleting logement:", error);
+            toast({
+                title: "Erreur",
+                description: "Impossible de supprimer le logement. Vérifiez les règles de sécurité et les permissions.",
+                variant: "destructive",
+            });
+            setIsDeleting(false);
+        }
+    };
+    
+    return (
+        <Card className="overflow-hidden flex flex-col">
+            <Carousel className="w-full">
+                <CarouselContent>
+                    {logement.imageUrls.map((url, index) => (
+                        <CarouselItem key={index}>
+                            <div className="relative aspect-video bg-muted">
+                                <Image src={url} alt={logement.title} fill className="object-cover" data-ai-hint="apartment interior" />
+                            </div>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+                {logement.imageUrls.length > 1 && <>
+                    <CarouselPrevious className="left-2" />
+                    <CarouselNext className="right-2" />
+                </>}
+            </Carousel>
+            <CardHeader className="relative">
+                <CardTitle>{logement.title}</CardTitle>
+                <CardDescription className="flex items-center gap-1 pt-1"><Building className="h-4 w-4" /> {logement.address}</CardDescription>
+                
+                {isAdmin && (
+                    <div className="absolute top-4 right-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" disabled={isDeleting}>
+                                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive cursor-pointer">
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Supprimer
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Êtes-vous absolument sûr?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Cette action est irréversible. Le logement et toutes ses images seront définitivement supprimés.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Supprimer
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                )}
+            </CardHeader>
+            <CardContent className="flex-1">
+                <p className="text-sm text-muted-foreground mb-4">{logement.description}</p>
+                <div className="flex flex-wrap gap-2">
+                    {logement.amenities.map(amenity => <Badge key={amenity} variant="secondary">{amenity}</Badge>)}
+                </div>
+            </CardContent>
+            <CardFooter className="bg-muted/50 p-4 flex justify-between items-center">
+                <div className="font-bold text-lg flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    {logement.pricePerNight} <span className="text-sm font-normal text-muted-foreground">/ nuit</span>
+                </div>
+                <Button>Réserver</Button>
+            </CardFooter>
+        </Card>
+    );
+};
 
 // --- Skeleton Loader ---
 const LogementSkeleton = () => (

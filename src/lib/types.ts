@@ -229,6 +229,16 @@ export const logementFormSchema = z.object({
 });
 export type LogementFormValues = z.infer<typeof logementFormSchema>;
 
+// Schema for the Edit Logement form
+export const editLogementFormSchema = z.object({
+  title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
+  description: z.string().min(20, "La description doit être plus détaillée."),
+  address: z.string().min(10, "L'adresse doit être plus précise."),
+  pricePerNight: z.coerce.number().positive("Le prix doit être un nombre positif."),
+  amenities: z.string().min(3, "Veuillez lister quelques commodités."),
+});
+export type EditLogementFormValues = z.infer<typeof editLogementFormSchema>;
+
 // Schema for Transport Subscription Form
 export const transportSubscriptionFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis."),

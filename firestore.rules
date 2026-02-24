@@ -103,6 +103,14 @@ service cloud.firestore {
     function isImmutableUserId() {
       return request.resource.data.userId == resource.data.userId;
     }
+    
+    /**
+     * On create, validates that the new 'LogementApplication' document contains an
+     * 'applicantId' field that correctly matches the user's ID.
+     */
+    function hasValidApplicationDataOnCreate(userId) {
+      return request.resource.data.applicantId == userId;
+    }
 
 
     // Collection Group Rules
@@ -241,6 +249,22 @@ service cloud.firestore {
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow update, delete: if false; // Simplification: No editing/deleting comments
       }
+    }
+
+    /**
+     * @description Secures the top-level collection for all apartment applications.
+     *   Writable by any authenticated user for creating their own application.
+     *   Readable only by administrators for review.
+     * @path /logement_applications/{applicationId}
+     * @principle Allows broad write access for submissions and restricted read access for review.
+     */
+    match /logement_applications/{applicationId} {
+      // Any signed-in user can create an application for themselves.
+      allow create: if isSignedIn() && hasValidApplicationDataOnCreate(request.auth.uid);
+      // Only the admin can read, update, or delete applications.
+      allow read, update, delete: if isAdmin();
+      // Users cannot list all applications.
+      allow list: if isAdmin();
     }
   }
 }

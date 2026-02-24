@@ -11,7 +11,7 @@
  * 3. /roles_admin/{userId}: A lookup collection where the existence of a document signifies a user has admin rights.
  *
  * Key Security Decisions:
- * - Admin Access: Administrative privileges are determined by the user's email address.
+ * - Admin Access: Administrative privileges are determined by a user's existence in the `/roles_admin` collection.
  * - User Data Privacy: User-generated IDs are stored in a subcollection under their unique user ID (/users/{userId}/...).
  *   This path-based ownership prevents any user from accessing, or even knowing about, another user's private data.
  * - User Enumeration: Listing documents in the top-level /users collection is explicitly disallowed to prevent scraping user data.
@@ -67,10 +67,11 @@ service cloud.firestore {
     }
 
     /**
-     * Checks if the requesting user has administrative privileges by their email.
+     * Checks if the requesting user has administrative privileges by checking for
+     * their UID in the /roles_admin collection.
      */
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email == 'drnduwa@gmail.com';
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
     /**
@@ -118,7 +119,7 @@ service cloud.firestore {
     
     /**
      * @description Allows the admin to perform a collection group query to list all transport subscriptions.
-     * This is essential for the admin dashboard and does not conflict with user-specific rules.
+     * This is essential for the admin dashboard.
      * @path /{path=**}/transport_subscriptions/{subscriptionId}
      */
     match /{path=**}/transport_subscriptions/{subscriptionId} {
@@ -215,9 +216,8 @@ service cloud.firestore {
         // GET/UPDATE/DELETE: A user can access their own subscription, and an admin can access any.
         allow get, update, delete: if isOwner(userId) || isAdmin();
         
-        // LIST: A user can list THEIR OWN subscriptions. An admin can also list any user's
-        // subscriptions, which resolves conflicts with collection group queries.
-        allow list: if isOwner(userId) || isAdmin();
+        // LIST: A user can list THEIR OWN subscriptions.
+        allow list: if isOwner(userId);
         
         // CREATE: Only a user can create a subscription for themselves.
         allow create: if isOwner(userId) && hasValidSubscriptionDataOnCreate(userId);
@@ -263,8 +263,38 @@ service cloud.firestore {
       allow create: if isSignedIn() && hasValidApplicationDataOnCreate(request.auth.uid);
       // Only the admin can read, update, or delete applications.
       allow read, update, delete: if isAdmin();
-      // Users cannot list all applications.
+      // Admins can list all applications for their dashboard.
       allow list: if isAdmin();
+    }
+
+    /**
+    * @description Rules for the 'events' collection.
+    */
+    match /events/{eventId} {
+      // Any signed-in user can read events and their comments.
+      allow get, list: if isSignedIn();
+
+      // Only an authenticated user can create an event for themselves.
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid;
+      
+      // Users can't update or delete events after creation.
+      allow update, delete: if false;
+
+      /**
+       * @description Rules for comments sub-collection within an event.
+       */
+      match /comments/{commentId} {
+        // Any signed-in user can read comments.
+        allow read, list: if isSignedIn();
+
+        // Any signed-in user can create a comment for themselves.
+        allow create: if isSignedIn()
+                      && request.resource.data.userId == request.auth.uid;
+        
+        // Comments are immutable.
+        allow update, delete: if false;
+      }
     }
   }
 }

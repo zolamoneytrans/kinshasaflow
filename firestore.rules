@@ -2,18 +2,18 @@
  * Core Philosophy: This ruleset implements a security model that combines role-based access control (RBAC) with
  * a strict user-ownership model. It provides public read access to shared resources (templates) for all authenticated
  * users while ensuring that user-generated data is private and accessible only by its creator. Administrative
- * privileges are managed through a dedicated role-lookup collection.
+ * privileges are managed by checking the user's email address.
  *
- * Data Structure: The data is organized into three main areas:
+ * Data Structure: The data is organized into several main areas:
  * 1. /id_templates/{templateId}: A top-level collection of ID card templates, readable by all signed-in users.
- * 2. /users/{userId}/generated_ids/{generatedId}: User-specific data nested under a path that includes the owner's UID.
- *    This enforces a clear ownership hierarchy.
- * 3. /roles_admin/{userId}: A lookup collection where the existence of a document signifies a user has admin rights.
+ * 2. /users/{userId}/...: User-specific data nested under a path that includes the owner's UID.
+ * 3. /logements/{logementId}: Publicly readable apartment listings.
+ * 4. /logement_applications/{applicationId}: Applications for apartments, readable by admin.
  *
  * Key Security Decisions:
- * - Admin Access: Administrative privileges are determined by a user's existence in the `/roles_admin` collection.
- * - User Data Privacy: User-generated IDs are stored in a subcollection under their unique user ID (/users/{userId}/...).
- *   This path-based ownership prevents any user from accessing, or even knowing about, another user's private data.
+ * - Admin Access: Administrative privileges are determined by checking if the user's email is 'drnduwa@gmail.com'.
+ * - User Data Privacy: User-generated data is stored in subcollections under their unique user ID (/users/{userId}/...).
+ *   This path-based ownership prevents any user from accessing another user's private data.
  * - User Enumeration: Listing documents in the top-level /users collection is explicitly disallowed to prevent scraping user data.
  * - Prototyping Flexibility: Data validation is strictly limited to fields essential for authorization (e.g., `creatorUserId`).
  *   Other data shapes are not enforced, allowing the front-end application schema to evolve rapidly without rule changes.
@@ -24,9 +24,8 @@
  *   require any extra document reads (`get()` calls).
  *
  * Structural Segregation:
- * - Publicly readable templates (`id_templates`) are in a separate top-level collection from private, user-owned data
- *   (`generated_ids`). This separation ensures that list operations are simple, secure, and performant, as security
- *   does not depend on filtering documents based on an internal field.
+ * - Publicly readable templates (`id_templates`) are in a separate top-level collection from private, user-owned data.
+ *   This separation ensures that list operations are simple, secure, and performant.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -67,11 +66,10 @@ service cloud.firestore {
     }
 
     /**
-     * Checks if the requesting user has administrative privileges by checking for
-     * their UID in the /roles_admin collection.
+     * Checks if the requesting user has administrative privileges by checking their email address.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && request.auth.token.email == 'drnduwa@gmail.com';
     }
 
     /**
@@ -128,19 +126,6 @@ service cloud.firestore {
 
     // Collection Rules
     // =================================
-
-    /**
-     * @description Controls access to the admin role lookup collection.
-     *   This collection should be completely inaccessible to clients. Its only
-     *   purpose is for server-side `exists()` checks in other rules.
-     * @path /roles_admin/{userId}
-     * @allow (get) No one. A user's admin status is a server-side secret.
-     * @deny (create) A non-admin user trying to make themselves an admin.
-     * @principle Prevents any client-side read or write access to the role-management collection.
-     */
-    match /roles_admin/{userId} {
-      allow read, write: if false;
-    }
 
     /**
      * @description Controls access to ID card templates. Templates are public

@@ -20,6 +20,8 @@ import { useUser } from '@/firebase';
 import React, { useEffect } from 'react';
 import { Logo } from './logo';
 import { NotificationPermission } from './notification-permission';
+import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -46,6 +48,30 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useUser();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      const handleControllerChange = () => {
+        toast({
+          title: 'Mise à jour disponible',
+          description: "Une nouvelle version de l'application est prête.",
+          duration: Infinity,
+          action: (
+            <ToastAction altText="Actualiser" onClick={() => window.location.reload()}>
+              Actualiser
+            </ToastAction>
+          ),
+        });
+      };
+      
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+      return () => {
+        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      };
+    }
+  }, [toast]);
 
   const isAdmin = user?.email === 'drnduwa@gmail.com';
   

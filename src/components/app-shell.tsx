@@ -139,6 +139,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}}>
+                  <Link href="/signaler-embouteillage">
+                    <PlusCircle />
+                    <span>Signaler</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}}>
                   <Link href="/police-routiere">
                     <Siren />
@@ -202,14 +210,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}}>
-                  <Link href="/signaler-embouteillage">
-                    <PlusCircle />
-                    <span>Signaler</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              
 
               {isAdmin && (
                 <>

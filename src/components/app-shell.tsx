@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -91,6 +91,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/map') return 'Carte du Trafic';
     if (pathname === '/login') return 'Se connecter';
     if (pathname === '/signup') return "S'inscrire";
+    if (pathname === '/admin/transport') return 'Admin Transport';
+    if (pathname === '/admin/logement') return 'Admin Logement';
     if (pathname.startsWith('/admin')) return 'Tableau de Bord Admin';
     return 'Kinshasa Flow';
   }
@@ -112,6 +114,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/login') return 'Accédez à votre compte pour contribuer.';
     if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
     if (pathname === '/admin/transport') return 'Gérer les abonnements au transport.';
+    if (pathname === '/admin/logement') return 'Gérer les candidatures pour les logements.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -242,10 +245,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <>
                   <SidebarSeparator className="my-2" />
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith('/admin')} tooltip={{children: "Admin Transport"}}>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} tooltip={{children: "Admin Transport"}}>
                       <Link href="/admin/transport">
                         <Shield />
                         <span>Admin Transport</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} tooltip={{children: "Admin Logement"}}>
+                      <Link href="/admin/logement">
+                        <BedDouble />
+                        <span>Admin Logement</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

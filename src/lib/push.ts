@@ -1,7 +1,10 @@
 'use client';
 
-import { Firestore, doc, setDoc, collection, getDocs, query, where, deleteDoc } from "firebase/firestore";
+import { Firestore, doc, setDoc, collection, getDocs, query, where, deleteDoc, serverTimestamp } from "firebase/firestore";
 
+/**
+ * Saves a standard Web Push subscription to Firestore.
+ */
 export async function saveSubscription(
     firestore: Firestore,
     userId: string,
@@ -12,17 +15,38 @@ export async function saveSubscription(
     }
     const subscriptionsRef = collection(firestore, 'users', userId, 'pushSubscriptions');
     
-    // Check if subscription already exists
     const q = query(subscriptionsRef, where("endpoint", "==", subscription.endpoint));
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-        // Add new subscription
         const newSubscriptionRef = doc(subscriptionsRef);
-        await setDoc(newSubscriptionRef, subscription);
+        await setDoc(newSubscriptionRef, { ...subscription, createdAt: serverTimestamp() });
     } else {
-        // It exists, do nothing or update if needed. For now, do nothing.
         console.log("Subscription already exists.");
+    }
+}
+
+/**
+ * Saves an FCM Token to Firestore. This allows sending messages from the Firebase Console.
+ */
+export async function saveFCMToken(
+    firestore: Firestore,
+    userId: string,
+    token: string
+) {
+    if (!userId || !token) return;
+    
+    const tokensRef = collection(firestore, 'users', userId, 'fcmTokens');
+    const q = query(tokensRef, where("token", "==", token));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        const newTokenRef = doc(tokensRef);
+        await setDoc(newTokenRef, { 
+            token, 
+            createdAt: serverTimestamp(),
+            platform: 'web'
+        });
     }
 }
 

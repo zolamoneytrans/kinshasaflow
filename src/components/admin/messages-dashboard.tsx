@@ -47,13 +47,17 @@ const InquiryRow = ({ inquiry }: { inquiry: WithId<Inquiry> }) => {
     return (
         <TableRow>
             <TableCell>
-                <div className="font-medium">{inquiry.subject}</div>
+                <div className="font-medium">{inquiry.fullName}</div>
                 <div className="text-sm text-muted-foreground">{inquiry.userEmail}</div>
+                <div className="text-sm text-muted-foreground">{inquiry.phone}</div>
+            </TableCell>
+            <TableCell>
+                <div className="font-medium">{inquiry.subject}</div>
             </TableCell>
             <TableCell>
                 <Badge variant={typeConfig.variant as any}>{typeConfig.label}</Badge>
             </TableCell>
-             <TableCell className="max-w-md">
+             <TableCell className="max-w-sm">
                 <p className="truncate">{inquiry.message}</p>
             </TableCell>
             <TableCell>{formattedDate}</TableCell>
@@ -89,7 +93,8 @@ export default function MessagesDashboard() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Sujet / Contact</TableHead>
+                                        <TableHead>Contact</TableHead>
+                                        <TableHead>Sujet</TableHead>
                                         <TableHead>Type</TableHead>
                                         <TableHead>Message</TableHead>
                                         <TableHead>Date</TableHead>
@@ -98,7 +103,7 @@ export default function MessagesDashboard() {
                                 <TableBody>
                                     {isLoading ? (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="h-24 text-center">
+                                            <TableCell colSpan={5} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                                             </TableCell>
                                         </TableRow>
@@ -106,7 +111,7 @@ export default function MessagesDashboard() {
                                         inquiries.map(inquiry => <InquiryRow key={inquiry.id} inquiry={inquiry} />)
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="h-24 text-center">Aucun message trouvé.</TableCell>
+                                            <TableCell colSpan={5} className="h-24 text-center">Aucun message trouvé.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>

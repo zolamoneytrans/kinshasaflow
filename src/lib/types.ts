@@ -304,6 +304,8 @@ export type LogementApplicationFormValues = z.infer<typeof logementApplicationFo
 export const inquirySchema = z.object({
   userId: z.string(),
   userEmail: z.string().email(),
+  fullName: z.string(),
+  phone: z.string(),
   type: z.enum(['inquiry', 'suggestion', 'complaint']),
   subject: z.string().min(5, "Le sujet doit comporter au moins 5 caractères."),
   message: z.string().min(10, "Le message doit comporter au moins 10 caractères."),
@@ -312,6 +314,8 @@ export const inquirySchema = z.object({
 export type Inquiry = z.infer<typeof inquirySchema>;
 
 export const inquiryFormSchema = z.object({
+  fullName: z.string().min(3, { message: "Le nom complet est requis." }),
+  phone: z.string().min(9, { message: "Un numéro de téléphone valide est requis." }),
   type: z.enum(['inquiry', 'suggestion', 'complaint'], {
     required_error: 'Vous devez sélectionner un type de message.',
   }),

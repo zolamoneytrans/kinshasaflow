@@ -23,7 +23,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Send, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { inquiryFormSchema, InquiryFormValues } from '@/lib/types';
 import { useFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
@@ -35,17 +35,31 @@ export function ContactForm() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    const { firestore, auth } = useFirebase();
+    const { firestore } = useFirebase();
     const { user, isUserLoading } = useUser();
 
     const form = useForm<InquiryFormValues>({
         resolver: zodResolver(inquiryFormSchema),
         defaultValues: {
+            fullName: '',
+            phone: '',
             subject: '',
             message: '',
             type: 'inquiry',
         },
     });
+
+    useEffect(() => {
+        if (user) {
+            form.reset({
+                fullName: user.displayName || '',
+                phone: user.phoneNumber || '',
+                subject: '',
+                message: '',
+                type: 'inquiry',
+            });
+        }
+    }, [user, form]);
 
 
     async function onSubmit(data: InquiryFormValues) {
@@ -70,7 +84,7 @@ export function ContactForm() {
             };
 
             const inquiriesCollection = collection(firestore, 'inquiries');
-            await addDocumentNonBlocking(inquiriesCollection, inquiryData);
+            addDocumentNonBlocking(inquiriesCollection, inquiryData);
 
             toast({
                 title: 'Message envoyé !',
@@ -100,6 +114,32 @@ export function ContactForm() {
             <CardContent>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                         <FormField
+                            control={form.control}
+                            name="fullName"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nom complet</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Votre nom complet" {...field} disabled={isSubmitting || isUserLoading} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Numéro de téléphone</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Votre numéro de téléphone" {...field} disabled={isSubmitting || isUserLoading} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                          <FormField
                             control={form.control}
                             name="type"

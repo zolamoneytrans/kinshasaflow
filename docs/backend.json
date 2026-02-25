@@ -381,6 +381,14 @@
           "format": "email",
           "description": "The email of the user who submitted the message."
         },
+        "fullName": {
+          "type": "string",
+          "description": "The full name of the user who submitted the message."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number of the user who submitted the message."
+        },
         "type": {
           "type": "string",
           "description": "The type of the message.",
@@ -407,6 +415,8 @@
       "required": [
         "userId",
         "userEmail",
+        "fullName",
+        "phone",
         "type",
         "subject",
         "message",

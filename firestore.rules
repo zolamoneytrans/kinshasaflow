@@ -81,10 +81,13 @@ service cloud.firestore {
     }
     
     /**
-     * On create, validates that a new inquiry is from the correct user.
+     * On create, validates that a new inquiry is from the correct user and has all required fields.
      */
     function hasValidInquiryDataOnCreate() {
-      return request.resource.data.userId == request.auth.uid;
+      let data = request.resource.data;
+      return data.userId == request.auth.uid
+        && data.fullName is string && data.fullName.size() > 2
+        && data.phone is string && data.phone.size() > 6;
     }
 
     /**

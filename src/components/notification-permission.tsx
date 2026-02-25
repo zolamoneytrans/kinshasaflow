@@ -34,21 +34,29 @@ export function NotificationPermission() {
     setIsSubscribing(true);
 
     try {
+      // Ensure service worker is registered and ready
+      const registration = await navigator.serviceWorker.ready;
+
       // 1. Get FCM Token (Standard way for Firebase Console)
       const currentToken = await getToken(messaging, {
         vapidKey: vapidKey,
+        serviceWorkerRegistration: registration
       });
 
       if (currentToken) {
         await saveFCMToken(firestore, user.uid, currentToken);
-        console.log('FCM Token generated and saved.');
-      } else {
-        console.log('No registration token available. Request permission to generate one.');
+        console.log('FCM Token generated and saved:', currentToken);
       }
 
-      // 2. Also register standard Web Push (Optional, for your custom backends)
-      const swRegistration = await navigator.serviceWorker.ready;
-      let subscription = await swRegistration.pushManager.getSubscription();
+      // 2. Also register standard Web Push for your custom backend tests
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidKey
+        });
+      }
+      
       if (subscription) {
         await saveSubscription(firestore, user.uid, subscription.toJSON());
       }
@@ -57,7 +65,7 @@ export function NotificationPermission() {
       toast({ title: 'Notifications activées!', description: 'Vous recevrez désormais des alertes en temps réel.' });
     } catch (error) {
       console.error('Failed to subscribe to push notifications', error);
-      toast({ title: 'Erreur', description: "Impossible d'activer les notifications.", variant: 'destructive' });
+      toast({ title: 'Erreur', description: "Impossible d'activer les notifications. Vérifiez les paramètres de votre navigateur.", variant: 'destructive' });
     } finally {
       setIsSubscribing(false);
     }

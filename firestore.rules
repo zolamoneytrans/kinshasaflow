@@ -79,6 +79,13 @@ service cloud.firestore {
     function hasValidGeneratedIdDataOnCreate(userId) {
       return request.resource.data.creatorUserId == userId;
     }
+    
+    /**
+     * On create, validates that a new inquiry is from the correct user.
+     */
+    function hasValidInquiryDataOnCreate() {
+      return request.resource.data.userId == request.auth.uid;
+    }
 
     /**
      * On update, ensures the 'creatorUserId' field cannot be changed.
@@ -250,6 +257,18 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
       // Admins can list all applications for their dashboard.
       allow list: if isAdmin();
+    }
+
+    /**
+     * @description Secures the top-level collection for user inquiries.
+     *   Writable by any authenticated user for submitting their own message.
+     *   Readable only by administrators for review.
+     * @path /inquiries/{inquiryId}
+     */
+    match /inquiries/{inquiryId} {
+        allow create: if isSignedIn() && hasValidInquiryDataOnCreate();
+        allow read, update, delete: if isAdmin();
+        allow list: if isAdmin();
     }
 
     /**

@@ -300,4 +300,22 @@ export const logementApplicationFormSchema = logementApplicationSchema.omit({
 });
 export type LogementApplicationFormValues = z.infer<typeof logementApplicationFormSchema>;
 
-    
+// Schema for Inquiry
+export const inquirySchema = z.object({
+  userId: z.string(),
+  userEmail: z.string().email(),
+  type: z.enum(['inquiry', 'suggestion', 'complaint']),
+  subject: z.string().min(5, "Le sujet doit comporter au moins 5 caractères."),
+  message: z.string().min(10, "Le message doit comporter au moins 10 caractères."),
+  createdAt: z.instanceof(Timestamp).or(z.any()),
+});
+export type Inquiry = z.infer<typeof inquirySchema>;
+
+export const inquiryFormSchema = z.object({
+  type: z.enum(['inquiry', 'suggestion', 'complaint'], {
+    required_error: 'Vous devez sélectionner un type de message.',
+  }),
+  subject: z.string().min(5, "Le sujet doit comporter au moins 5 caractères."),
+  message: z.string().min(10, "Le message doit comporter au moins 10 caractères."),
+});
+export type InquiryFormValues = z.infer<typeof inquiryFormSchema>;

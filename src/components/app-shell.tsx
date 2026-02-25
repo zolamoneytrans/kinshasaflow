@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -83,6 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/annonces') return 'Annonces Officielles';
     if (pathname === '/logement') return 'Logement (Courte durée)';
     if (pathname === '/transport') return 'Solutions de Transport';
+    if (pathname === '/contact') return 'Contactez-nous';
     if (pathname === '/signaler-embouteillage') return 'Signaler un Embouteillage';
     if (pathname === '/evenements') return 'Événements';
     if (pathname === '/videos') return 'Vidéos';
@@ -93,6 +94,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/signup') return "S'inscrire";
     if (pathname === '/admin/transport') return 'Admin Transport';
     if (pathname === '/admin/logement') return 'Admin Logement';
+    if (pathname === '/admin/messages') return 'Messages';
     if (pathname.startsWith('/admin')) return 'Tableau de Bord Admin';
     return 'Kinshasa Flow';
   }
@@ -105,6 +107,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/annonces') return 'Mises à jour du gouvernement pour les automobilistes';
     if (pathname === '/logement') return 'Trouvez un appartement de type RBNB à Kinshasa.';
     if (pathname === '/transport') return 'Abonnements, covoiturage, et plus.';
+    if (pathname === '/contact') return 'Envoyez-nous vos questions, suggestions ou plaintes.';
     if (pathname === '/signaler-embouteillage') return 'Signalez un incident pour aider les autres conducteurs';
     if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
     if (pathname === '/videos') return 'Un aperçu de la vie à Kinshasa en vidéos.';
@@ -115,6 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
     if (pathname === '/admin/transport') return 'Gérer les abonnements au transport.';
     if (pathname === '/admin/logement') return 'Gérer les candidatures pour les logements.';
+    if (pathname === '/admin/messages') return 'Consulter les messages des utilisateurs.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -216,6 +220,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/contact'} tooltip={{children: "Contact"}}>
+                  <Link href="/contact">
+                    <Mail />
+                    <span>Contact</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}}>
                   <Link href="/evenements">
                     <Megaphone />
@@ -257,6 +269,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <Link href="/admin/logement">
                         <BedDouble />
                         <span>Admin Logement</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} tooltip={{children: "Messages"}}>
+                      <Link href="/admin/messages">
+                        <Mail />
+                        <span>Messages</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

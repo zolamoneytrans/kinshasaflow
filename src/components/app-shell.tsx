@@ -220,14 +220,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/contact'} tooltip={{children: "Contact"}}>
-                  <Link href="/contact">
-                    <Mail />
-                    <span>Contact</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}}>
                   <Link href="/evenements">
                     <Megaphone />
@@ -248,6 +240,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/kinshasa">
                     <AreaChart />
                     <span>Kinshasa</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/contact'} tooltip={{children: "Contact"}}>
+                  <Link href="/contact">
+                    <Mail className="animate-pulse text-primary"/>
+                    <span>Contact</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "mercedes-viano",
+      "description": "A Mercedes Viano van",
+      "imageUrl": "https://picsum.photos/seed/mercedes-viano/600/400",
+      "imageHint": "mercedes viano"
+    },
+    {
+      "id": "jeep-wrangler",
+      "description": "A Jeep Wrangler SUV",
+      "imageUrl": "https://images.unsplash.com/photo-1622665556164-1a41221d82ce?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8amVlcCUyMHdyYW5nbGVyfGVufDB8fHx8MTc3MTk5MTEyOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "jeep wrangler"
+    },
+    {
+      "id": "mercedes-glc",
+      "description": "A Mercedes GLC SUV",
+      "imageUrl": "https://images.unsplash.com/photo-1684239845179-0bb0362dfd28?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtZXJjZWRlcyUyMGdsY3xlbnwwfHx8fDE3NzIwMzQxNDd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mercedes glc"
+    },
+    {
+      "id": "classic-jaguar",
+      "description": "A classic silver Jaguar car",
+      "imageUrl": "https://images.unsplash.com/photo-1549359030-a86ed42ff8e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjbGFzc2ljJTIwamFndWFyfGVufDB8fHx8MTc3MjAzNDE0N3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "classic jaguar"
+    },
+    {
+      "id": "modern-jaguar",
+      "description": "A modern white Jaguar sedan",
+      "imageUrl": "https://images.unsplash.com/photo-1687580713291-fcd716e3f49e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBqYWd1YXJ8ZW58MHx8fHwxNzcyMDM0MTQ4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "modern jaguar"
+    },
+    {
+      "id": "mercedes-g-wagon",
+      "description": "A Mercedes AMG G-Wagon",
+      "imageUrl": "https://images.unsplash.com/photo-1709072244495-31de3007ad31?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxtZXJjZWRlcyUyMGctd2Fnb258ZW58MHx8fHwxNzcyMDM0MTQ4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mercedes g-wagon"
+    },
+    {
+      "id": "mercedes-gle",
+      "description": "A Mercedes GLE SUV",
+      "imageUrl": "https://images.unsplash.com/photo-1669221721680-e13fcd462499?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxtZXJjZWRlcyUyMGdsZXxlbnwwfHx8fDE3NzIwMzQxNDh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mercedes gle"
+    },
+    {
+      "id": "lexus-lx570",
+      "description": "A Lexus LX570 SUV",
+      "imageUrl": "https://images.unsplash.com/photo-1628188765472-50896231dafb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8bGV4dXMlMjBseDU3MHxlbnwwfHx8fDE3NzIwMzQxNDh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "lexus lx570"
+    }
+  ]
 }

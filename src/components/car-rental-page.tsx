@@ -6,17 +6,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription }
 import { Button } from '@/components/ui/button';
 import { DollarSign, Phone, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-const carData = [
-    { id: "mercedes-viano", name: "Mercedes Viano", price: 500, imageUrl: "https://picsum.photos/seed/viano/600/400", imageHint: "mercedes van" },
-    { id: "jeep-wrangle", name: "Jeep Wrangle", price: 500, imageUrl: "https://picsum.photos/seed/wrangler/600/400", imageHint: "jeep wrangler" },
-    { id: "mercedes-glc", name: "Mercedes GLC", price: 500, imageUrl: "https://picsum.photos/seed/glc/600/400", imageHint: "mercedes suv" },
-    { id: "jaguar-silver", name: "Jaguar (Classic)", price: 500, imageUrl: "https://picsum.photos/seed/jaguarsilver/600/400", imageHint: "classic jaguar" },
-    { id: "jaguar-white", name: "Jaguar (Modern)", price: 500, imageUrl: "https://picsum.photos/seed/jaguarwhite/600/400", imageHint: "jaguar sedan" },
-    { id: "mercedes-amg", name: "Mercedes AMG (G-Wagon)", price: 600, imageUrl: "https://picsum.photos/seed/gwagon/600/400", imageHint: "mercedes g-wagon" },
-    { id: "mercedes-gle", name: "Mercedes GLE", price: 600, imageUrl: "https://picsum.photos/seed/gle/600/400", imageHint: "mercedes gle" },
-    { id: "lexus-lx570", name: "Lexus LX570", price: 600, imageUrl: "https://picsum.photos/seed/lexus/600/400", imageHint: "lexus suv" }
+const rentalCarDetails = [
+    { id: "mercedes-viano", name: "Mercedes Viano", price: 500 },
+    { id: "jeep-wrangler", name: "Jeep Wrangler", price: 500 },
+    { id: "mercedes-glc", name: "Mercedes GLC", price: 500 },
+    { id: "classic-jaguar", name: "Jaguar (Classic)", price: 500 },
+    { id: "modern-jaguar", name: "Jaguar (Modern)", price: 500 },
+    { id: "mercedes-g-wagon", name: "Mercedes AMG (G-Wagon)", price: 600 },
+    { id: "mercedes-gle", name: "Mercedes GLE", price: 600 },
+    { id: "lexus-lx570", name: "Lexus LX570", price: 600 }
 ];
+
+const carData = rentalCarDetails.map(car => {
+    const placeholder = PlaceHolderImages.find(p => p.id === car.id);
+    return {
+        ...car,
+        imageUrl: placeholder?.imageUrl || `https://picsum.photos/seed/${car.id}/600/400`,
+        imageHint: placeholder?.imageHint || car.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+    };
+});
+
 
 const CarCard = ({ car }: { car: typeof carData[0] }) => {
     return (

@@ -7,14 +7,14 @@ import { DollarSign, Phone, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const rentalCarDetails = [
-    { id: "mercedes-viano", name: "Mercedes Viano", price: 500 },
-    { id: "jeep-wrangler", name: "Jeep Wrangler", price: 500 },
-    { id: "mercedes-glc", name: "Mercedes GLC", price: 500 },
-    { id: "classic-jaguar", name: "Jaguar (Classic)", price: 500 },
-    { id: "modern-jaguar", name: "Jaguar (Modern)", price: 500 },
-    { id: "mercedes-g-wagon", name: "Mercedes AMG (G-Wagon)", price: 600 },
-    { id: "mercedes-gle", name: "Mercedes GLE", price: 600 },
-    { id: "lexus-lx570", name: "Lexus LX570", price: 600 }
+    { id: "toyota-ist", name: "Toyota IST", price: 55 },
+    { id: "toyota-belta", name: "Toyota Belta", price: 70 },
+    { id: "toyota-mark-x", name: "Toyota Mark X", price: 80 },
+    { id: "toyota-corolla", name: "Toyota Corolla", price: 80 },
+    { id: "toyota-rav4-v6", name: "Toyota RAV4 V6", price: 100 },
+    { id: "toyota-yaris", name: "Toyota Yaris", price: 100 },
+    { id: "toyota-camry", name: "Toyota Camry", price: 100 },
+    { id: "toyota-ipsum", name: "Toyota Ipsum", price: 100 },
 ];
 
 const CarCard = ({ car }: { car: { id: string; name: string; price: number; } }) => {
@@ -29,7 +29,7 @@ const CarCard = ({ car }: { car: { id: string; name: string; price: number; } })
             <CardFooter className="bg-muted/50 p-4 flex justify-between items-center">
                 <div className="font-bold text-lg flex items-center gap-2">
                     <DollarSign className="h-5 w-5" />
-                    {car.price} <span className="text-sm font-normal text-muted-foreground">/ jour</span>
+                    {car.price}$ <span className="text-sm font-normal text-muted-foreground">/ jour</span>
                 </div>
                  <a href="tel:0857767040">
                     <Button>Réserver</Button>
@@ -47,7 +47,7 @@ export default function CarRentalPage() {
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
                     <div className="text-center">
                         <h1 className="text-3xl md:text-4xl font-bold flex items-center justify-center gap-3"><Car className="h-8 w-8 text-primary"/>Location de Véhicules</h1>
-                        <p className="mt-2 text-lg text-muted-foreground">Des véhicules de luxe pour vos déplacements en ville.</p>
+                        <p className="mt-2 text-lg text-muted-foreground">Découvrez nos véhicules disponibles pour une location journalière.</p>
                     </div>
                 </motion.div>
                 

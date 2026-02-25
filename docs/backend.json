@@ -485,8 +485,6 @@
         "userName",
         "userPhone",
         "userAddress",
-        "startDate",
-        "endDate",
         "status",
         "createdAt"
       ]

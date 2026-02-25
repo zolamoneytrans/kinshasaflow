@@ -7,17 +7,12 @@ import { useFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { collection, serverTimestamp } from 'firebase/firestore';
-import { format, addDays } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 type BookingDialogProps = {
   car: { id: string; name: string; price: number; };
@@ -36,8 +31,6 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
       userName: user?.displayName || '',
       userPhone: user?.phoneNumber || '',
       userAddress: '',
-      startDate: undefined,
-      numberOfDays: 1,
     },
   });
 
@@ -47,8 +40,6 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
         userName: user.displayName || '',
         userPhone: user.phoneNumber || '',
         userAddress: '',
-        startDate: undefined,
-        numberOfDays: 1,
       });
     }
   }, [user, open, form]);
@@ -61,8 +52,6 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
     
     setIsSubmitting(true);
     try {
-      const endDate = addDays(data.startDate, data.numberOfDays);
-
       const bookingData = {
         userId: user.uid,
         carId: car.id,
@@ -70,8 +59,6 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
         userName: data.userName,
         userPhone: data.userPhone,
         userAddress: data.userAddress,
-        startDate: data.startDate,
-        endDate: endDate,
         status: 'pending',
         createdAt: serverTimestamp(),
       };
@@ -98,7 +85,7 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
         <DialogHeader>
           <DialogTitle>Réserver: {car.name}</DialogTitle>
           <DialogDescription>
-            Remplissez vos informations pour réserver ce véhicule. Nous vous contacterons pour confirmer.
+            Remplissez vos informations pour réserver ce véhicule. Les dates seront confirmées par téléphone.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -112,63 +99,6 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
             <FormField control={form.control} name="userAddress" render={({ field }) => (
                 <FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                            <FormLabel>Date de début</FormLabel>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                            variant={"outline"}
-                                            className={cn(
-                                                "w-full pl-3 text-left font-normal",
-                                                !field.value && "text-muted-foreground"
-                                            )}
-                                        >
-                                            {field.value ? (
-                                                format(field.value, "PPP", { locale: fr })
-                                            ) : (
-                                                <span>Choisissez une date</span>
-                                            )}
-                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                        initialFocus
-                                        locale={fr}
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="numberOfDays"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nombre de jours</FormLabel>
-                            <FormControl>
-                                <Input type="number" min="1" placeholder="Ex: 3" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 1)} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
-
 
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting} className="w-full">

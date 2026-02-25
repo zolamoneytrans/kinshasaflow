@@ -1,12 +1,10 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DollarSign, Phone, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const rentalCarDetails = [
     { id: "mercedes-viano", name: "Mercedes Viano", price: 500 },
@@ -19,29 +17,15 @@ const rentalCarDetails = [
     { id: "lexus-lx570", name: "Lexus LX570", price: 600 }
 ];
 
-const carData = rentalCarDetails.map(car => {
-    const placeholder = PlaceHolderImages.find(p => p.id === car.id);
-    return {
-        ...car,
-        imageUrl: placeholder?.imageUrl || `https://picsum.photos/seed/${car.id}/600/400`,
-        imageHint: placeholder?.imageHint || car.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
-    };
-});
-
-
-const CarCard = ({ car }: { car: typeof carData[0] }) => {
+const CarCard = ({ car }: { car: { id: string; name: string; price: number; } }) => {
     return (
-        <Card className="overflow-hidden flex flex-col">
-            <div className="relative aspect-video bg-muted">
-                <Image src={car.imageUrl} alt={car.name} fill className="object-cover" data-ai-hint={car.imageHint} />
-            </div>
-            <CardHeader>
+        <Card className="overflow-hidden flex flex-col h-full">
+            <CardHeader className="flex-grow">
                 <CardTitle className="flex items-center gap-2">
                     <Car className="h-6 w-6 text-primary" />
                     <span>{car.name}</span>
                 </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1" />
             <CardFooter className="bg-muted/50 p-4 flex justify-between items-center">
                 <div className="font-bold text-lg flex items-center gap-2">
                     <DollarSign className="h-5 w-5" />
@@ -73,7 +57,7 @@ export default function CarRentalPage() {
                     animate="visible"
                     variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
                 >
-                    {carData.map(car => (
+                    {rentalCarDetails.map(car => (
                         <motion.div key={car.id} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} layout>
                             <CarCard car={car} />
                         </motion.div>

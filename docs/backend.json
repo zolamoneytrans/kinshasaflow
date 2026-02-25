@@ -452,6 +452,10 @@
           "type": "string",
           "description": "The address of the user."
         },
+        "numberOfDays": {
+          "type": "number",
+          "description": "The number of days for the rental."
+        },
         "startDate": {
           "type": "string",
           "format": "date-time",

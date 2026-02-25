@@ -332,6 +332,7 @@ export const carBookingSchema = z.object({
   userName: z.string(),
   userPhone: z.string(),
   userAddress: z.string(),
+  numberOfDays: z.number().optional(),
   startDate: z.instanceof(Timestamp).or(z.any()).optional().nullable(),
   endDate: z.instanceof(Timestamp).or(z.any()).optional().nullable(),
   status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']),
@@ -343,5 +344,6 @@ export const carBookingFormSchema = z.object({
   userName: z.string().min(3, "Le nom est requis."),
   userPhone: z.string().min(9, "Le numéro de téléphone est requis."),
   userAddress: z.string().min(5, "L'adresse est requise."),
+  numberOfDays: z.coerce.number().int().min(1, "Veuillez entrer un nombre de jours valide."),
 });
 export type CarBookingFormValues = z.infer<typeof carBookingFormSchema>;

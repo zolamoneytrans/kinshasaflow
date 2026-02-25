@@ -36,8 +36,10 @@ const ProtectedAdmin = ({ children }: { children: React.ReactNode }) => {
 
 const BookingRow = ({ booking }: { booking: WithId<CarBooking> }) => {
     const formattedCreatedDate = booking.createdAt?.toDate ? format(booking.createdAt.toDate(), 'dd MMM yyyy, HH:mm', { locale: fr }) : 'N/A';
-    const formattedStartDate = booking.startDate?.toDate ? format(booking.startDate.toDate(), 'dd MMM yyyy', { locale: fr }) : 'N/A';
-    const formattedEndDate = booking.endDate?.toDate ? format(booking.endDate.toDate(), 'dd MMM yyyy', { locale: fr }) : 'N/A';
+    
+    const durationDisplay = booking.numberOfDays 
+        ? `${booking.numberOfDays} jour${booking.numberOfDays > 1 ? 's' : ''}` 
+        : 'N/A';
 
     return (
         <TableRow>
@@ -50,8 +52,7 @@ const BookingRow = ({ booking }: { booking: WithId<CarBooking> }) => {
                  <div className="font-medium">{booking.carName}</div>
             </TableCell>
             <TableCell>
-                <div>Du: {formattedStartDate}</div>
-                <div>Au: {formattedEndDate}</div>
+                <div>{durationDisplay}</div>
             </TableCell>
             <TableCell>
                 <Badge variant={booking.status === 'pending' ? 'secondary' : 'default'}>{booking.status}</Badge>
@@ -91,7 +92,7 @@ export default function CarRentalAdminDashboard() {
                                     <TableRow>
                                         <TableHead>Client</TableHead>
                                         <TableHead>Véhicule</TableHead>
-                                        <TableHead>Dates de location</TableHead>
+                                        <TableHead>Durée</TableHead>
                                         <TableHead>Statut</TableHead>
                                         <TableHead>Date de réservation</TableHead>
                                     </TableRow>

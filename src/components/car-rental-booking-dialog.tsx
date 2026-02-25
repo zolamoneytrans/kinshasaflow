@@ -31,6 +31,7 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
       userName: user?.displayName || '',
       userPhone: user?.phoneNumber || '',
       userAddress: '',
+      numberOfDays: 1,
     },
   });
 
@@ -40,6 +41,7 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
         userName: user.displayName || '',
         userPhone: user.phoneNumber || '',
         userAddress: '',
+        numberOfDays: 1,
       });
     }
   }, [user, open, form]);
@@ -59,6 +61,7 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
         userName: data.userName,
         userPhone: data.userPhone,
         userAddress: data.userAddress,
+        numberOfDays: data.numberOfDays,
         status: 'pending',
         createdAt: serverTimestamp(),
       };
@@ -98,6 +101,15 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
             )} />
             <FormField control={form.control} name="userAddress" render={({ field }) => (
                 <FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+             <FormField control={form.control} name="numberOfDays" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre de jours</FormLabel>
+                  <FormControl>
+                    <Input type="number" min={1} {...field} onChange={event => field.onChange(+event.target.value)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
             )} />
 
             <DialogFooter>

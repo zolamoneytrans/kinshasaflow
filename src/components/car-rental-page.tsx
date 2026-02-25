@@ -1,20 +1,28 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DollarSign, Phone, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const rentalCarDetails = [
+    { id: "toyota-ist", name: "Toyota IST", price: 50 },
+    { id: "toyota-yaris", name: "Toyota Yaris", price: 60 },
+    { id: "toyota-corolla", name: "Toyota Corolla", price: 70 },
+    { id: "toyota-premio", name: "Toyota Premio", price: 80 },
     { id: "toyota-harrier", name: "Toyota Harrier", price: 100 },
     { id: "nissan-juke", name: "Nissan Juke", price: 100 },
     { id: "toyota-noah-alphard", name: "Toyota Noah ou Alphard", price: 100 },
+    { id: "toyota-rav4", name: "Toyota RAV4", price: 100 },
     { id: "toyota-vanguard", name: "Toyota Vanguard", price: 110 },
     { id: "hyundai-sonata", name: "Hyundai Sonata", price: 120 },
     { id: "hyundai-creta", name: "Hyundai Creta", price: 120 },
     { id: "toyota-rav4-new", name: "Toyota RAV4 New", price: 130 },
     { id: "toyota-crown", name: "Toyota Crown", price: 130 },
+    { id: "prado-txl", name: "Prado TXL", price: 200 },
+    { id: "range-rover", name: "Range Rover", price: 350 },
+    { id: "lexus-lx570-new", name: "Lexus LX570 New", price: 500 },
 ];
 
 const CarCard = ({ car }: { car: { id: string; name: string; price: number; } }) => {

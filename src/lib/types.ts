@@ -344,8 +344,10 @@ export const carBookingFormSchema = z.object({
   userPhone: z.string().min(9, "Le numéro de téléphone est requis."),
   userAddress: z.string().min(5, "L'adresse est requise."),
   dates: z.object({
-    from: z.date({ required_error: "La date de début est requise."}),
-    to: z.date({ required_error: "La date de fin est requise."}),
+    from: z.date().optional(),
+    to: z.date().optional(),
+  }).refine((data) => data.from && data.to, {
+    message: "La date de début et la date de fin sont requises.",
   }),
 });
 export type CarBookingFormValues = z.infer<typeof carBookingFormSchema>;

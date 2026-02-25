@@ -63,11 +63,7 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
       toast({ title: "Connexion requise", description: "Vous devez être connecté pour réserver.", variant: "destructive" });
       return router.push('/login');
     }
-    if (!data.dates.from || !data.dates.to) {
-        form.setError("dates", { message: "Veuillez sélectionner une plage de dates." });
-        return;
-    }
-
+    
     setIsSubmitting(true);
     try {
       const bookingData = {
@@ -75,8 +71,8 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
         userId: user.uid,
         carId: car.id,
         carName: car.name,
-        startDate: data.dates.from,
-        endDate: data.dates.to,
+        startDate: data.dates.from!,
+        endDate: data.dates.to!,
         status: 'pending',
         createdAt: serverTimestamp(),
       };

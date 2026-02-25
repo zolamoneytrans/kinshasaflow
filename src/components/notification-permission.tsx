@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Bell, Loader2 } from 'lucide-react';
 import { saveSubscription, saveFCMToken } from '@/lib/push';
-import { useFirebase, useUser } from '@/firebase';
-import { getToken } from 'firebase/messaging';
+import { useFirebase } from '@/firebase';
+import { getToken, onMessage } from 'firebase/messaging';
 
 export function NotificationPermission() {
   const { user, firestore, messaging } = useFirebase();
@@ -14,6 +14,7 @@ export function NotificationPermission() {
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported' | 'loading'>('loading');
   const [isSubscribing, setIsSubscribing] = useState(false);
 
+  // 1. Détecter la permission actuelle au chargement
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator) {
       setPermission(Notification.permission);
@@ -21,6 +22,20 @@ export function NotificationPermission() {
       setPermission('unsupported');
     }
   }, []);
+
+  // 2. Écouter les messages en PREMIER PLAN (App ouverte)
+  useEffect(() => {
+    if (messaging) {
+      const unsubscribe = onMessage(messaging, (payload) => {
+        console.log('Notification reçue en premier plan:', payload);
+        toast({
+          title: payload.notification?.title || 'Kinshasa Flow',
+          description: payload.notification?.body || 'Nouvelle mise à jour reçue.',
+        });
+      });
+      return () => unsubscribe();
+    }
+  }, [messaging, toast]);
 
   const subscribeUser = async () => {
     if (!user || !messaging) return;
@@ -34,10 +49,10 @@ export function NotificationPermission() {
     setIsSubscribing(true);
 
     try {
-      // Ensure service worker is registered and ready
+      // S'assurer que le service worker est prêt
       const registration = await navigator.serviceWorker.ready;
 
-      // 1. Get FCM Token (Standard way for Firebase Console)
+      // Récupérer le jeton FCM
       const currentToken = await getToken(messaging, {
         vapidKey: vapidKey,
         serviceWorkerRegistration: registration
@@ -45,27 +60,21 @@ export function NotificationPermission() {
 
       if (currentToken) {
         await saveFCMToken(firestore, user.uid, currentToken);
-        console.log('FCM Token generated and saved:', currentToken);
-      }
-
-      // 2. Also register standard Web Push for your custom backend tests
-      let subscription = await registration.pushManager.getSubscription();
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: vapidKey
-        });
-      }
-      
-      if (subscription) {
-        await saveSubscription(firestore, user.uid, subscription.toJSON());
+        console.log('FCM Token enregistré avec succès.');
       }
 
       setPermission('granted');
-      toast({ title: 'Notifications activées!', description: 'Vous recevrez désormais des alertes en temps réel.' });
+      toast({ 
+        title: 'Notifications activées!', 
+        description: 'Vous recevrez désormais les alertes de trafic en temps réel.' 
+      });
     } catch (error) {
-      console.error('Failed to subscribe to push notifications', error);
-      toast({ title: 'Erreur', description: "Impossible d'activer les notifications. Vérifiez les paramètres de votre navigateur.", variant: 'destructive' });
+      console.error('Erreur lors de l\'activation des notifications:', error);
+      toast({ 
+        title: 'Erreur', 
+        description: "Impossible d'activer les notifications. Vérifiez les paramètres de votre navigateur.", 
+        variant: 'destructive' 
+      });
     } finally {
       setIsSubscribing(false);
     }
@@ -88,20 +97,20 @@ export function NotificationPermission() {
   
   if (permission === 'denied') {
       return (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md my-4" role="alert">
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded-md my-4" role="alert">
             <p className="font-bold">Notifications bloquées</p>
-            <p>Veuillez autoriser les notifications dans les paramètres de votre navigateur pour rester informé.</p>
+            <p className="text-sm">Veuillez autoriser les notifications dans les paramètres de votre navigateur pour recevoir les alertes.</p>
         </div>
       );
   }
 
   return (
     <div className="bg-primary/10 border-l-4 border-primary p-4 rounded-md my-2 flex items-center justify-between">
-      <div>
+      <div className="pr-4">
         <p className="font-bold text-foreground">Restez informé en temps réel !</p>
-        <p className="text-muted-foreground text-sm">Activez les notifications pour recevoir les alertes de trafic importantes.</p>
+        <p className="text-muted-foreground text-sm">Activez les notifications pour ne rien rater sur le trafic de Kinshasa.</p>
       </div>
-      <Button onClick={handleRequestPermission} disabled={isSubscribing}>
+      <Button onClick={handleRequestPermission} disabled={isSubscribing} className="shrink-0">
         {isSubscribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bell className="mr-2 h-4 w-4" />}
         Activer
       </Button>

@@ -7,14 +7,14 @@ import { DollarSign, Phone, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const rentalCarDetails = [
-    { id: "toyota-ist", name: "Toyota IST", price: 55 },
-    { id: "toyota-belta", name: "Toyota Belta", price: 70 },
-    { id: "toyota-mark-x", name: "Toyota Mark X", price: 80 },
-    { id: "toyota-corolla", name: "Toyota Corolla", price: 80 },
-    { id: "toyota-rav4-v6", name: "Toyota RAV4 V6", price: 100 },
-    { id: "toyota-yaris", name: "Toyota Yaris", price: 100 },
-    { id: "toyota-camry", name: "Toyota Camry", price: 100 },
-    { id: "toyota-ipsum", name: "Toyota Ipsum", price: 100 },
+    { id: "toyota-harrier", name: "Toyota Harrier", price: 100 },
+    { id: "nissan-juke", name: "Nissan Juke", price: 100 },
+    { id: "toyota-noah-alphard", name: "Toyota Noah ou Alphard", price: 100 },
+    { id: "toyota-vanguard", name: "Toyota Vanguard", price: 110 },
+    { id: "hyundai-sonata", name: "Hyundai Sonata", price: 120 },
+    { id: "hyundai-creta", name: "Hyundai Creta", price: 120 },
+    { id: "toyota-rav4-new", name: "Toyota RAV4 New", price: 130 },
+    { id: "toyota-crown", name: "Toyota Crown", price: 130 },
 ];
 
 const CarCard = ({ car }: { car: { id: string; name: string; price: number; } }) => {

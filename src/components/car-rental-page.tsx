@@ -36,7 +36,10 @@ const CarCard = ({ car }: { car: typeof carData[0] }) => {
                 <Image src={car.imageUrl} alt={car.name} fill className="object-cover" data-ai-hint={car.imageHint} />
             </div>
             <CardHeader>
-                <CardTitle>{car.name}</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                    <Car className="h-6 w-6 text-primary" />
+                    <span>{car.name}</span>
+                </CardTitle>
             </CardHeader>
             <CardContent className="flex-1" />
             <CardFooter className="bg-muted/50 p-4 flex justify-between items-center">

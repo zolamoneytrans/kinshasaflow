@@ -346,8 +346,6 @@ export const carBookingFormSchema = z.object({
   dates: z.object({
     from: z.date().optional(),
     to: z.date().optional(),
-  }).refine((data) => data.from && data.to, {
-    message: "La date de début et la date de fin sont requises.",
   }),
 });
 export type CarBookingFormValues = z.infer<typeof carBookingFormSchema>;

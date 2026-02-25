@@ -63,6 +63,14 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
       toast({ title: "Connexion requise", description: "Vous devez être connecté pour réserver.", variant: "destructive" });
       return router.push('/login');
     }
+
+    if (!data.dates.from || !data.dates.to) {
+        form.setError('dates', {
+            type: 'manual',
+            message: 'La date de début et la date de fin sont requises.'
+        });
+        return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -71,8 +79,8 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
         userId: user.uid,
         carId: car.id,
         carName: car.name,
-        startDate: data.dates.from!,
-        endDate: data.dates.to!,
+        startDate: data.dates.from,
+        endDate: data.dates.to,
         status: 'pending',
         createdAt: serverTimestamp(),
       };

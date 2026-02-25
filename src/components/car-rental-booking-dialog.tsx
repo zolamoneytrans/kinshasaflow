@@ -7,7 +7,7 @@ import { useFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { collection, serverTimestamp } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Loader2 } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
 
 type BookingDialogProps = {
   car: { id: string; name: string; price: number; };
@@ -37,10 +36,8 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
       userName: user?.displayName || '',
       userPhone: user?.phoneNumber || '',
       userAddress: '',
-      dates: {
-        from: undefined,
-        to: undefined,
-      },
+      startDate: undefined,
+      numberOfDays: 1,
     },
   });
 
@@ -50,10 +47,8 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
         userName: user.displayName || '',
         userPhone: user.phoneNumber || '',
         userAddress: '',
-        dates: {
-          from: undefined,
-          to: undefined,
-        },
+        startDate: undefined,
+        numberOfDays: 1,
       });
     }
   }, [user, open, form]);
@@ -63,28 +58,23 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
       toast({ title: "Connexion requise", description: "Vous devez être connecté pour réserver.", variant: "destructive" });
       return router.push('/login');
     }
-
-    if (!data.dates.from || !data.dates.to) {
-        form.setError('dates', {
-            type: 'manual',
-            message: 'La date de début et la date de fin sont requises.'
-        });
-        return;
-    }
     
     setIsSubmitting(true);
     try {
+      const endDate = addDays(data.startDate, data.numberOfDays);
+
       const bookingData = {
-        ...data,
         userId: user.uid,
         carId: car.id,
         carName: car.name,
-        startDate: data.dates.from,
-        endDate: data.dates.to,
+        userName: data.userName,
+        userPhone: data.userPhone,
+        userAddress: data.userAddress,
+        startDate: data.startDate,
+        endDate: endDate,
         status: 'pending',
         createdAt: serverTimestamp(),
       };
-      delete (bookingData as any).dates; // Remove the 'dates' object before saving
 
       const bookingsCollection = collection(firestore, 'car_bookings');
       await addDocumentNonBlocking(bookingsCollection, bookingData);
@@ -104,7 +94,7 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
       <DialogTrigger asChild>
         <Button>Réserver</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>Réserver: {car.name}</DialogTitle>
           <DialogDescription>
@@ -122,49 +112,63 @@ export const BookingDialog = ({ car }: BookingDialogProps) => {
             <FormField control={form.control} name="userAddress" render={({ field }) => (
                 <FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            <FormField control={form.control} name="dates" render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Dates de location</FormLabel>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              id="date"
-                              variant={"outline"}
-                              className={cn("w-full justify-start text-left font-normal", !field.value.from && "text-muted-foreground")}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value?.from ? (
-                                field.value.to ? (
-                                  <>
-                                    {format(field.value.from, "LLL dd, y", {locale: fr})} -{" "}
-                                    {format(field.value.to, "LLL dd, y", {locale: fr})}
-                                  </>
-                                ) : (
-                                  format(field.value.from, "LLL dd, y", {locale: fr})
-                                )
-                              ) : (
-                                <span>Choisissez une plage de dates</span>
-                              )}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={field.value?.from}
-                            selected={field.value as DateRange}
-                            onSelect={field.onChange}
-                            numberOfMonths={1}
-                            locale={fr}
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    <FormMessage />
-                </FormItem>
-             )} />
+            
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Date de début</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full pl-3 text-left font-normal",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {field.value ? (
+                                                format(field.value, "PPP", { locale: fr })
+                                            ) : (
+                                                <span>Choisissez une date</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                        initialFocus
+                                        locale={fr}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="numberOfDays"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nombre de jours</FormLabel>
+                            <FormControl>
+                                <Input type="number" min="1" placeholder="Ex: 3" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 1)} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+
 
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting} className="w-full">

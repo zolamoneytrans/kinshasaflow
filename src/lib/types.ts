@@ -323,3 +323,29 @@ export const inquiryFormSchema = z.object({
   message: z.string().min(10, "Le message doit comporter au moins 10 caractères."),
 });
 export type InquiryFormValues = z.infer<typeof inquiryFormSchema>;
+
+// Schema for Car Booking
+export const carBookingSchema = z.object({
+  userId: z.string(),
+  carId: z.string(),
+  carName: z.string(),
+  userName: z.string(),
+  userPhone: z.string(),
+  userAddress: z.string(),
+  startDate: z.instanceof(Timestamp).or(z.any()),
+  endDate: z.instanceof(Timestamp).or(z.any()),
+  status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']),
+  createdAt: z.instanceof(Timestamp).or(z.any()),
+});
+export type CarBooking = z.infer<typeof carBookingSchema>;
+
+export const carBookingFormSchema = z.object({
+  userName: z.string().min(3, "Le nom est requis."),
+  userPhone: z.string().min(9, "Le numéro de téléphone est requis."),
+  userAddress: z.string().min(5, "L'adresse est requise."),
+  dates: z.object({
+    from: z.date({ required_error: "La date de début est requise."}),
+    to: z.date({ required_error: "La date de fin est requise."}),
+  }),
+});
+export type CarBookingFormValues = z.infer<typeof carBookingFormSchema>;

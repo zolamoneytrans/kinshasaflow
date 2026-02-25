@@ -96,6 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/admin/transport') return 'Admin Transport';
     if (pathname === '/admin/logement') return 'Admin Logement';
     if (pathname === '/admin/messages') return 'Messages';
+    if (pathname === '/admin/car-rental') return 'Admin Location';
     if (pathname.startsWith('/admin')) return 'Tableau de Bord Admin';
     return 'Kinshasa Flow';
   }
@@ -121,6 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/admin/transport') return 'Gérer les abonnements au transport.';
     if (pathname === '/admin/logement') return 'Gérer les candidatures pour les logements.';
     if (pathname === '/admin/messages') return 'Consulter les messages des utilisateurs.';
+    if (pathname === '/admin/car-rental') return 'Gérer les réservations de véhicules.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -287,6 +289,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <Link href="/admin/messages">
                         <Mail />
                         <span>Messages</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} tooltip={{children: "Admin Location"}}>
+                      <Link href="/admin/car-rental">
+                        <Car />
+                        <span>Admin Location</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

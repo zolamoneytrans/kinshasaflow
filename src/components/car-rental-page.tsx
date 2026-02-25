@@ -1,12 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardFooter, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardFooter, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DollarSign, Phone, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { BookingDialog } from './car-rental-booking-dialog';
 
-const rentalCarDetails = [
+type CarInfo = { id: string; name: string; price: number; };
+
+const rentalCarDetails: CarInfo[] = [
     { id: "toyota-ist", name: "Toyota IST", price: 50 },
     { id: "toyota-yaris", name: "Toyota Yaris", price: 60 },
     { id: "toyota-corolla", name: "Toyota Corolla", price: 70 },
@@ -23,9 +26,10 @@ const rentalCarDetails = [
     { id: "prado-txl", name: "Prado TXL", price: 200 },
     { id: "range-rover", name: "Range Rover", price: 350 },
     { id: "lexus-lx570-new", name: "Lexus LX570 New", price: 500 },
-];
+].sort((a, b) => a.price - b.price);
 
-const CarCard = ({ car }: { car: { id: string; name: string; price: number; } }) => {
+
+const CarCard = ({ car }: { car: CarInfo }) => {
     return (
         <Card className="overflow-hidden flex flex-col h-full">
             <CardHeader className="flex-grow">
@@ -39,9 +43,7 @@ const CarCard = ({ car }: { car: { id: string; name: string; price: number; } })
                     <DollarSign className="h-5 w-5" />
                     {car.price}$ <span className="text-sm font-normal text-muted-foreground">/ jour</span>
                 </div>
-                 <a href="tel:0857767040">
-                    <Button>Réserver</Button>
-                </a>
+                 <BookingDialog car={car} />
             </CardFooter>
         </Card>
     );
@@ -55,7 +57,7 @@ export default function CarRentalPage() {
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
                     <div className="text-center">
                         <h1 className="text-3xl md:text-4xl font-bold flex items-center justify-center gap-3"><Car className="h-8 w-8 text-primary"/>Location de Véhicules</h1>
-                        <p className="mt-2 text-lg text-muted-foreground">Découvrez nos véhicules disponibles pour une location journalière.</p>
+                        <p className="mt-2 text-lg text-muted-foreground">Découvrez notre flotte de véhicules et réservez en quelques clics.</p>
                     </div>
                 </motion.div>
                 
@@ -70,22 +72,6 @@ export default function CarRentalPage() {
                             <CarCard car={car} />
                         </motion.div>
                     ))}
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
-                    <Card className="bg-accent/50 border-accent">
-                        <CardHeader className="items-center text-center">
-                            <CardTitle className="flex items-center gap-2"><Phone /> Contact pour Réservation</CardTitle>
-                            <CardDescription>
-                                Pour réserver un véhicule ou pour toute question, n'hésitez pas à nous appeler.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-center">
-                            <a href="tel:0857767040" className="text-2xl font-bold text-primary hover:underline">
-                                0857767040
-                            </a>
-                        </CardContent>
-                    </Card>
                 </motion.div>
             </div>
         </div>

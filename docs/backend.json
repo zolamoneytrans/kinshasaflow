@@ -422,6 +422,74 @@
         "message",
         "createdAt"
       ]
+    },
+    "CarBooking": {
+      "title": "Car Booking",
+      "type": "object",
+      "description": "Represents a user's booking for a rental car.",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the booking user."
+        },
+        "carId": {
+          "type": "string",
+          "description": "The ID of the booked car."
+        },
+        "carName": {
+          "type": "string",
+          "description": "The name of the booked car."
+        },
+        "userName": {
+          "type": "string",
+          "description": "The name of the user."
+        },
+        "userPhone": {
+          "type": "string",
+          "description": "The phone number of the user."
+        },
+        "userAddress": {
+          "type": "string",
+          "description": "The address of the user."
+        },
+        "startDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The start date of the rental."
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The end date of the rental."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "confirmed",
+            "completed",
+            "cancelled"
+          ],
+          "description": "The status of the booking."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the booking was made."
+        }
+      },
+      "required": [
+        "userId",
+        "carId",
+        "carName",
+        "userName",
+        "userPhone",
+        "userAddress",
+        "startDate",
+        "endDate",
+        "status",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -548,6 +616,22 @@
             {
               "name": "inquiryId",
               "description": "Unique identifier for the inquiry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/car_bookings/{bookingId}",
+        "definition": {
+          "entityName": "CarBooking",
+          "schema": {
+            "$ref": "#/backend/entities/CarBooking"
+          },
+          "description": "Top-level collection for all car rental bookings. Writable by any authenticated user. Readable only by administrators.",
+          "params": [
+            {
+              "name": "bookingId",
+              "description": "Unique identifier for the car booking."
             }
           ]
         }

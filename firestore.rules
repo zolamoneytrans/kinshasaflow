@@ -104,6 +104,13 @@ service cloud.firestore {
     function hasValidSubscriptionDataOnCreate(userId) {
       return request.resource.data.userId == userId;
     }
+    
+    /**
+     * On create, validates that the new car booking request belongs to the user creating it.
+     */
+    function hasValidCarBookingDataOnCreate(userId) {
+      return request.resource.data.userId == userId;
+    }
 
     /**
      * On update, ensures the 'userId' field cannot be changed.
@@ -260,6 +267,17 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
       // Admins can list all applications for their dashboard.
       allow list: if isAdmin();
+    }
+    
+    /**
+     * @description Secures the top-level collection for all car rental bookings.
+     *   Writable by any authenticated user for creating their own booking.
+     *   Readable only by administrators for review.
+     * @path /car_bookings/{bookingId}
+     */
+    match /car_bookings/{bookingId} {
+      allow create: if isSignedIn() && hasValidCarBookingDataOnCreate(request.auth.uid);
+      allow read, list, update, delete: if isAdmin();
     }
 
     /**

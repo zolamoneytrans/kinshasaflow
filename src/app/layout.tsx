@@ -4,12 +4,42 @@ import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'Kinshasa Flow',
-  description: "Naviguez facilement dans le trafic de Kinshasa.",
+  metadataBase: new URL('https://kinshasaflow.online'),
+  title: {
+    default: 'Kinshasa Flow - Trafic et Mobilité à Kinshasa',
+    template: '%s | Kinshasa Flow',
+  },
+  description: "Naviguez facilement dans le trafic de Kinshasa. Rapports en temps réel, alertes de police, assistant IA, solutions de transport et logements de court séjour.",
+  keywords: ['Kinshasa', 'trafic', 'embouteillage', 'RDC', 'transport Kinshasa', 'location voiture Kinshasa', 'logement Kinshasa', 'route Kinshasa'],
+  authors: [{ name: 'Swazi Appli Lab sarl' }],
+  creator: 'Swazi Appli Lab sarl',
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    url: 'https://kinshasaflow.online',
+    siteName: 'Kinshasa Flow',
+    title: 'Kinshasa Flow - Votre copilote sur les routes de Kinshasa',
+    description: 'Évitez les embouteillages à Kinshasa grâce à nos rapports en temps réel et notre assistant IA.',
+    images: [
+      {
+        url: '/og-image.png', // Note: You should create this image later
+        width: 1200,
+        height: 630,
+        alt: 'Kinshasa Flow Banner',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Kinshasa Flow',
+    description: 'Naviguez Kinshasa sans embouteillage.',
+    images: ['/og-image.png'],
+  },
   icons: {
     icon: '/icon.svg',
     apple: '/apple-touch-icon.png',
-  }
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

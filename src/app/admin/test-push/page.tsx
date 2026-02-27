@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirebase, useCollection, useMemoFirebase } from "@/firebase";
-import { collectionGroup, query, orderBy, limit } from "firebase/firestore";
+import { collectionGroup } from "firebase/firestore";
 import { sendTestPushNotificationAction } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Bell, Loader2, Send } from "lucide-react";
@@ -16,11 +16,15 @@ export default function TestPushPage() {
   const { toast } = useToast();
   const [isSending, setIsSubmitting] = useState(false);
 
-  // Get some recent subscriptions to test with
-  const subsQuery = useMemoFirebase(() => collectionGroup(firestore, 'pushSubscriptions'), [firestore]);
-  const { data: subs, isLoading } = useCollection(subsQuery);
-
   const isAdmin = user?.email === 'drnduwa@gmail.com';
+
+  // Only attempt to fetch if the user is authenticated and is the admin
+  const subsQuery = useMemoFirebase(() => {
+    if (!firestore || !isAdmin) return null;
+    return collectionGroup(firestore, 'pushSubscriptions');
+  }, [firestore, isAdmin]);
+
+  const { data: subs, isLoading } = useCollection(subsQuery);
 
   const handleSendTest = async () => {
     if (!subs || subs.length === 0) {
@@ -43,7 +47,13 @@ export default function TestPushPage() {
     setIsSubmitting(false);
   };
 
-  if (!isAdmin) return null;
+  if (!isAdmin) return (
+    <AppShell>
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Accès restreint aux administrateurs.</p>
+      </div>
+    </AppShell>
+  );
 
   return (
     <AppShell>
@@ -55,8 +65,8 @@ export default function TestPushPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm font-medium mb-2">Utilisateurs enregistrés :</p>
-              <p className="text-2xl font-bold">{isLoading ? "..." : subs?.length || 0}</p>
+              <p className="text-sm font-medium mb-2">Utilisateurs enregistrés (Abonnements Push) :</p>
+              <p className="text-2xl font-bold">{isLoading ? "Chargement..." : subs?.length || 0}</p>
             </div>
 
             <Button onClick={handleSendTest} disabled={isSending || isLoading || !subs?.length} className="w-full h-16 text-lg">

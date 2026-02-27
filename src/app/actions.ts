@@ -1,3 +1,4 @@
+
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -14,7 +15,7 @@ export async function askAssistantAction(input: AssistantInput) {
 }
 
 export async function sendTestPushNotificationAction(subscription: PushSubscription, payload: string) {
-  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_KEY;
   const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
   if (!vapidPublicKey || !vapidPrivateKey) {
@@ -27,7 +28,7 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
   const webPushSubscription = subscription as webpush.PushSubscription;
 
   webpush.setVapidDetails(
-    'mailto:test@example.com',
+    'mailto:drnduwa@gmail.com',
     vapidPublicKey,
     vapidPrivateKey
   );

@@ -1,24 +1,24 @@
+
 {
   "name": "Kinshasa Flow",
   "short_name": "K-Flow",
-  "description": "Naviguez facilement dans le trafic de Kinshasa.",
+  "description": "Naviguez sans embouteillage à Kinshasa",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f9fb",
+  "background_color": "#ffffff",
   "theme_color": "#248eeb",
   "icons": [
     {
       "src": "/icon.svg",
-      "sizes": "192x192",
+      "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/icon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
   ],
-  "gcm_sender_id": "103953800507"
+  "gcm_sender_id": "196367644911"
 }

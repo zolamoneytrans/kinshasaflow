@@ -14,7 +14,7 @@ export function NotificationPermission() {
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported' | 'loading'>('loading');
   const [isSubscribing, setIsSubscribing] = useState(false);
 
-  // 1. Détecter la permission actuelle au chargement
+  // 1. Detect current permission on load
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator) {
       setPermission(Notification.permission);
@@ -23,11 +23,11 @@ export function NotificationPermission() {
     }
   }, []);
 
-  // 2. Écouter les messages en PREMIER PLAN (App ouverte)
+  // 2. Listen for messages in FOREGROUND (App open)
   useEffect(() => {
     if (messaging) {
       const unsubscribe = onMessage(messaging, (payload) => {
-        console.log('Notification reçue en premier plan:', payload);
+        console.log('Notification received in foreground:', payload);
         toast({
           title: payload.notification?.title || 'Kinshasa Flow',
           description: payload.notification?.body || 'Nouvelle mise à jour reçue.',
@@ -49,10 +49,24 @@ export function NotificationPermission() {
     setIsSubscribing(true);
 
     try {
-      // S'assurer que le service worker est prêt
+      // Ensure service worker is ready
       const registration = await navigator.serviceWorker.ready;
 
-      // Récupérer le jeton FCM
+      // STAGE 1: Save standard Web Push Subscription (for our custom Test Push page)
+      try {
+        const sub = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidKey
+        });
+        if (sub) {
+          await saveSubscription(firestore, user.uid, sub.toJSON());
+          console.log('Web Push Subscription saved.');
+        }
+      } catch (subErr) {
+        console.warn('Standard Web Push subscription failed, falling back to FCM only.', subErr);
+      }
+
+      // STAGE 2: Get FCM Token (for Firebase Console campaigns)
       const currentToken = await getToken(messaging, {
         vapidKey: vapidKey,
         serviceWorkerRegistration: registration
@@ -60,7 +74,7 @@ export function NotificationPermission() {
 
       if (currentToken) {
         await saveFCMToken(firestore, user.uid, currentToken);
-        console.log('FCM Token enregistré avec succès.');
+        console.log('FCM Token saved successfully.');
       }
 
       setPermission('granted');
@@ -69,7 +83,7 @@ export function NotificationPermission() {
         description: 'Vous recevrez désormais les alertes de trafic en temps réel.' 
       });
     } catch (error) {
-      console.error('Erreur lors de l\'activation des notifications:', error);
+      console.error('Error enabling notifications:', error);
       toast({ 
         title: 'Erreur', 
         description: "Impossible d'activer les notifications. Vérifiez les paramètres de votre navigateur.", 

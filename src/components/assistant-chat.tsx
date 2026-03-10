@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bot, Send, User, Loader2 } from 'lucide-react';
-import { askAssistantAction } from '@/app/actions';
+import { Bot, Send, User, Loader2, Volume2, VolumeX } from 'lucide-react';
+import { askAssistantAction, generateSpeechAction } from '@/app/actions';
 import { useUser } from '@/firebase';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -20,8 +21,11 @@ export default function AssistantChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSpeakingId, setIsSpeakingId] = useState<number | null>(null);
   const { user } = useUser();
+  const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,6 +34,34 @@ export default function AssistantChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  const handleSpeech = async (index: number, text: string) => {
+    if (isSpeakingId === index) {
+      audioRef.current?.pause();
+      setIsSpeakingId(null);
+      return;
+    }
+
+    setIsSpeakingId(index);
+    try {
+      const { media } = await generateSpeechAction(text);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audio = new Audio(media);
+      audioRef.current = audio;
+      audio.play();
+      audio.onended = () => setIsSpeakingId(null);
+    } catch (error) {
+      console.error('Error generating speech:', error);
+      toast({
+        title: "Erreur audio",
+        description: "Impossible de lire le message. Veuillez réessayer.",
+        variant: "destructive"
+      });
+      setIsSpeakingId(null);
+    }
+  };
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,14 +91,22 @@ export default function AssistantChat() {
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              <AvatarFallback><User /></AvatarFallback>
+              <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
             </Avatar>
-            <span>Assistant K-Flow</span>
+            <div className="flex flex-col">
+                <span className="text-lg">Assistant K-Flow</span>
+                <span className="text-xs text-muted-foreground font-normal">Expert en routes de Kinshasa</span>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">
           <ScrollArea className="flex-1 pr-4">
             <div className="space-y-6">
+              {messages.length === 0 && (
+                  <div className="text-center py-10 text-muted-foreground italic">
+                      "Mbote! Naza K-Flow Assistant. Ndenge nini nakoki kosalisa yo lelo?"
+                  </div>
+              )}
               {messages.map((message, index) => (
                 <div
                   key={index}
@@ -77,18 +117,33 @@ export default function AssistantChat() {
                 >
                   {message.role === 'assistant' && (
                     <Avatar className="h-8 w-8 border">
-                      <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                      <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
                     </Avatar>
                   )}
                   <div
                     className={cn(
-                      'max-w-md rounded-lg p-3 text-sm',
+                      'max-w-md rounded-lg p-3 text-sm relative group',
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
                     )}
                   >
                     {message.content}
+                    {message.role === 'assistant' && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute -right-10 top-0 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                            onClick={() => handleSpeech(index, message.content)}
+                            disabled={isSpeakingId !== null && isSpeakingId !== index}
+                        >
+                            {isSpeakingId === index ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Volume2 className="h-4 w-4" />
+                            )}
+                        </Button>
+                    )}
                   </div>
                   {message.role === 'user' && (
                     <Avatar className="h-8 w-8 border">
@@ -101,7 +156,7 @@ export default function AssistantChat() {
               {isLoading && (
                 <div className="flex items-start gap-3 justify-start">
                     <Avatar className="h-8 w-8 border">
-                      <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                      <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
                     </Avatar>
                     <div className="bg-muted p-3 rounded-lg">
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -115,7 +170,7 @@ export default function AssistantChat() {
             <Input
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Naza na likambo..."
+              placeholder="Posez votre question (ex: Itinéraire Victoire vers Gombe...)"
               disabled={isLoading}
               className="flex-1"
             />

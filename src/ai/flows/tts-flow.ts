@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Text-To-Speech (TTS) flow for the AI Assistant.
@@ -28,13 +29,14 @@ const generateSpeechFlow = ai.defineFlow(
     outputSchema: TTSOutputSchema,
   },
   async (text) => {
-    // Sanitize and limit text length
+    // Sanitize and limit text length to avoid model errors
     const sanitizedText = text.substring(0, 1000).trim();
     if (!sanitizedText) {
       throw new Error('Le texte à convertir est vide.');
     }
 
     try {
+      // Use the specific TTS model from Google AI with explicit modalities
       const response = await ai.generate({
         model: 'googleai/gemini-2.5-flash-preview-tts',
         config: {
@@ -48,17 +50,25 @@ const generateSpeechFlow = ai.defineFlow(
         prompt: sanitizedText,
       });
 
-      const media = response.media;
+      // Try multiple ways to find the media in the response
+      let media = response.media;
+      
+      if (!media) {
+        // Search in the output content parts if shortcut property is missing
+        const mediaPart = response.output?.message?.content.find((p) => !!p.media);
+        media = mediaPart?.media;
+      }
 
       if (!media || !media.url) {
-        throw new Error('Aucun média audio retourné par le modèle.');
+        console.error('TTS Model did not return media. Full response info available in Genkit logs.');
+        throw new Error('Le modèle n\'a pas retourné de média audio. Cela peut être dû à des limites de quota ou à un filtrage de contenu.');
       }
 
       // Convert PCM to WAV format
       // Expected format: 'data:audio/pcm;base64,<data>'
       const commaIndex = media.url.indexOf(',');
       if (commaIndex === -1) {
-        throw new Error('Format de données audio invalide.');
+        throw new Error('Format de données audio invalide reçu du modèle.');
       }
 
       const base64Data = media.url.substring(commaIndex + 1);
@@ -70,7 +80,7 @@ const generateSpeechFlow = ai.defineFlow(
         media: 'data:audio/wav;base64,' + wavBase64,
       };
     } catch (error: any) {
-      console.error('Erreur Genkit TTS:', error);
+      console.error('Erreur dans le flow generateSpeech:', error);
       throw new Error(`Échec de la génération vocale: ${error.message}`);
     }
   }

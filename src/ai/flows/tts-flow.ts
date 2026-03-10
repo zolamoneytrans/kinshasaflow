@@ -7,7 +7,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
 import wav from 'wav';
 
 const TTSInputSchema = z.string();
@@ -29,32 +28,51 @@ const generateSpeechFlow = ai.defineFlow(
     outputSchema: TTSOutputSchema,
   },
   async (text) => {
-    const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-preview-tts'),
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' }, // A balanced professional voice
-          },
-        },
-      },
-      prompt: text,
-    });
-
-    if (!media || !media.url) {
-      throw new Error('No audio media returned from the model.');
+    // Sanitize and limit text length
+    const sanitizedText = text.substring(0, 1000).trim();
+    if (!sanitizedText) {
+      throw new Error('Le texte à convertir est vide.');
     }
 
-    // Convert PCM to WAV format
-    const base64Data = media.url.substring(media.url.indexOf(',') + 1);
-    const audioBuffer = Buffer.from(base64Data, 'base64');
-    
-    const wavBase64 = await toWav(audioBuffer);
+    try {
+      const response = await ai.generate({
+        model: 'googleai/gemini-2.5-flash-preview-tts',
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Algenib' },
+            },
+          },
+        },
+        prompt: sanitizedText,
+      });
 
-    return {
-      media: 'data:audio/wav;base64,' + wavBase64,
-    };
+      const media = response.media;
+
+      if (!media || !media.url) {
+        throw new Error('Aucun média audio retourné par le modèle.');
+      }
+
+      // Convert PCM to WAV format
+      // Expected format: 'data:audio/pcm;base64,<data>'
+      const commaIndex = media.url.indexOf(',');
+      if (commaIndex === -1) {
+        throw new Error('Format de données audio invalide.');
+      }
+
+      const base64Data = media.url.substring(commaIndex + 1);
+      const audioBuffer = Buffer.from(base64Data, 'base64');
+      
+      const wavBase64 = await toWav(audioBuffer);
+
+      return {
+        media: 'data:audio/wav;base64,' + wavBase64,
+      };
+    } catch (error: any) {
+      console.error('Erreur Genkit TTS:', error);
+      throw new Error(`Échec de la génération vocale: ${error.message}`);
+    }
   }
 );
 

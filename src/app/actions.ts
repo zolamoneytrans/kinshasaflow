@@ -1,4 +1,3 @@
-
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -16,7 +15,12 @@ export async function askAssistantAction(input: AssistantInput) {
 }
 
 export async function generateSpeechAction(text: string) {
-    return await generateSpeech(text);
+    try {
+        return await generateSpeech(text);
+    } catch (error: any) {
+        console.error('generateSpeechAction error:', error);
+        throw new Error(error.message || "Erreur lors de la génération vocale.");
+    }
 }
 
 export async function sendTestPushNotificationAction(subscription: PushSubscription, payload: string) {

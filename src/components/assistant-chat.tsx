@@ -35,28 +35,63 @@ export default function AssistantChat() {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
   const handleSpeech = async (index: number, text: string) => {
     if (isSpeakingId === index) {
-      audioRef.current?.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       setIsSpeakingId(null);
       return;
     }
 
     setIsSpeakingId(index);
     try {
-      const { media } = await generateSpeechAction(text);
       if (audioRef.current) {
         audioRef.current.pause();
       }
-      const audio = new Audio(media);
+
+      const result = await generateSpeechAction(text);
+      if (!result || !result.media) {
+        throw new Error('Données audio manquantes');
+      }
+
+      const audio = new Audio(result.media);
       audioRef.current = audio;
-      audio.play();
-      audio.onended = () => setIsSpeakingId(null);
-    } catch (error) {
+      
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Audio playback failed:", error);
+          setIsSpeakingId(null);
+        });
+      }
+
+      audio.onended = () => {
+        setIsSpeakingId(null);
+        audioRef.current = null;
+      };
+      
+      audio.onerror = (e) => {
+        console.error("Audio element error:", e);
+        setIsSpeakingId(null);
+        audioRef.current = null;
+      };
+
+    } catch (error: any) {
       console.error('Error generating speech:', error);
       toast({
         title: "Erreur audio",
-        description: "Impossible de lire le message. Veuillez réessayer.",
+        description: error.message || "Impossible de lire le message. Veuillez réessayer.",
         variant: "destructive"
       });
       setIsSpeakingId(null);
@@ -133,12 +168,15 @@ export default function AssistantChat() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute -right-10 top-0 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                            className={cn(
+                              "absolute -right-10 top-0 transition-opacity h-8 w-8",
+                              isSpeakingId === index ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            )}
                             onClick={() => handleSpeech(index, message.content)}
                             disabled={isSpeakingId !== null && isSpeakingId !== index}
                         >
                             {isSpeakingId === index ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
                             ) : (
                                 <Volume2 className="h-4 w-4" />
                             )}

@@ -4,30 +4,30 @@
 
 @layer base {
   :root {
-    --background: 210 40% 96.5%; /* Teinte bleu-gris très douce pour le fond de page */
-    --foreground: 222 47% 11%;
-    --card: 210 40% 99%;
+    --background: 210 50% 98%; /* Fond ultra-clair pour une interface aérienne */
+    --foreground: 222 47% 11%; /* Texte sombre profond pour un contraste haut de gamme */
+    --card: 0 0% 100%; /* Cartes blanc pur pour un aspect détaché et propre */
     --card-foreground: 222 47% 11%;
-    --popover: 210 40% 99%;
+    --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
     --primary: 205 100% 50%; /* Bleu Congo vibrant */
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 92%;
+    --secondary: 210 40% 94%;
     --secondary-foreground: 222 47% 11.2%;
-    --muted: 210 40% 92%;
+    --muted: 210 40% 94%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 45 100% 50%; /* Jaune Kinshasa */
+    --accent: 45 100% 50%; /* Jaune Kinshasa vif pour les appels à l'action */
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --success: 142.1 76.2% 36.3%;
     --success-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 88%;
-    --input: 214.3 31.8% 88%;
+    --border: 214.3 31.8% 91%;
+    --input: 214.3 31.8% 91%;
     --ring: 205 100% 50%;
     --radius: 0.75rem;
 
-    /* Sidebar - Changement du noir vers un bleu profond élégant */
+    /* Sidebar - Contraste et élégance */
     --sidebar-background: 215 50% 23%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 45 100% 50%;
@@ -66,6 +66,10 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight text-foreground;
   }
 }

@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/input';
 import { getTomTomTrafficIncidents } from '@/app/actions';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Progress } from '@/components/ui/progress';
 
 type TrafficStatus = 'BLOQUÉ' | 'SATURÉ' | 'RALENTI' | 'FLUIDE';
 
@@ -50,13 +49,11 @@ export default function TrafficReports() {
     try {
       const data = await getTomTomTrafficIncidents();
       
-      // Districts de Kinshasa pour la simulation/enrichissement
       const districts = ["Gombe", "Limete", "Kalamu", "Ngaliema", "Bandalungwa", "Kintambo", "Lingwala", "Masina", "N'djili", "Lemba"];
       
-      // On mappe les données TomTom et on ajoute des entrées pour atteindre au moins 20
       let formatted: Incident[] = data.map((inc: any, idx: number) => {
-        const magnitude = inc.tm.m;
-        const delay = Math.round(inc.tm.dl / 60);
+        const magnitude = inc.tm?.m || 0;
+        const delay = Math.round((inc.tm?.dl || 0) / 60);
         
         let status: TrafficStatus = "FLUIDE";
         let speed = 45;
@@ -75,8 +72,8 @@ export default function TrafficReports() {
 
         return {
             id: inc.id || `inc-${idx}`,
-            road: inc.tm.shortDesc || "Axe principal",
-            description: inc.tm.i || "Trafic dense",
+            road: inc.tm?.shortDesc || "Axe principal",
+            description: inc.tm?.i || "Trafic dense",
             district: districts[Math.floor(Math.random() * districts.length)],
             status,
             speed,
@@ -86,7 +83,6 @@ export default function TrafficReports() {
         };
       });
 
-      // Si on a moins de 20 incidents, on génère des axes majeurs réalistes
       if (formatted.length < 20) {
           const mainRoads = [
               { name: "Blvd du 30 Juin", district: "Gombe", flow: 50 },
@@ -178,7 +174,6 @@ export default function TrafficReports() {
         const query = searchQuery.toLowerCase();
         result = result.filter(i => i.road.toLowerCase().includes(query) || i.district.toLowerCase().includes(query));
     }
-    // Sort logic (can be expanded)
     return result.sort((a, b) => {
         const priority = { 'BLOQUÉ': 0, 'SATURÉ': 1, 'RALENTI': 2, 'FLUIDE': 3 };
         return priority[a.status] - priority[b.status];
@@ -188,12 +183,11 @@ export default function TrafficReports() {
   return (
     <div className="flex flex-col h-full w-full gap-6 bg-[#f0f4f8] overflow-y-auto pb-10">
       
-      {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 pt-6">
         <div>
             <h1 className="text-2xl font-bold text-[#1e293b] tracking-tight">Rapports de trafic — Kinshasa</h1>
             <p className="text-sm text-slate-500 font-medium">
-                Analyse automatique Google Maps · mise à jour toutes les 60s
+                Analyse automatique · mise à jour toutes les 60s
             </p>
         </div>
         
@@ -206,7 +200,7 @@ export default function TrafficReports() {
                 Actualisation dans {countdown}s
             </div>
             <div className="flex gap-2">
-                <Button size="icon" variant="primary" onClick={() => fetchData(true)} disabled={isRefreshing} className="rounded-xl shadow-md h-10 w-10 bg-[#007bff] hover:bg-[#0069d9]">
+                <Button size="icon" variant="default" onClick={() => fetchData(true)} disabled={isRefreshing} className="rounded-xl shadow-md h-10 w-10 bg-[#007bff] hover:bg-[#0069d9]">
                     <RefreshCw className={cn("h-5 w-5 text-white", isRefreshing && "animate-spin")} />
                 </Button>
                 <Button size="icon" variant="outline" className="rounded-xl shadow-sm h-10 w-10 bg-white border-slate-200">
@@ -216,9 +210,7 @@ export default function TrafficReports() {
         </div>
       </div>
 
-      {/* KPI STATS CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-6">
-        {/* BLOQUÉ */}
         <Card className="rounded-2xl border-none shadow-sm bg-white overflow-hidden group">
             <CardContent className="p-5 flex justify-between items-start">
                 <div className="space-y-1">
@@ -232,7 +224,6 @@ export default function TrafficReports() {
             </CardContent>
         </Card>
 
-        {/* SATURÉ */}
         <Card className="rounded-2xl border-none shadow-sm bg-white overflow-hidden group">
             <CardContent className="p-5 flex justify-between items-start">
                 <div className="space-y-1">
@@ -246,7 +237,6 @@ export default function TrafficReports() {
             </CardContent>
         </Card>
 
-        {/* RALENTI */}
         <Card className="rounded-2xl border-none shadow-sm bg-white overflow-hidden group">
             <CardContent className="p-5 flex justify-between items-start">
                 <div className="space-y-1">
@@ -260,7 +250,6 @@ export default function TrafficReports() {
             </CardContent>
         </Card>
 
-        {/* FLUIDE */}
         <Card className="rounded-2xl border-none shadow-sm bg-white overflow-hidden group">
             <CardContent className="p-5 flex justify-between items-start">
                 <div className="space-y-1">
@@ -275,7 +264,6 @@ export default function TrafficReports() {
         </Card>
       </div>
 
-      {/* FILTER CONTROLS */}
       <div className="px-6 space-y-4">
         <div className="flex flex-col md:flex-row items-center gap-4">
             <h2 className="text-lg font-bold text-slate-800 whitespace-nowrap">
@@ -318,17 +306,8 @@ export default function TrafficReports() {
                 </Button>
             ))}
         </div>
-
-        {/* SORT DROPDOWN (UI ONLY) */}
-        <div className="w-full md:w-64">
-            <div className="bg-white border border-slate-200 rounded-xl px-4 py-2 flex justify-between items-center text-sm font-semibold text-slate-600 shadow-sm cursor-pointer">
-                Trier: Statut
-                <ChevronDown className="h-4 w-4 opacity-50" />
-            </div>
-        </div>
       </div>
 
-      {/* DATA TABLE */}
       <div className="px-6 flex-1">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="overflow-x-auto">
@@ -435,7 +414,6 @@ export default function TrafficReports() {
         </div>
       </div>
 
-      {/* FLOATING SCROLL BUTTON (UI ONLY) */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white p-3 rounded-full shadow-2xl border border-slate-100 cursor-pointer animate-bounce hover:bg-slate-50">
         <ArrowDown className="h-5 w-5 text-slate-400" />
       </div>

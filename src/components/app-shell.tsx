@@ -137,130 +137,130 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-background">
       <SidebarProvider>
-        <Sidebar>
+        <Sidebar className="border-r-0 shadow-2xl">
           <SidebarContent>
-            <SidebarHeader className="border-b">
-               <div className="p-3 flex items-center justify-center">
-                <Logo className="h-9 w-auto text-sidebar-primary" />
+            <SidebarHeader className="border-b border-sidebar-border/50">
+               <div className="p-4 flex items-center justify-center">
+                <Logo className="h-9 w-auto text-sidebar-foreground" />
                </div>
             </SidebarHeader>
-            <SidebarMenu className="p-2">
+            <SidebarMenu className="p-3 gap-1">
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/reports'} tooltip={{children: "Rapports"}}>
-                  <Link href="/reports">
-                    <Home />
+                <SidebarMenuButton asChild isActive={pathname === '/reports'} tooltip={{children: "Rapports"}} className="hover:bg-sidebar-accent transition-all duration-200">
+                  <Link href="/reports" className="font-medium">
+                    <Home className={pathname === '/reports' ? "text-accent" : "text-primary"} />
                     <span>Rapports</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} tooltip={{children: "Embouteillage en Temps Réel"}}>
-                  <Link href="/live-traffic">
-                    <Activity />
+                <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} tooltip={{children: "Embouteillage en Temps Réel"}} className="hover:bg-sidebar-accent">
+                  <Link href="/live-traffic" className="font-medium">
+                    <Activity className={pathname === '/live-traffic' ? "text-accent" : "text-primary"} />
                     <span>Temps Réel</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/map'} tooltip={{children: "Carte"}}>
-                  <Link href="/map">
-                    <Map />
+                <SidebarMenuButton asChild isActive={pathname === '/map'} tooltip={{children: "Carte"}} className="hover:bg-sidebar-accent">
+                  <Link href="/map" className="font-medium">
+                    <Map className={pathname === '/map' ? "text-accent" : "text-primary"} />
                     <span>Carte</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/assistant'} tooltip={{children: "Assistant IA"}}>
-                  <Link href="/assistant">
-                    <Bot />
+                <SidebarMenuButton asChild isActive={pathname === '/assistant'} tooltip={{children: "Assistant IA"}} className="hover:bg-sidebar-accent">
+                  <Link href="/assistant" className="font-medium">
+                    <Bot className={pathname === '/assistant' ? "text-accent" : "text-primary"} />
                     <span>Assistant</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}}>
-                  <Link href="/signaler-embouteillage">
-                    <PlusCircle />
+                <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}} className="bg-primary/10 hover:bg-primary/20 mt-2 border border-primary/20">
+                  <Link href="/signaler-embouteillage" className="font-bold text-primary-foreground">
+                    <PlusCircle className="text-accent animate-pulse" />
                     <span>Signaler</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}}>
-                  <Link href="/police-routiere">
-                    <Siren />
+                <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}} className="hover:bg-sidebar-accent">
+                  <Link href="/police-routiere" className="font-medium">
+                    <Siren className={pathname === '/police-routiere' ? "text-accent" : "text-primary"} />
                     <span>Police</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
                <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/routes'} tooltip={{children: "État des Routes"}}>
-                  <Link href="/routes">
-                    <Route />
+                <SidebarMenuButton asChild isActive={pathname === '/routes'} tooltip={{children: "État des Routes"}} className="hover:bg-sidebar-accent">
+                  <Link href="/routes" className="font-medium">
+                    <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
                     <span>Routes</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/annonces'} tooltip={{children: "Annonces"}}>
-                  <Link href="/annonces">
-                    <Landmark />
+                <SidebarMenuButton asChild isActive={pathname === '/annonces'} tooltip={{children: "Annonces"}} className="hover:bg-sidebar-accent">
+                  <Link href="/annonces" className="font-medium">
+                    <Landmark className={pathname === '/annonces' ? "text-accent" : "text-primary"} />
                     <span>Annonces</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/logement'} tooltip={{children: "Logement"}}>
-                  <Link href="/logement">
-                    <Hotel />
+                <SidebarMenuButton asChild isActive={pathname === '/logement'} tooltip={{children: "Logement"}} className="hover:bg-sidebar-accent">
+                  <Link href="/logement" className="font-medium">
+                    <Hotel className={pathname === '/logement' ? "text-accent" : "text-primary"} />
                     <span>Logement</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/transport'} tooltip={{children: "Transport"}}>
-                  <Link href="/transport">
-                    <Bus />
+                <SidebarMenuButton asChild isActive={pathname === '/transport'} tooltip={{children: "Transport"}} className="hover:bg-sidebar-accent">
+                  <Link href="/transport" className="font-medium">
+                    <Bus className={pathname === '/transport' ? "text-accent" : "text-primary"} />
                     <span>Transport</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/location-voiture'} tooltip={{children: "Location de Véhicules"}}>
-                  <Link href="/location-voiture">
-                    <Car />
+                <SidebarMenuButton asChild isActive={pathname === '/location-voiture'} tooltip={{children: "Location de Véhicules"}} className="hover:bg-sidebar-accent">
+                  <Link href="/location-voiture" className="font-medium">
+                    <Car className={pathname === '/location-voiture' ? "text-accent" : "text-primary"} />
                     <span>Location Voiture</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}}>
-                  <Link href="/evenements">
-                    <Megaphone />
+                <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}} className="hover:bg-sidebar-accent">
+                  <Link href="/evenements" className="font-medium">
+                    <Megaphone className={pathname === '/evenements' ? "text-accent" : "text-primary"} />
                     <span>Événements</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/videos'} tooltip={{children: "Vidéos"}}>
-                  <Link href="/videos">
-                    <Video />
+                <SidebarMenuButton asChild isActive={pathname === '/videos'} tooltip={{children: "Vidéos"}} className="hover:bg-sidebar-accent">
+                  <Link href="/videos" className="font-medium">
+                    <Video className={pathname === '/videos' ? "text-accent" : "text-primary"} />
                     <span>Vidéos</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/kinshasa'} tooltip={{children: "Statistiques"}}>
-                  <Link href="/kinshasa">
-                    <AreaChart />
+                <SidebarMenuButton asChild isActive={pathname === '/kinshasa'} tooltip={{children: "Statistiques"}} className="hover:bg-sidebar-accent">
+                  <Link href="/kinshasa" className="font-medium">
+                    <AreaChart className={pathname === '/kinshasa' ? "text-accent" : "text-primary"} />
                     <span>Kinshasa</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/contact'} tooltip={{children: "Contact"}}>
-                  <Link href="/contact">
-                    <Mail className="animate-pulse text-primary"/>
+                <SidebarMenuButton asChild isActive={pathname === '/contact'} tooltip={{children: "Contact"}} className="hover:bg-sidebar-accent">
+                  <Link href="/contact" className="font-medium">
+                    <Mail className={pathname === '/contact' ? "text-accent" : "text-primary"} />
                     <span>Contact</span>
                   </Link>
                 </SidebarMenuButton>
@@ -269,43 +269,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isAdmin && (
                 <>
-                  <SidebarSeparator className="my-2" />
+                  <SidebarSeparator className="my-4 bg-sidebar-border/30" />
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} tooltip={{children: "Admin Transport"}}>
-                      <Link href="/admin/transport">
-                        <Shield />
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} tooltip={{children: "Admin Transport"}} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/transport" className="font-medium">
+                        <Shield className="text-destructive" />
                         <span>Admin Transport</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} tooltip={{children: "Admin Logement"}}>
-                      <Link href="/admin/logement">
-                        <BedDouble />
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} tooltip={{children: "Admin Logement"}} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/logement" className="font-medium">
+                        <BedDouble className="text-destructive" />
                         <span>Admin Logement</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                    <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} tooltip={{children: "Messages"}}>
-                      <Link href="/admin/messages">
-                        <Mail />
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} tooltip={{children: "Messages"}} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/messages" className="font-medium">
+                        <Mail className="text-destructive" />
                         <span>Messages</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} tooltip={{children: "Admin Location"}}>
-                      <Link href="/admin/car-rental">
-                        <Car />
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} tooltip={{children: "Admin Location"}} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/car-rental" className="font-medium">
+                        <Car className="text-destructive" />
                         <span>Admin Location</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/test-push'} tooltip={{children: "Test Push"}}>
-                      <Link href="/admin/test-push">
-                        <Bell />
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/test-push'} tooltip={{children: "Test Push"}} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/test-push" className="font-medium">
+                        <Bell className="text-destructive" />
                         <span>Test Push</span>
                       </Link>
                     </SidebarMenuButton>
@@ -317,23 +317,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Sidebar>
         <SidebarInset>
             <div className="flex flex-col h-full">
-                <header className="bg-card border-b p-4 flex items-center justify-between gap-4">
+                <header className="bg-card border-b p-4 flex items-center justify-between gap-4 shadow-sm z-20">
                     <div className="flex items-center gap-4">
                       <SidebarTrigger className="md:hidden" />
                       <div>
-                        <h1 className="text-2xl font-bold text-foreground">{getPageTitle()}</h1>
-                        <p className="text-muted-foreground">{getPageDescription()}</p>
+                        <h1 className="text-2xl font-black text-foreground tracking-tight">{getPageTitle()}</h1>
+                        <p className="text-sm font-medium text-muted-foreground">{getPageDescription()}</p>
                       </div>
                     </div>
                     <UserNav />
                 </header>
-                <main className="flex-1 p-4 flex flex-col gap-4 overflow-hidden">
+                <main className="flex-1 p-4 flex flex-col gap-4 overflow-hidden bg-background">
                     <NotificationPermission />
                     <div className="flex-1 h-full w-full flex">
                         {isProtectedPage ? <ProtectedContent>{children}</ProtectedContent> : children}
                     </div>
                 </main>
-                <footer className="text-center p-2 text-xs text-muted-foreground border-t">
+                <footer className="text-center p-3 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/60 border-t bg-card">
                     <a href="http://www.swaziapplilab.co.za" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
                         &copy; {new Date().getFullYear()} Swazi Appli Lab sarl
                     </a>

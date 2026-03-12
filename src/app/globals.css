@@ -4,19 +4,19 @@
 
 @layer base {
   :root {
-    --background: 210 50% 98%; /* Fond ultra-clair pour une interface aérienne */
+    --background: 210 50% 98%; /* Fond bleu-gris ultra-clair et apaisant */
     --foreground: 222 47% 11%; /* Texte sombre profond pour un contraste haut de gamme */
     --card: 0 0% 100%; /* Cartes blanc pur pour un aspect détaché et propre */
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 205 100% 50%; /* Bleu Congo vibrant */
+    --primary: 205 100% 50%; /* Bleu Congo électrique et vibrant */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 94%;
     --secondary-foreground: 222 47% 11.2%;
     --muted: 210 40% 94%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 45 100% 50%; /* Jaune Kinshasa vif pour les appels à l'action */
+    --accent: 45 100% 50%; /* Jaune Kinshasa vif pour les appels à l'action prioritaires */
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -27,14 +27,14 @@
     --ring: 205 100% 50%;
     --radius: 0.75rem;
 
-    /* Sidebar - Contraste et élégance */
-    --sidebar-background: 215 50% 23%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 45 100% 50%;
-    --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 215 50% 30%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 50% 28%;
+    /* Sidebar - Contraste fort pour une navigation claire */
+    --sidebar-background: 222 47% 11%; /* Bleu nuit très profond (presque noir mais vibrant) */
+    --sidebar-foreground: 210 40% 98%; /* Texte blanc pur pour un contraste maximal */
+    --sidebar-primary: 205 100% 50%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 215 50% 20%; /* Légèrement plus clair que le fond pour le survol */
+    --sidebar-accent-foreground: 45 100% 50%; /* Icônes/Textes en jaune au survol pour attirer l'attention */
+    --sidebar-border: 215 50% 15%;
     --sidebar-ring: 205 100% 50%;
   }
 

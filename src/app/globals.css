@@ -4,19 +4,19 @@
 
 @layer base {
   :root {
-    --background: 210 40% 96.5%; /* Teinte bleu-gris très douce au lieu du blanc */
+    --background: 210 40% 96.5%; /* Teinte bleu-gris très douce pour le fond de page */
     --foreground: 222 47% 11%;
     --card: 210 40% 99%;
     --card-foreground: 222 47% 11%;
     --popover: 210 40% 99%;
     --popover-foreground: 222 47% 11%;
-    --primary: 205 100% 50%;
+    --primary: 205 100% 50%; /* Bleu Congo vibrant */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 92%;
     --secondary-foreground: 222 47% 11.2%;
     --muted: 210 40% 92%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 45 100% 50%;
+    --accent: 45 100% 50%; /* Jaune Kinshasa */
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -27,14 +27,15 @@
     --ring: 205 100% 50%;
     --radius: 0.75rem;
 
-    --sidebar-background: 222 47% 11%;
+    /* Sidebar - Changement du noir vers un bleu profond élégant */
+    --sidebar-background: 215 50% 23%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 45 100% 50%;
     --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent: 215 50% 30%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 224.3 76.3% 48%;
+    --sidebar-border: 215 50% 28%;
+    --sidebar-ring: 205 100% 50%;
   }
 
   .dark {

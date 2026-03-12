@@ -153,7 +153,7 @@ export default function WelcomePage() {
                                 src={heroImage.imageUrl} 
                                 alt={heroImage.description} 
                                 fill 
-                                className="object-cover transition-transform duration-[10s] group-hover:scale-105"
+                                className="object-cover transition-transform duration-[10000ms] group-hover:scale-105"
                                 priority
                                 data-ai-hint={heroImage.imageHint}
                             />

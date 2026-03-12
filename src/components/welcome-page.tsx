@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Activity, Bot, Megaphone, Siren, Download } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -42,6 +44,7 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, titl
 
 export default function WelcomePage() {
     const [installPrompt, setInstallPrompt] = useState<any>(null);
+    const heroImage = PlaceHolderImages.find(img => img.id === 'kinshasa-hero');
 
     useEffect(() => {
         const handleBeforeInstallPrompt = (e: Event) => {
@@ -87,7 +90,7 @@ export default function WelcomePage() {
                 </Button>
             </motion.header>
 
-            <main className="container mx-auto px-4 py-16 md:py-24 text-center flex-grow flex items-center justify-center">
+            <main className="container mx-auto px-4 py-12 md:py-20 text-center flex-grow flex flex-col items-center justify-center gap-12">
                  <motion.div
                     variants={containerVariants}
                     initial="hidden"
@@ -125,6 +128,27 @@ export default function WelcomePage() {
                         )}
                     </motion.div>
                 </motion.div>
+
+                {heroImage && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.6, duration: 0.8 }}
+                        className="w-full max-w-4xl px-4"
+                    >
+                        <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border-4 border-background">
+                            <Image 
+                                src={heroImage.imageUrl} 
+                                alt={heroImage.description} 
+                                fill 
+                                className="object-cover"
+                                priority
+                                data-ai-hint={heroImage.imageHint}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                        </div>
+                    </motion.div>
+                )}
             </main>
 
             <motion.section 

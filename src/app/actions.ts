@@ -52,3 +52,27 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Récupère les incidents de trafic réels via l'API TomTom pour Kinshasa.
+ */
+export async function getTomTomTrafficIncidents() {
+  const TOMTOM_KEY = "KGPZ8xhBjIIdThtnB8N3M1M2IlKBseJk";
+  // Bounding box approximative pour Kinshasa
+  const minLat = -4.55;
+  const minLon = 15.15;
+  const maxLat = -4.1;
+  const maxLon = 15.6;
+  
+  const url = `https://api.tomtom.com/traffic/services/5/incidentDetails/s3/${minLat},${minLon},${maxLat},${maxLon}/12/-1/json?key=${TOMTOM_KEY}&language=fr-FR&categoryFilter=0,1,6,9`;
+
+  try {
+    const response = await fetch(url, { next: { revalidate: 300 } }); // Cache 5 min
+    if (!response.ok) throw new Error('TomTom API Error');
+    const data = await response.json();
+    return data.incidents || [];
+  } catch (error) {
+    console.error("Failed to fetch TomTom incidents:", error);
+    return [];
+  }
+}

@@ -21,7 +21,7 @@ const ReportTypeBadge = ({ type }: { type: PoliceReport['type'] }) => {
 }
 
 const PoliceReportItem = ({ report }: { report: PoliceReport & { id: number; time: string } }) => (
-    <div className="p-4 rounded-lg border bg-card transition-colors">
+    <div className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors shadow-sm">
         <div className="flex justify-between items-start mb-2">
             <h3 className="font-semibold text-card-foreground">{report.location}</h3>
             <ReportTypeBadge type={report.type} />
@@ -53,8 +53,9 @@ export default function PolicePresenceReports() {
   const fetchData = (isRefresh = false) => {
     if (isRefresh) {
       setIsRefreshing(true);
+    } else {
+      setLoading(true);
     }
-    setLoading(true);
 
     // Simulate fetching data
     setTimeout(() => {
@@ -63,7 +64,7 @@ export default function PolicePresenceReports() {
       if (isRefresh) {
         setIsRefreshing(false);
       }
-    }, 1000);
+    }, 800);
   };
 
   useEffect(() => {
@@ -80,22 +81,22 @@ export default function PolicePresenceReports() {
   };
 
   return (
-    <Card className="flex-1 flex flex-col overflow-hidden">
-        <CardHeader>
+    <Card className="border-none shadow-none bg-transparent">
+        <CardHeader className="px-0 pb-4">
           <CardTitle className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Siren className="text-primary" />
-              Présence Policière Signalée
+              <Siren className="text-primary h-5 w-5" />
+              <span>Présence Policière Signalée</span>
             </div>
-            <Button size="icon" variant="outline" onClick={handleUpdate} disabled={isRefreshing}>
-              {isRefreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-              <span className="sr-only">Mettre à jour les rapports</span>
+            <Button size="sm" variant="outline" onClick={handleUpdate} disabled={isRefreshing} className="h-8">
+              {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              <span className="ml-2 hidden sm:inline">Mettre à jour</span>
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto">
+        <CardContent className="px-0">
           <div className="space-y-4">
-            {loading && !isRefreshing ? (
+            {loading ? (
               Array.from({ length: 5 }).map((_, i) => <ReportSkeleton key={i} />)
             ) : (
               reports.map((report) => (

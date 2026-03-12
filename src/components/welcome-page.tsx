@@ -3,42 +3,39 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Activity, Bot, Megaphone, Siren, Download } from 'lucide-react';
+import { Activity, Bot, Megaphone, Siren, Download, ArrowRight, MapPin, ShieldCheck, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Badge } from './ui/badge';
 
 const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.2,
+            staggerChildren: 0.15,
         },
     },
 };
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
 };
 
-const featureCardVariants = {
-    hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-}
-
-const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
+const FeatureCard = ({ icon, title, description, color }: { icon: React.ReactNode, title: string, description: string, color: string }) => (
     <motion.div
-        variants={featureCardVariants}
-        className="bg-card/50 backdrop-blur-sm p-6 rounded-lg border border-border/20 text-center"
+        variants={itemVariants}
+        whileHover={{ y: -10, transition: { duration: 0.2 } }}
+        className="group bg-card/40 backdrop-blur-md p-8 rounded-2xl border border-white/10 shadow-xl hover:shadow-2xl hover:bg-card/60 transition-all cursor-default"
     >
-        <div className="inline-block p-4 bg-primary/10 text-primary rounded-full mb-4">
+        <div className={`inline-flex p-4 rounded-xl mb-6 transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-lg ${color}`}>
             {icon}
         </div>
-        <h3 className="text-xl font-bold mb-2 text-foreground">{title}</h3>
-        <p className="text-muted-foreground">{description}</p>
+        <h3 className="text-xl font-bold mb-3 text-foreground group-hover:text-primary transition-colors">{title}</h3>
+        <p className="text-muted-foreground leading-relaxed">{description}</p>
     </motion.div>
 );
 
@@ -63,65 +60,78 @@ export default function WelcomePage() {
         if (!installPrompt) return;
         installPrompt.prompt();
         installPrompt.userChoice.then((choiceResult: { outcome: string }) => {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-            } else {
-                console.log('User dismissed the install prompt');
-            }
             setInstallPrompt(null);
         });
     };
 
     return (
-        <div className="min-h-screen w-full bg-background text-foreground overflow-hidden flex flex-col">
-            <div className="absolute inset-0 -z-10 h-full w-full bg-background bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
-                <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-primary/20 opacity-20 blur-[100px]"></div>
-            </div>
+        <div className="relative min-h-screen w-full bg-background text-foreground overflow-x-hidden flex flex-col">
+            {/* Background elements */}
+            <div className="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
             
+            {/* Mesh Gradients */}
+            <div className="absolute top-[-10%] left-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-primary/20 blur-[120px] animate-pulse"></div>
+            <div className="absolute bottom-[10%] right-[-10%] -z-10 h-[600px] w-[600px] rounded-full bg-accent/10 blur-[150px]"></div>
+
             <motion.header
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="p-4 flex justify-between items-center"
+                className="container mx-auto p-6 flex justify-between items-center z-50"
             >
-                <Logo className="h-9 w-auto text-primary" />
-                 <Button asChild variant="ghost">
-                    <Link href="/login">Se connecter</Link>
-                </Button>
+                <Logo className="h-10 w-auto text-primary" />
+                <div className="flex items-center gap-4">
+                    <Button asChild variant="ghost" className="hidden sm:inline-flex hover:bg-primary/10">
+                        <Link href="/login">Se connecter</Link>
+                    </Button>
+                    <Button asChild className="shadow-lg shadow-primary/20">
+                        <Link href="/signup">Commencer</Link>
+                    </Button>
+                </div>
             </motion.header>
 
-            <main className="container mx-auto px-4 py-12 md:py-20 text-center flex-grow flex flex-col items-center justify-center gap-12">
+            <main className="container mx-auto px-4 py-12 md:py-24 text-center flex-grow flex flex-col items-center justify-center gap-16 relative z-10">
                  <motion.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="max-w-3xl"
+                    className="max-w-4xl"
                 >
-                    <motion.div variants={itemVariants}>
-                        <Badge className="mb-4 bg-primary/10 text-primary border-primary/20 hover:bg-primary/20">Votre copilote pour les routes de Kinshasa</Badge>
+                    <motion.div variants={itemVariants} className="flex justify-center mb-6">
+                        <Badge variant="outline" className="px-4 py-1.5 border-primary/30 bg-primary/5 text-primary text-sm font-medium rounded-full animate-bounce">
+                            <Zap className="w-3 h-3 mr-2 fill-current" />
+                            Votre copilote intelligent sur les routes de Kinshasa
+                        </Badge>
                     </motion.div>
-                    <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
-                        Naviguez Kinshasa,<br /> sans embouteillage.
+
+                    <motion.h1 variants={itemVariants} className="text-5xl md:text-8xl font-black tracking-tighter text-foreground mb-8 leading-[1.1]">
+                        Naviguez <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">Kinshasa</span><br /> 
+                        <span className="relative">
+                            sans stress.
+                            <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 338 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 10C56.3333 3.66667 188.6 -5.2 337 10" stroke="hsl(var(--accent))" strokeWidth="4" strokeLinecap="round"/>
+                            </svg>
+                        </span>
                     </motion.h1>
-                    <motion.p variants={itemVariants} className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-10">
-                        Recevez des mises à jour sur le trafic en temps réel, signalez les incidents et utilisez notre assistant IA pour trouver le meilleur itinéraire. Roulez plus intelligemment avec Kinshasa Flow.
+
+                    <motion.p variants={itemVariants} className="max-w-2xl mx-auto text-xl md:text-2xl text-muted-foreground mb-12 font-medium leading-relaxed">
+                        Évitez les bouchons, suivez la police en direct et trouvez vos meilleurs itinéraires avec notre assistant IA. Le futur de la mobilité urbaine est ici.
                     </motion.p>
-                    <motion.div variants={itemVariants} className="flex flex-wrap justify-center gap-4">
-                        <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            <Button asChild size="lg" className="text-lg py-7 px-8">
-                                <Link href="/reports">Entrer dans l'application</Link>
+
+                    <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-center gap-6">
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button asChild size="lg" className="text-xl py-8 px-10 rounded-2xl shadow-2xl shadow-primary/30 group">
+                                <Link href="/reports">
+                                    Accéder au Direct
+                                    <ArrowRight className="ml-2 w-6 h-6 transition-transform group-hover:translate-x-1" />
+                                </Link>
                             </Button>
                         </motion.div>
+                        
                         {installPrompt && (
-                             <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                <Button onClick={handleInstallClick} size="lg" variant="outline" className="text-lg py-7 px-8">
-                                    <Download className="mr-2 h-5 w-5" />
+                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button onClick={handleInstallClick} size="lg" variant="outline" className="text-xl py-8 px-10 rounded-2xl border-2 border-primary/20 bg-background/50 backdrop-blur-sm">
+                                    <Download className="mr-2 h-6 w-6" />
                                     Installer l'app
                                 </Button>
                             </motion.div>
@@ -131,21 +141,26 @@ export default function WelcomePage() {
 
                 {heroImage && (
                     <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.6, duration: 0.8 }}
-                        className="w-full max-w-4xl px-4"
+                        initial={{ opacity: 0, scale: 0.95, y: 40 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ delay: 0.8, duration: 1, ease: "easeOut" }}
+                        className="w-full max-w-5xl px-4 relative"
                     >
-                        <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border-4 border-background">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-[2.5rem] blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative aspect-video rounded-[2rem] overflow-hidden shadow-2xl border-8 border-background/80 ring-1 ring-white/20">
                             <Image 
                                 src={heroImage.imageUrl} 
                                 alt={heroImage.description} 
                                 fill 
-                                className="object-cover"
+                                className="object-cover transition-transform duration-[10s] hover:scale-110"
                                 priority
                                 data-ai-hint={heroImage.imageHint}
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                            <div className="absolute bottom-8 left-8 text-left text-white">
+                                <p className="text-xs font-bold uppercase tracking-widest text-accent mb-2">Ville de Kinshasa</p>
+                                <h4 className="text-2xl font-bold flex items-center gap-2"><MapPin className="w-5 h-5"/> Une vision aérienne de la capitale</h4>
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -154,30 +169,34 @@ export default function WelcomePage() {
             <motion.section 
                 initial="hidden"
                 whileInView="visible"
-                viewport={{ once: true, amount: 0.2 }}
-                variants={{ visible: { transition: { staggerChildren: 0.2 } } }}
-                className="container mx-auto px-4 pb-16"
+                viewport={{ once: true, amount: 0.1 }}
+                variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+                className="container mx-auto px-4 py-24"
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     <FeatureCard
-                        icon={<Activity size={28} />}
+                        icon={<Activity size={32} className="text-white" />}
                         title="Trafic en Temps Réel"
-                        description="Visualisez les embouteillages et les rapports d'incidents partagés par la communauté."
+                        description="Vivez l'info trafic en direct grâce aux rapports communautaires vérifiés."
+                        color="bg-red-500 shadow-red-200"
                     />
                     <FeatureCard
-                        icon={<Siren size={28} />}
-                        title="Alertes Police"
-                        description="Restez informé de la présence policière, des contrôles et des interventions."
+                        icon={<ShieldCheck size={32} className="text-white" />}
+                        title="Alertes Sécurité"
+                        description="Soyez prévenu de la présence policière et des zones de contrôle."
+                        color="bg-primary shadow-blue-200"
                     />
                     <FeatureCard
-                        icon={<Megaphone size={28} />}
+                        icon={<Megaphone size={32} className="text-white" />}
                         title="Annonces Officielles"
-                        description="Accédez aux dernières communications des autorités concernant la circulation."
+                        description="Les dernières communications de l'Hôtel de Ville directement sur votre écran."
+                        color="bg-orange-500 shadow-orange-200"
                     />
                     <FeatureCard
-                        icon={<Bot size={28} />}
-                        title="Assistant IA"
-                        description="Demandez le meilleur itinéraire en français ou lingala et laissez notre IA vous guider."
+                        icon={<Bot size={32} className="text-white" />}
+                        title="Assistant Vocal IA"
+                        description="L'IA qui vous répond en Français et en Lingala pour vous guider."
+                        color="bg-accent shadow-yellow-200"
                     />
                 </div>
             </motion.section>
@@ -185,20 +204,19 @@ export default function WelcomePage() {
             <motion.footer 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="text-center p-6 text-sm text-muted-foreground"
+                transition={{ duration: 0.5, delay: 1 }}
+                className="text-center p-12 border-t border-border/10 bg-card/20 backdrop-blur-sm"
             >
-                <a href="http://www.swaziapplilab.co.za" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                    &copy; {new Date().getFullYear()} Swazi Appli Lab sarl
-                </a>
+                <div className="flex flex-col items-center gap-6">
+                    <Logo className="h-8 w-auto text-muted-foreground opacity-50" />
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                        Simplifier la vie des Kinois, un kilomètre à la fois.
+                    </p>
+                    <a href="http://www.swaziapplilab.co.za" target="_blank" rel="noopener noreferrer" className="text-xs hover:text-primary transition-colors">
+                        &copy; {new Date().getFullYear()} Swazi Appli Lab sarl. Tous droits réservés.
+                    </a>
+                </div>
             </motion.footer>
         </div>
     );
 }
-
-// Temporary Badge component to avoid full import
-const Badge = ({className, children}: {className?: string, children: React.ReactNode}) => (
-    <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors ${className}`}>
-        {children}
-    </span>
-);

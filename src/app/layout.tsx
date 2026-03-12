@@ -2,7 +2,6 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase';
-import { ChunkErrorReloader } from '@/components/chunk-error-reloader';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://kinshasaflow.online'),
@@ -66,9 +65,33 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        
+        {/* Script de récupération critique pour les erreurs de chargement de modules (ChunkLoadError) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var handleError = function(e) {
+                  var error = e.error || e.reason || e;
+                  var msg = error && (error.message || error.toString()) || "";
+                  if (msg.indexOf("Loading chunk") > -1 || msg.indexOf("ChunkLoadError") > -1 || msg.indexOf("timeout") > -1) {
+                    console.warn("Problème de module détecté, rechargement de sécurité...");
+                    var lastReload = sessionStorage.getItem("last-chunk-reload");
+                    var now = Date.now();
+                    if (!lastReload || (now - parseInt(lastReload)) > 5000) {
+                      sessionStorage.setItem("last-chunk-reload", now);
+                      window.location.reload();
+                    }
+                  }
+                };
+                window.addEventListener("error", handleError, true);
+                window.addEventListener("unhandledrejection", handleError);
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="font-body antialiased">
-        <ChunkErrorReloader />
         <FirebaseClientProvider>
           {children}
         </FirebaseClientProvider>

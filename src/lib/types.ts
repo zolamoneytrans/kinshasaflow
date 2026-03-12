@@ -347,3 +347,12 @@ export const carBookingFormSchema = z.object({
   numberOfDays: z.coerce.number().int().min(1, "Veuillez entrer un nombre de jours valide."),
 });
 export type CarBookingFormValues = z.infer<typeof carBookingFormSchema>;
+
+// Schema for Police Station
+export const policeStationSchema = z.object({
+  commune: z.string(),
+  name: z.string(),
+  phone: z.string(),
+  address: z.string(),
+});
+export type PoliceStation = z.infer<typeof policeStationSchema>;

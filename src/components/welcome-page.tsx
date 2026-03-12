@@ -115,7 +115,7 @@ export default function WelcomePage() {
                     </motion.h1>
 
                     <motion.p variants={itemVariants} className="max-w-2xl mx-auto text-xl md:text-2xl text-muted-foreground mb-12 font-medium leading-relaxed">
-                        Évitez les bouchons, suivez la police en direct et trouvez vos meilleurs itinéraires avec notre assistant IA. Le futur de la mobilité urbaine est ici.
+                        Évitez les bouchons et trouvez vos meilleurs itinéraires avec notre assistant IA. Le futur de la mobilité urbaine est ici.
                     </motion.p>
 
                     <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-center gap-6">

@@ -66,10 +66,10 @@ export default function WelcomePage() {
 
     return (
         <div className="relative min-h-screen w-full bg-background text-foreground overflow-x-hidden flex flex-col">
-            {/* Dots Background - Teinté avec la couleur primaire */}
+            {/* Dots Background */}
             <div className="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.15] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
             
-            {/* Mesh Gradients plus intenses */}
+            {/* Mesh Gradients */}
             <div className="absolute top-[-5%] left-[-5%] -z-10 h-[600px] w-[600px] rounded-full bg-primary/25 blur-[120px] animate-pulse"></div>
             <div className="absolute top-[20%] right-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[130px]"></div>
             <div className="absolute bottom-[-10%] left-[10%] -z-10 h-[600px] w-[600px] rounded-full bg-blue-400/20 blur-[150px]"></div>

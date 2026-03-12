@@ -54,8 +54,8 @@ const generateSpeechFlow = ai.defineFlow(
       let media = response.media;
       
       if (!media) {
-        // Search in the output content parts if shortcut property is missing
-        const mediaPart = response.output?.message?.content.find((p) => !!p.media);
+        // Explicitly type 'p' as any to bypass TypeScript inference issues during build
+        const mediaPart = response.output?.message?.content.find((p: any) => !!p.media);
         media = mediaPart?.media;
       }
 

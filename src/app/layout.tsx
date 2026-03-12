@@ -78,6 +78,7 @@ export default function RootLayout({
                     console.warn("Problème de module détecté, rechargement de sécurité...");
                     var lastReload = sessionStorage.getItem("last-chunk-reload");
                     var now = Date.now();
+                    // Empêche les boucles de rechargement infinies (max 1 recharge toutes les 5s)
                     if (!lastReload || (now - parseInt(lastReload)) > 5000) {
                       sessionStorage.setItem("last-chunk-reload", now);
                       window.location.reload();

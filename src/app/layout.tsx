@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase';
+import { ChunkErrorReloader } from '@/components/chunk-error-reloader';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://kinshasaflow.online'),
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     description: 'Évitez les embouteillages à Kinshasa grâce à nos rapports en temps réel et notre assistant IA.',
     images: [
       {
-        url: '/og-image.png', // Note: You should create this image later
+        url: '/og-image.png',
         width: 1200,
         height: 630,
         alt: 'Kinshasa Flow Banner',
@@ -68,6 +69,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
+          <ChunkErrorReloader />
           {children}
         </FirebaseClientProvider>
         <Toaster />

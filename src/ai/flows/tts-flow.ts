@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A Text-To-Speech (TTS) flow for the AI Assistant.
@@ -8,6 +7,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+// @ts-ignore - wav doesn't have official types and can block the build
 import wav from 'wav';
 
 const TTSInputSchema = z.string();

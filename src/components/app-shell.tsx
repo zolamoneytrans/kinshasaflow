@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -16,12 +16,14 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { UserNav } from './auth/user-nav';
-import { useUser } from '@/firebase';
+import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import React, { useEffect } from 'react';
 import { Logo } from './logo';
 import { NotificationPermission } from './notification-permission';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
+import { doc } from 'firebase/firestore';
+import { UserProfile } from '@/lib/types';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -48,7 +50,27 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useUser();
+  const { firestore } = useFirebase();
   const { toast } = useToast();
+
+  // Star Balance monitoring for low balance toast
+  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  const { data: profile } = useDoc<UserProfile>(userProfileRef);
+
+  useEffect(() => {
+    if (profile && profile.currentStarsBalance < 5 && pathname !== '/mes-stars') {
+      toast({
+        title: 'Solde faible — ' + profile.currentStarsBalance + ' stars restantes',
+        description: 'Certaines fonctionnalités premium seront bientôt bloquées.',
+        variant: 'destructive',
+        action: (
+          <ToastAction altText="Recharger" onClick={() => window.location.href = '/mes-stars'}>
+            Recharger
+          </ToastAction>
+        ),
+      });
+    }
+  }, [profile, pathname, toast]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -91,6 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/kinshasa') return 'Statistiques de Kinshasa';
     if (pathname === '/assistant') return 'Assistant IA';
     if (pathname === '/map') return 'Carte du Trafic';
+    if (pathname === '/mes-stars') return 'Mes Stars';
     if (pathname === '/login') return 'Se connecter';
     if (pathname === '/signup') return "S'inscrire";
     if (pathname === '/admin/transport') return 'Admin Transport';
@@ -118,6 +141,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/kinshasa') return 'Informations et statistiques sur la ville.';
     if (pathname === '/assistant') return 'Posez des questions sur les itinéraires à Kinshasa.';
     if (pathname === '/map') return 'Visualisez le trafic en temps réel à Kinshasa.';
+    if (pathname === '/mes-stars') return 'Gérez votre solde de stars et monétisez votre usage.';
     if (pathname === '/login') return 'Accédez à votre compte pour contribuer.';
     if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
     if (pathname === '/admin/transport') return 'Gérer les abonnements au transport.';
@@ -174,6 +198,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/assistant" className="font-medium">
                     <Bot className={pathname === '/assistant' ? "text-accent" : "text-primary"} />
                     <span>Assistant</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/mes-stars'} tooltip={{children: "Mes Stars"}} className="hover:bg-sidebar-accent">
+                  <Link href="/mes-stars" className="font-medium">
+                    <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />
+                    <span>Mes Stars</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

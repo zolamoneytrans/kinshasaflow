@@ -1,6 +1,36 @@
 import { z } from "zod";
 import { Timestamp } from "firebase/firestore";
 
+// User profile extension for Stars System
+export const userProfileSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  name: z.string().optional(),
+  photoURL: z.string().optional(),
+  currentStarsBalance: z.number().default(0),
+  totalStarsEarned: z.number().default(0),
+  totalStarsPurchased: z.number().default(0),
+  totalStarsUsed: z.number().default(0),
+  lastLoginTimestamp: z.instanceof(Timestamp).or(z.any()).optional(),
+  consecutiveLoginDays: z.number().default(0),
+  referralCode: z.string().optional(),
+  isProfileComplete: z.boolean().default(false),
+});
+export type UserProfile = z.infer<typeof userProfileSchema>;
+
+// Star Transaction
+export const starTransactionSchema = z.object({
+  userId: z.string(),
+  type: z.enum(['purchase', 'earned', 'spent']),
+  starsChange: z.number(),
+  balanceAfterTransaction: z.number(),
+  description: z.string(),
+  timestamp: z.instanceof(Timestamp).or(z.any()),
+  relatedObjectId: z.string().optional(),
+  relatedObjectType: z.string().optional(),
+});
+export type StarTransaction = z.infer<typeof starTransactionSchema>;
+
 // Schema for comments to be stored in Firestore
 export const commentSchema = z.object({
   userId: z.string(),

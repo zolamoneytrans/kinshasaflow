@@ -7,23 +7,20 @@ import { Badge } from '@/components/ui/badge';
 import { 
   RefreshCw, 
   Search, 
-  Bell, 
   Ban, 
   AlertTriangle, 
   Clock, 
   CheckCircle2, 
   Navigation,
-  Activity,
   Users,
-  PlusCircle,
-  ChevronRight
+  PlusCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getTomTomTrafficIncidents } from '@/app/actions';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { EventReport, WithId } from '@/lib/types';
+import { EventReport } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -42,7 +39,6 @@ interface Incident {
   source: 'tomtom' | 'user';
 }
 
-// Les 22 axes majeurs de Kinshasa pour une analyse constante
 const MAJOR_AXES = [
   { name: "Boulevard du 30 Juin", district: "Gombe", normalSpeed: 50 },
   { name: "Boulevard Lumumba", district: "Limete/Masina", normalSpeed: 60 },
@@ -80,7 +76,6 @@ export default function TrafficReports() {
   const [tomtomIncidents, setTomTomIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [countdown, setCountdown] = useState(60);
   const [filter, setFilter] = useState<TrafficStatus | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -99,7 +94,6 @@ export default function TrafficReports() {
     try {
       const data = await getTomTomTrafficIncidents();
       
-      // On initialise avec nos axes majeurs en mode "FLUIDE"
       const analyzedAxes: Incident[] = MAJOR_AXES.map((axis, idx) => ({
         id: `axis-${idx}`,
         road: axis.name,
@@ -109,17 +103,15 @@ export default function TrafficReports() {
         speed: axis.normalSpeed,
         freeFlow: axis.normalSpeed,
         delay: 0,
-        updatedAt: "Temps réel",
+        updatedAt: "À l'instant",
         source: 'tomtom'
       }));
 
-      // On met à jour les axes avec les incidents réels de TomTom
       data.forEach((inc: any) => {
         const roadName = inc.tm?.shortDesc || inc.tm?.i || "";
         const magnitude = inc.tm?.m || 0;
         const delay = Math.round((inc.tm?.dl || 0) / 60);
         
-        // Trouver l'axe correspondant
         const axisIndex = analyzedAxes.findIndex(a => 
           roadName.toLowerCase().includes(a.road.toLowerCase()) || 
           a.road.toLowerCase().includes(roadName.toLowerCase())
@@ -138,13 +130,12 @@ export default function TrafficReports() {
             status: classifyTraffic(axis.freeFlow * speedFactor, axis.freeFlow),
             speed: Math.round(axis.freeFlow * speedFactor),
             delay: delay,
-            updatedAt: "Il y a " + (Math.floor(Math.random() * 5) + 1) + " min",
+            updatedAt: "Mis à jour",
           };
         }
       });
 
       setTomTomIncidents(analyzedAxes);
-      setCountdown(60);
     } catch (err) {
       console.error("Erreur TomTom:", err);
     } finally {
@@ -155,16 +146,9 @@ export default function TrafficReports() {
 
   useEffect(() => {
     fetchTomTomData();
-    const interval = setInterval(() => fetchTomTomData(true), 60000);
-    const timer = setInterval(() => setCountdown(prev => (prev > 0 ? prev - 1 : 60)), 1000);
-    return () => {
-        clearInterval(interval);
-        clearInterval(timer);
-    };
   }, []);
 
   const allIncidents = useMemo(() => {
-    // Intégrer les rapports des utilisateurs
     const formattedUserReports: Incident[] = (userReports || []).map(rep => ({
         id: rep.id,
         road: rep.location,
@@ -195,7 +179,6 @@ export default function TrafficReports() {
         const q = searchQuery.toLowerCase();
         result = result.filter(i => i.road.toLowerCase().includes(q) || i.district.toLowerCase().includes(q));
     }
-    // Trier par priorité de statut
     return result.sort((a, b) => {
         const priority = { 'BLOQUÉ': 0, 'SATURÉ': 1, 'RALENTI': 2, 'FLUIDE': 3 };
         return priority[a.status] - priority[b.status];
@@ -210,11 +193,11 @@ export default function TrafficReports() {
         <div>
             <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                 Analyse du trafic
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse text-[10px] md:text-xs">Direct</Badge>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] md:text-xs">Direct</Badge>
             </h1>
             <p className="text-xs md:text-sm text-slate-500 font-semibold flex items-center gap-2">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                Navigation GPS + Communauté · sync {countdown}s
+                <span className="w-2 h-2 bg-emerald-500 rounded-full" />
+                Navigation GPS + Communauté · Données en temps réel
             </p>
         </div>
         

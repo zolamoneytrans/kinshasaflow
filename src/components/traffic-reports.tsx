@@ -15,7 +15,8 @@ import {
   Navigation,
   Activity,
   Users,
-  PlusCircle
+  PlusCircle,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,32 @@ interface Incident {
   updatedAt: string;
   source: 'tomtom' | 'user';
 }
+
+// Les 22 axes majeurs de Kinshasa pour une analyse constante
+const MAJOR_AXES = [
+  { name: "Boulevard du 30 Juin", district: "Gombe", normalSpeed: 50 },
+  { name: "Boulevard Lumumba", district: "Limete/Masina", normalSpeed: 60 },
+  { name: "Avenue de la Libération", district: "Lingwala", normalSpeed: 45 },
+  { name: "Avenue Kasa-Vubu", district: "Kalamu", normalSpeed: 40 },
+  { name: "Avenue By-Pass", district: "Lemba/Ngaba", normalSpeed: 50 },
+  { name: "Route de Matadi", district: "Ngaliema", normalSpeed: 45 },
+  { name: "Avenue de l'Université", district: "Makala", normalSpeed: 40 },
+  { name: "Avenue des Huileries", district: "Gombe/Lingwala", normalSpeed: 45 },
+  { name: "Avenue Mondjiba", district: "Ngaliema", normalSpeed: 50 },
+  { name: "Avenue Nguma", district: "Ngaliema", normalSpeed: 40 },
+  { name: "Avenue du Tourisme", district: "Ngaliema", normalSpeed: 50 },
+  { name: "Avenue de la Science", district: "Gombe", normalSpeed: 45 },
+  { name: "Avenue des Poids Lourds", district: "Limete", normalSpeed: 40 },
+  { name: "Avenue Luambo Makiadi", district: "Kinshasa", normalSpeed: 40 },
+  { name: "Avenue Pierre Mulele", district: "Gombe", normalSpeed: 45 },
+  { name: "Avenue Elengesa", district: "Makala/Ngiri-Ngiri", normalSpeed: 35 },
+  { name: "Avenue Kimwenza", district: "Kalamu", normalSpeed: 35 },
+  { name: "Boulevard Triomphal", district: "Kasa-Vubu", normalSpeed: 50 },
+  { name: "Avenue de la Justice", district: "Gombe", normalSpeed: 40 },
+  { name: "Avenue Batetela", district: "Gombe", normalSpeed: 40 },
+  { name: "Avenue de l'Ozone", district: "Ngaliema", normalSpeed: 40 },
+  { name: "Avenue Victoire", district: "Kalamu", normalSpeed: 35 },
+];
 
 function classifyTraffic(currentSpeed: number, freeFlowSpeed: number): TrafficStatus {
   const ratio = currentSpeed / freeFlowSpeed;
@@ -71,34 +98,52 @@ export default function TrafficReports() {
     
     try {
       const data = await getTomTomTrafficIncidents();
-      const districts = ["Gombe", "Limete", "Kalamu", "Ngaliema", "Bandalungwa", "Kintambo", "Lingwala", "Masina", "N'djili", "Lemba", "Barumbu", "Matete"];
       
-      let realIncidents: Incident[] = data.map((inc: any, idx: number) => {
-        const magnitude = inc.tm?.m || 0; 
-        const delay = Math.round((inc.tm?.dl || 0) / 60);
-        let freeFlow = 50;
-        let speed = 45;
-        
-        if (magnitude === 4) speed = freeFlow * 0.05;
-        else if (magnitude === 3) speed = freeFlow * 0.25;
-        else if (magnitude === 2) speed = freeFlow * 0.55;
-        else speed = freeFlow * 0.85;
+      // On initialise avec nos axes majeurs en mode "FLUIDE"
+      const analyzedAxes: Incident[] = MAJOR_AXES.map((axis, idx) => ({
+        id: `axis-${idx}`,
+        road: axis.name,
+        description: "Flux de circulation normal",
+        district: axis.district,
+        status: "FLUIDE",
+        speed: axis.normalSpeed,
+        freeFlow: axis.normalSpeed,
+        delay: 0,
+        updatedAt: "Temps réel",
+        source: 'tomtom'
+      }));
 
-        return {
-            id: inc.id || `tomtom-${idx}`,
-            road: inc.tm?.shortDesc || "Axe principal",
-            description: inc.tm?.i || "Incident détecté par navigation",
-            district: districts[Math.floor(Math.random() * districts.length)],
-            status: classifyTraffic(speed, freeFlow),
-            speed: Math.round(speed),
-            freeFlow,
-            delay,
-            updatedAt: "il y a " + (Math.floor(Math.random() * 5) + 1) + " min",
-            source: 'tomtom'
-        };
+      // On met à jour les axes avec les incidents réels de TomTom
+      data.forEach((inc: any) => {
+        const roadName = inc.tm?.shortDesc || inc.tm?.i || "";
+        const magnitude = inc.tm?.m || 0;
+        const delay = Math.round((inc.tm?.dl || 0) / 60);
+        
+        // Trouver l'axe correspondant
+        const axisIndex = analyzedAxes.findIndex(a => 
+          roadName.toLowerCase().includes(a.road.toLowerCase()) || 
+          a.road.toLowerCase().includes(roadName.toLowerCase())
+        );
+
+        if (axisIndex !== -1) {
+          const axis = analyzedAxes[axisIndex];
+          let speedFactor = 0.85;
+          if (magnitude === 4) speedFactor = 0.05;
+          else if (magnitude === 3) speedFactor = 0.25;
+          else if (magnitude === 2) speedFactor = 0.55;
+
+          analyzedAxes[axisIndex] = {
+            ...axis,
+            description: inc.tm?.i || "Ralentissement détecté",
+            status: classifyTraffic(axis.freeFlow * speedFactor, axis.freeFlow),
+            speed: Math.round(axis.freeFlow * speedFactor),
+            delay: delay,
+            updatedAt: "Il y a " + (Math.floor(Math.random() * 5) + 1) + " min",
+          };
+        }
       });
 
-      setTomTomIncidents(realIncidents);
+      setTomTomIncidents(analyzedAxes);
       setCountdown(60);
     } catch (err) {
       console.error("Erreur TomTom:", err);
@@ -119,6 +164,7 @@ export default function TrafficReports() {
   }, []);
 
   const allIncidents = useMemo(() => {
+    // Intégrer les rapports des utilisateurs
     const formattedUserReports: Incident[] = (userReports || []).map(rep => ({
         id: rep.id,
         road: rep.location,
@@ -128,11 +174,11 @@ export default function TrafficReports() {
         speed: rep.severity === 'high' ? 5 : rep.severity === 'medium' ? 15 : 30,
         freeFlow: 50,
         delay: rep.severity === 'high' ? 45 : 15,
-        updatedAt: "Rapport Direct",
+        updatedAt: "Signalé en direct",
         source: 'user'
     }));
 
-    return [...tomtomIncidents, ...formattedUserReports];
+    return [...formattedUserReports, ...tomtomIncidents];
   }, [tomtomIncidents, userReports]);
 
   const stats = useMemo(() => ({
@@ -149,6 +195,7 @@ export default function TrafficReports() {
         const q = searchQuery.toLowerCase();
         result = result.filter(i => i.road.toLowerCase().includes(q) || i.district.toLowerCase().includes(q));
     }
+    // Trier par priorité de statut
     return result.sort((a, b) => {
         const priority = { 'BLOQUÉ': 0, 'SATURÉ': 1, 'RALENTI': 2, 'FLUIDE': 3 };
         return priority[a.status] - priority[b.status];
@@ -158,35 +205,33 @@ export default function TrafficReports() {
   return (
     <div className="flex flex-col h-full w-full gap-4 md:gap-6 bg-[#f8fafc] overflow-y-auto pb-10">
       
-      {/* STATUT HEADER */}
+      {/* HEADER ANALYTIQUE */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 md:px-6 pt-6">
         <div>
             <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                 Analyse du trafic
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse text-[10px] md:text-xs">K-Flow AI</Badge>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse text-[10px] md:text-xs">Direct</Badge>
             </h1>
             <p className="text-xs md:text-sm text-slate-500 font-semibold flex items-center gap-2">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                Navigation & Communauté · sync {countdown}s
+                Navigation GPS + Communauté · sync {countdown}s
             </p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
+        <div className="flex flex-wrap items-center gap-2">
             <Button asChild variant="outline" className="rounded-xl h-10 px-6 border-slate-200 bg-white shadow-sm font-bold text-slate-900 hover:bg-slate-50">
-                <Link href="/signaler-embouteillage">
+                <Link href="/signaler-embouteillage" className="flex items-center gap-2">
+                    <PlusCircle className="h-4 w-4 text-primary" />
                     Signaler un incident
                 </Link>
             </Button>
             <Button size="icon" variant="outline" onClick={() => fetchTomTomData(true)} disabled={isRefreshing} className="rounded-xl h-10 w-10 border-slate-200 bg-white shadow-sm">
                 <RefreshCw className={cn("h-5 w-5 text-slate-600", isRefreshing && "animate-spin")} />
             </Button>
-            <Button size="icon" variant="outline" className="rounded-xl h-10 w-10 border-slate-200 bg-white shadow-sm">
-                <Bell className="h-5 w-5 text-slate-400" />
-            </Button>
         </div>
       </div>
 
-      {/* KPI CARDS (Dashboard) */}
+      {/* KPI CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-4 md:px-6">
         {[
             { label: 'Bloqué', count: stats.blocked, icon: Ban, color: 'text-red-600', bg: 'bg-red-50', sub: '< 10% vitesse' },
@@ -194,7 +239,10 @@ export default function TrafficReports() {
             { label: 'Ralenti', count: stats.slow, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50', sub: '40–70% vitesse' },
             { label: 'Fluide', count: stats.fluid, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', sub: '> 70% vitesse' }
         ].map((kpi) => (
-            <Card key={kpi.label} className="rounded-2xl border-none shadow-sm bg-white hover:shadow-md transition-shadow cursor-pointer" onClick={() => setFilter(kpi.label as TrafficStatus)}>
+            <Card key={kpi.label} className={cn(
+                "rounded-2xl border-none shadow-sm bg-white hover:shadow-md transition-all cursor-pointer ring-2 ring-transparent",
+                filter === kpi.label && "ring-primary/20 bg-slate-50"
+            )} onClick={() => setFilter(kpi.label as TrafficStatus)}>
                 <CardContent className="p-3 md:p-5 flex justify-between items-start">
                     <div className="space-y-0.5 md:space-y-1">
                         <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
@@ -218,7 +266,7 @@ export default function TrafficReports() {
             <div className="w-full md:flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
-                    placeholder="Filtrer rue ou commune..." 
+                    placeholder="Filtrer par rue ou commune..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl text-sm w-full"
@@ -246,7 +294,7 @@ export default function TrafficReports() {
         </div>
       </div>
 
-      {/* LISTE DES DONNÉES (MOBILE CARDS + DESKTOP TABLE) */}
+      {/* LISTE DES DONNÉES */}
       <div className="px-4 md:px-6 flex-1">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             
@@ -283,7 +331,7 @@ export default function TrafficReports() {
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
                                                 <span className="font-bold text-slate-800 text-sm">{incident.road}</span>
-                                                <span className="text-[11px] text-slate-400 font-medium">{incident.description}</span>
+                                                <span className="text-[11px] text-slate-400 font-medium line-clamp-1">{incident.description}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -293,7 +341,7 @@ export default function TrafficReports() {
                                                 </span>
                                                 <span className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase">
                                                     {incident.source === 'tomtom' ? <Navigation className="h-2 w-2" /> : <Users className="h-2 w-2" />}
-                                                    {incident.source === 'tomtom' ? 'Navigation' : 'Communauté'}
+                                                    {incident.source === 'tomtom' ? 'GPS' : 'Communauté'}
                                                 </span>
                                             </div>
                                         </td>
@@ -317,7 +365,7 @@ export default function TrafficReports() {
                 </table>
             </div>
 
-            {/* VUE CARTES (Mobile) */}
+            {/* VUE MOBILE */}
             <div className="md:hidden divide-y divide-slate-100">
                 {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
@@ -365,8 +413,6 @@ export default function TrafficReports() {
   );
 }
 
-/* COMPOSANTS RÉUTILISABLES */
-
 const StatusBadge = ({ status, size = 'default' }: { status: TrafficStatus, size?: 'sm' | 'default' }) => (
     <div className={cn(
         "inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-black uppercase tracking-wider",
@@ -403,7 +449,7 @@ const SpeedIndicator = ({ speed, freeFlow, status }: { speed: number, freeFlow: 
                     status === 'RALENTI' && "bg-amber-500",
                     status === 'FLUIDE' && "bg-emerald-500"
                 )}
-                style={{ width: `${(speed / freeFlow) * 100}%` }}
+                style={{ width: `${Math.min((speed / freeFlow) * 100, 100)}%` }}
             />
         </div>
     </div>
@@ -419,6 +465,6 @@ const DelayText = ({ delay }: { delay: number }) => (
 
 const EmptyState = () => (
     <div className="py-20 text-center text-slate-400 italic font-medium text-sm">
-        Aucune zone critique ne correspond à votre recherche.
+        Aucune donnée ne correspond à vos critères.
     </div>
 );

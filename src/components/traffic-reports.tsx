@@ -97,7 +97,7 @@ export default function TrafficReports() {
       const analyzedAxes: Incident[] = MAJOR_AXES.map((axis, idx) => ({
         id: `axis-${idx}`,
         road: axis.name,
-        description: "Flux de circulation normal",
+        description: "Circulation fluide",
         district: axis.district,
         status: "FLUIDE",
         speed: axis.normalSpeed,
@@ -126,7 +126,7 @@ export default function TrafficReports() {
 
           analyzedAxes[axisIndex] = {
             ...axis,
-            description: inc.tm?.i || "Ralentissement détecté",
+            description: inc.tm?.i || "Ralentissement détecté par GPS",
             status: classifyTraffic(axis.freeFlow * speedFactor, axis.freeFlow),
             speed: Math.round(axis.freeFlow * speedFactor),
             delay: delay,
@@ -197,7 +197,7 @@ export default function TrafficReports() {
             </h1>
             <p className="text-xs md:text-sm text-slate-500 font-semibold flex items-center gap-2">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-                Navigation GPS + Communauté · Données en temps réel
+                Données de navigation réelles · Kinshasa
             </p>
         </div>
         
@@ -448,6 +448,6 @@ const DelayText = ({ delay }: { delay: number }) => (
 
 const EmptyState = () => (
     <div className="py-20 text-center text-slate-400 italic font-medium text-sm">
-        Aucune donnée ne correspond à vos critères.
+        Aucune donnée réelle disponible pour le moment.
     </div>
 );

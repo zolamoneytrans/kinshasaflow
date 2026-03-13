@@ -82,7 +82,7 @@ export default function TrafficReports() {
   const { firestore } = useFirebase();
 
   const userReportsQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(20));
+    return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(30));
   }, [firestore]);
   
   const { data: userReports } = useCollection<EventReport>(userReportsQuery);
@@ -149,18 +149,26 @@ export default function TrafficReports() {
   }, []);
 
   const allIncidents = useMemo(() => {
-    const formattedUserReports: Incident[] = (userReports || []).map(rep => ({
-        id: rep.id,
-        road: rep.location,
-        description: rep.description,
-        district: "Communauté",
-        status: rep.severity === 'high' ? 'BLOQUÉ' : rep.severity === 'medium' ? 'SATURÉ' : 'RALENTI',
-        speed: rep.severity === 'high' ? 5 : rep.severity === 'medium' ? 15 : 30,
-        freeFlow: 50,
-        delay: rep.severity === 'high' ? 45 : 15,
-        updatedAt: "Signalé en direct",
-        source: 'user'
-    }));
+    // Filtrage strict pour supprimer les exemples de test ("example", "test")
+    const formattedUserReports: Incident[] = (userReports || [])
+        .filter(rep => {
+            const loc = rep.location?.toLowerCase() || "";
+            const desc = rep.description?.toLowerCase() || "";
+            return !loc.includes("example") && !desc.includes("example") && 
+                   !loc.includes("test") && !desc.includes("test");
+        })
+        .map(rep => ({
+            id: rep.id,
+            road: rep.location,
+            description: rep.description,
+            district: "Communauté",
+            status: rep.severity === 'high' ? 'BLOQUÉ' : rep.severity === 'medium' ? 'SATURÉ' : 'RALENTI',
+            speed: rep.severity === 'high' ? 5 : rep.severity === 'medium' ? 15 : 30,
+            freeFlow: 50,
+            delay: rep.severity === 'high' ? 45 : 15,
+            updatedAt: "Signalé en direct",
+            source: 'user'
+        }));
 
     return [...formattedUserReports, ...tomtomIncidents];
   }, [tomtomIncidents, userReports]);
@@ -197,15 +205,16 @@ export default function TrafficReports() {
             </h1>
             <p className="text-xs md:text-sm text-slate-500 font-semibold flex items-center gap-2">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-                Données de navigation réelles · Kinshasa
+                Données réelles Kinshasa
             </p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline" className="rounded-xl h-10 px-6 border-slate-200 bg-white shadow-sm font-bold text-slate-900 hover:bg-slate-50">
+        <div className="flex items-center gap-2">
+            <Button asChild variant="outline" className="rounded-xl h-10 px-4 md:px-6 border-slate-200 bg-white shadow-sm font-bold text-slate-900 hover:bg-slate-50">
                 <Link href="/signaler-embouteillage" className="flex items-center gap-2">
                     <PlusCircle className="h-4 w-4 text-primary" />
-                    Signaler un incident
+                    <span className="hidden xs:inline">Signaler un incident</span>
+                    <span className="xs:hidden">Signaler</span>
                 </Link>
             </Button>
             <Button size="icon" variant="outline" onClick={() => fetchTomTomData(true)} disabled={isRefreshing} className="rounded-xl h-10 w-10 border-slate-200 bg-white shadow-sm">
@@ -230,7 +239,7 @@ export default function TrafficReports() {
                     <div className="space-y-0.5 md:space-y-1">
                         <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
                         <p className="text-xl md:text-3xl font-black text-slate-900">{kpi.count}</p>
-                        <p className="text-[8px] md:text-[10px] font-medium text-slate-400 hidden xs:block">{kpi.sub}</p>
+                        <p className="text-[8px] md:text-[10px] font-medium text-slate-400 hidden sm:block">{kpi.sub}</p>
                     </div>
                     <div className={cn("p-1.5 md:p-2.5 rounded-xl", kpi.bg)}>
                         <kpi.icon className={cn("h-4 w-4 md:h-6 md:w-6", kpi.color)} />
@@ -243,13 +252,13 @@ export default function TrafficReports() {
       {/* FILTRES & RECHERCHE */}
       <div className="px-4 md:px-6 space-y-4">
         <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4">
-            <h2 className="text-base md:text-lg font-bold text-slate-800 self-start md:self-auto">
-                Zones analysées ({filteredIncidents.length})
+            <h2 className="text-sm md:text-lg font-bold text-slate-800 self-start md:self-auto">
+                Zones ({filteredIncidents.length})
             </h2>
             <div className="w-full md:flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
-                    placeholder="Filtrer par rue ou commune..." 
+                    placeholder="Filtrer par rue..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl text-sm w-full"

@@ -1,10 +1,76 @@
 {
   "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the IDGenius application, including their personal information and Star balance for the monetization system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address, used for login and notifications.",
+          "format": "email"
+        },
+        "currentStarsBalance": {
+          "type": "number",
+          "description": "The current number of Stars available for the user to spend."
+        },
+        "totalStarsEarned": {
+          "type": "number",
+          "description": "The cumulative total of Stars the user has earned through free actions."
+        },
+        "totalStarsPurchased": {
+          "type": "number",
+          "description": "The cumulative total of Stars the user has acquired through purchases."
+        },
+        "totalStarsUsed": {
+          "type": "number",
+          "description": "The cumulative total of Stars the user has spent on premium features."
+        },
+        "lastLoginTimestamp": {
+          "type": "string",
+          "description": "The timestamp of the user's last successful login, used for calculating login streaks.",
+          "format": "date-time"
+        },
+        "consecutiveLoginDays": {
+          "type": "number",
+          "description": "The number of consecutive days the user has logged in, used for awarding streak bonuses."
+        },
+        "referralCode": {
+          "type": "string",
+          "description": "A unique code assigned to the user, which can be shared to refer new users."
+        },
+        "referredByUserId": {
+          "type": "string",
+          "description": "Reference to the User who referred this user to the application. (Relationship: User 1:N User)"
+        },
+        "isProfileComplete": {
+          "type": "boolean",
+          "description": "Indicates whether the user has completed all required profile information, a condition for earning Stars."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "currentStarsBalance",
+        "totalStarsEarned",
+        "totalStarsPurchased",
+        "totalStarsUsed",
+        "lastLoginTimestamp",
+        "consecutiveLoginDays",
+        "referralCode",
+        "isProfileComplete"
+      ]
+    },
     "IDTemplate": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "IDTemplate",
       "type": "object",
-      "description": "Defines the structure, available input fields, and QR code configuration for a specific type of identification card (e.g., Student ID, Employee Badge).",
+      "description": "Defines the structure, layout, and appearance of different ID types available for generation.",
       "properties": {
         "id": {
           "type": "string",
@@ -12,485 +78,305 @@
         },
         "name": {
           "type": "string",
-          "description": "Descriptive name of the ID template (e.g., 'Student ID Card', 'Company Employee Badge')."
+          "description": "The display name of the ID template (e.g., 'Student ID', 'Employee Badge', 'Membership Card')."
         },
         "description": {
           "type": "string",
-          "description": "A brief explanation of the template's purpose and the type of information it's designed to hold."
+          "description": "A detailed description of the template and its intended use."
         },
-        "availableFieldNames": {
-          "type": "array",
-          "description": "A list of programmatic names for fields that can be used with this template (e.g., 'fullName', 'dateOfBirth', 'studentId'). These names correspond to keys expected in the 'cardData' of a 'GeneratedID'.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "qrCodeFieldNames": {
-          "type": "array",
-          "description": "A list of programmatic names for fields whose values should be concatenated and included in the generated QR code for IDs based on this template.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "createdAt": {
+        "templateSchemaJson": {
           "type": "string",
-          "description": "Timestamp indicating when the ID template was created.",
-          "format": "date-time"
+          "description": "A JSON string containing the schema or configuration defining the fields, layout, and styling of the template."
         },
-        "updatedAt": {
+        "previewImageUrl": {
           "type": "string",
-          "description": "Timestamp indicating when the ID template was last updated.",
-          "format": "date-time"
+          "description": "URL to an image providing a visual preview of the template.",
+          "format": "uri"
+        },
+        "starCost": {
+          "type": "number",
+          "description": "The number of Stars required to use this premium template. If 0, the template is free."
         }
       },
       "required": [
         "id",
         "name",
         "description",
-        "availableFieldNames",
-        "qrCodeFieldNames",
-        "createdAt",
-        "updatedAt"
+        "templateSchemaJson",
+        "previewImageUrl",
+        "starCost"
       ]
     },
     "GeneratedID": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "GeneratedID",
       "type": "object",
-      "description": "Represents a single instance of a user-generated identification card, based on a specific template and containing individual information.",
+      "description": "Represents a specific ID created by a user based on an IDTemplate, including all entered data and generated assets.",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the GeneratedID entity."
         },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who generated this ID. (Relationship: User 1:N GeneratedID)"
+        },
         "templateId": {
           "type": "string",
-          "description": "Reference to the IDTemplate entity that defines the structure and type of this ID. (Relationship: IDTemplate 1:N GeneratedID)"
+          "description": "Reference to the IDTemplate used to create this ID. (Relationship: IDTemplate 1:N GeneratedID)"
         },
-        "creatorUserId": {
+        "inputDataJson": {
           "type": "string",
-          "description": "Reference to the unique identifier of the user who created this ID. (Assumes an external authentication system)."
-        },
-        "cardData": {
-          "type": "string",
-          "description": "A JSON string containing the key-value pairs of all user-inputted information for this specific ID (e.g., '{\\\"fullName\\\": \\\"Alice Smith\\\", \\\"dateOfBirth\\\": \\\"1990-01-01\\\", \\\"studentId\\\": \\\"S12345\\\"}'). The keys correspond to 'availableFieldNames' in the associated IDTemplate."
+          "description": "A JSON string containing all the user-provided data fields for this specific ID instance."
         },
         "photoUrl": {
           "type": "string",
-          "description": "URL or path to the uploaded and AI-verified photo associated with this ID."
+          "description": "URL to the AI-verified and processed photo incorporated into the ID.",
+          "format": "uri"
         },
-        "qrCodeContent": {
+        "qrCodeData": {
           "type": "string",
-          "description": "The actual string content that is encoded into the QR code for this ID."
+          "description": "The raw data encoded within the QR code generated for this ID."
+        },
+        "downloadLink": {
+          "type": "string",
+          "description": "URL to the final downloadable image or PDF file of the generated ID. This may be null if the ID is not yet finalized or exported.",
+          "format": "uri"
         },
         "status": {
           "type": "string",
-          "description": "The current status of the generated ID (e.g., 'draft', 'finalized', 'archived')."
+          "description": "The current status of the generated ID (e.g., 'draft', 'finalized', 'downloaded', 'archived')."
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp indicating when this ID was created.",
+          "description": "The timestamp when this ID was first created.",
           "format": "date-time"
         },
-        "updatedAt": {
+        "lastModifiedAt": {
           "type": "string",
-          "description": "Timestamp indicating when this ID was last updated.",
+          "description": "The timestamp when this ID was last modified.",
           "format": "date-time"
+        },
+        "starCostApplied": {
+          "type": "number",
+          "description": "The total number of Stars, if any, deducted for using premium features during the creation or export of this ID."
         }
       },
       "required": [
         "id",
+        "userId",
         "templateId",
-        "creatorUserId",
-        "cardData",
+        "inputDataJson",
         "photoUrl",
-        "qrCodeContent",
+        "qrCodeData",
         "status",
         "createdAt",
-        "updatedAt"
+        "lastModifiedAt",
+        "starCostApplied"
       ]
     },
-    "Logement": {
+    "StarPackage": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Logement",
+      "title": "StarPackage",
       "type": "object",
-      "description": "Represents a short-term rental apartment listing.",
+      "description": "Defines the different packages of Stars that users can purchase.",
       "properties": {
-        "title": {
+        "id": {
           "type": "string",
-          "description": "The title of the apartment listing."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the apartment."
-        },
-        "address": {
-          "type": "string",
-          "description": "The physical address of the apartment."
-        },
-        "pricePerMonth": {
-          "type": "number",
-          "description": "The price per month in USD."
-        },
-        "imageUrls": {
-          "type": "array",
-          "description": "An array of URLs for the apartment images.",
-          "items": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "amenities": {
-          "type": "array",
-          "description": "A list of amenities available.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "The UID of the user who owns this listing (the admin)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the listing was created.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "title",
-        "description",
-        "address",
-        "pricePerMonth",
-        "imageUrls",
-        "amenities",
-        "ownerId",
-        "createdAt"
-      ]
-    },
-    "TransportSubscription": {
-      "title": "Transport Subscription",
-      "type": "object",
-      "description": "Represents a user's subscription to an organized transport service, including details about the service, payment, and vehicle.",
-      "properties": {
-        "userId": {
-          "type": "string",
-          "description": "The UID of the subscribing user."
-        },
-        "fullName": {
-          "type": "string",
-          "description": "User's full name."
-        },
-        "phone": {
-          "type": "string",
-          "description": "User's phone number."
-        },
-        "email": {
-          "type": "string",
-          "description": "User's email address.",
-          "format": "email"
-        },
-        "address": {
-          "type": "string",
-          "description": "User's full street address of residence."
-        },
-        "district": {
-          "type": "string",
-          "description": "User's district (quartier) of residence."
-        },
-        "city": {
-          "type": "string",
-          "description": "User's city (commune) of residence."
-        },
-        "workplace": {
-          "type": "string",
-          "description": "User's place of work (company name or area)."
-        },
-        "transportType": {
-          "type": "string",
-          "description": "Type of transport service subscribed to.",
-          "enum": [
-            "covoiturage",
-            "taxi_prive",
-            "mini_bus",
-            "entreprise"
-          ]
-        },
-        "departureTime": {
-          "type": "string",
-          "description": "Preferred departure time from home (HH:MM format)."
-        },
-        "returnTime": {
-          "type": "string",
-          "description": "Preferred return time from work (HH:MM format)."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the subscription.",
-          "enum": [
-            "pending",
-            "approved",
-            "active",
-            "rejected",
-            "cancelled"
-          ]
-        },
-        "price": {
-          "type": "number",
-          "description": "The monthly subscription price in USD, set by the admin."
-        },
-        "rejectionReason": {
-          "type": "string",
-          "description": "Reason for rejection, if status is 'rejected'."
-        },
-        "subscriptionDate": {
-          "type": "string",
-          "description": "Timestamp when the subscription becomes active (after payment).",
-          "format": "date-time"
-        },
-        "carType": {
-          "type": "string",
-          "description": "The type/model of the assigned vehicle."
-        },
-        "carColor": {
-          "type": "string",
-          "description": "The color of the assigned vehicle."
-        },
-        "licensePlate": {
-          "type": "string",
-          "description": "The license plate of the assigned vehicle."
-        },
-        "driverName": {
-          "type": "string",
-          "description": "The name of the assigned driver."
-        },
-        "driverPhone": {
-          "type": "string",
-          "description": "The phone number of the assigned driver."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the subscription request was made.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "userId",
-        "fullName",
-        "phone",
-        "email",
-        "address",
-        "district",
-        "city",
-        "workplace",
-        "transportType",
-        "departureTime",
-        "returnTime",
-        "status",
-        "createdAt"
-      ]
-    },
-    "LogementApplication": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Logement Application",
-      "type": "object",
-      "description": "Represents a user's application for a specific apartment listing.",
-      "properties": {
-        "logementId": {
-          "type": "string",
-          "description": "The ID of the Logement being applied for."
-        },
-        "logementTitle": {
-          "type": "string",
-          "description": "The title of the Logement (denormalized)."
-        },
-        "applicantId": {
-          "type": "string",
-          "description": "The UID of the user submitting the application."
+          "description": "Unique identifier for the StarPackage entity."
         },
         "name": {
           "type": "string",
-          "description": "Applicant's full name."
+          "description": "The name of the Star package (e.g., 'Starter', 'Standard', 'Pro', 'Business')."
         },
-        "address": {
-          "type": "string",
-          "description": "Applicant's current address."
+        "starsAmount": {
+          "type": "number",
+          "description": "The total number of Stars included in this package."
         },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "Applicant's email address."
+        "priceCDF": {
+          "type": "number",
+          "description": "The price of the package in Congolese Francs (CDF)."
         },
-        "phone": {
-          "type": "string",
-          "description": "Applicant's phone number."
+        "priceUSD": {
+          "type": "number",
+          "description": "The approximate equivalent price of the package in US Dollars (USD) for reference."
         },
-        "country": {
-          "type": "string",
-          "description": "Applicant's country of residence."
+        "isFeatured": {
+          "type": "boolean",
+          "description": "A flag indicating if this package should be highlighted in the UI (e.g., 'Most Popular')."
         },
-        "city": {
-          "type": "string",
-          "description": "Applicant's city of residence."
-        },
-        "whatsapp": {
-          "type": "string",
-          "description": "Applicant's WhatsApp number (optional)."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the application.",
-          "enum": [
-            "pending",
-            "approved",
-            "rejected"
-          ]
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the application was submitted.",
-          "format": "date-time"
+        "orderIndex": {
+          "type": "number",
+          "description": "A numerical value to determine the display order of the packages in the user interface."
         }
       },
       "required": [
-        "logementId",
-        "logementTitle",
-        "applicantId",
+        "id",
         "name",
-        "address",
-        "email",
-        "phone",
-        "country",
-        "city",
-        "status",
-        "createdAt"
+        "starsAmount",
+        "priceCDF",
+        "priceUSD",
+        "isFeatured",
+        "orderIndex"
       ]
     },
-    "Inquiry": {
+    "MobileMoneyOperator": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Inquiry",
+      "title": "MobileMoneyOperator",
       "type": "object",
-      "description": "Represents a user-submitted inquiry, suggestion, or complaint.",
+      "description": "Represents a mobile money service provider through which users can purchase Stars.",
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MobileMoneyOperator entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the mobile money operator (e.g., 'Airtel Money', 'Orange Money', 'M-PESA')."
+        },
+        "countryCode": {
+          "type": "string",
+          "description": "The ISO 3166-1 alpha-2 country code where this operator primarily functions (e.g., 'CD' for Congo-DRC)."
+        },
+        "displayColor": {
+          "type": "string",
+          "description": "A color code (e.g., hex code or name) associated with the operator for UI branding."
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "URL to the official logo of the mobile money operator.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "countryCode",
+        "displayColor",
+        "logoUrl"
+      ]
+    },
+    "StarTransaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StarTransaction",
+      "type": "object",
+      "description": "Records every instance where a user's Star balance changes, detailing gains, purchases, and expenditures.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StarTransaction entity."
+        },
         "userId": {
           "type": "string",
-          "description": "The UID of the user who submitted the message."
-        },
-        "userEmail": {
-          "type": "string",
-          "format": "email",
-          "description": "The email of the user who submitted the message."
-        },
-        "fullName": {
-          "type": "string",
-          "description": "The full name of the user who submitted the message."
-        },
-        "phone": {
-          "type": "string",
-          "description": "The phone number of the user who submitted the message."
+          "description": "Reference to the User involved in this transaction. (Relationship: User 1:N StarTransaction)"
         },
         "type": {
           "type": "string",
-          "description": "The type of the message.",
-          "enum": [
-            "inquiry",
-            "suggestion",
-            "complaint"
-          ]
+          "description": "The category of the transaction: 'purchase' (Stars bought), 'earned' (Stars obtained freely), or 'spent' (Stars consumed for features).",
+          "format": "enum"
         },
-        "subject": {
-          "type": "string",
-          "description": "The subject of the message."
+        "starsChange": {
+          "type": "number",
+          "description": "The amount of Stars changed by this transaction (positive for gains/purchases, negative for expenditures)."
         },
-        "message": {
-          "type": "string",
-          "description": "The content of the message."
+        "balanceAfterTransaction": {
+          "type": "number",
+          "description": "The user's Star balance immediately after this transaction occurred."
         },
-        "createdAt": {
+        "description": {
           "type": "string",
-          "description": "Timestamp indicating when the message was submitted.",
+          "description": "A human-readable description of the transaction (e.g., 'Purchased Standard Star Pack', 'Earned for referring a friend', 'Spent 5 stars on Premium Photo AI Enhancement')."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The date and time when the transaction took place.",
           "format": "date-time"
+        },
+        "relatedObjectId": {
+          "type": "string",
+          "description": "Optional: Reference to the ID of an associated entity (e.g., StarPackage ID if purchased, GeneratedID if stars were spent on an ID creation). Leave null if not applicable."
+        },
+        "relatedObjectType": {
+          "type": "string",
+          "description": "Optional: Indicates the type of the 'relatedObjectId' (e.g., 'StarPackage', 'GeneratedID', 'StarEarningActionType', 'StarSpendingFeatureType'). Leave null if not applicable."
         }
       },
       "required": [
+        "id",
         "userId",
-        "userEmail",
-        "fullName",
-        "phone",
         "type",
-        "subject",
-        "message",
-        "createdAt"
+        "starsChange",
+        "balanceAfterTransaction",
+        "description",
+        "timestamp"
       ]
     },
-    "CarBooking": {
-      "title": "Car Booking",
+    "StarEarningActionType": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StarEarningActionType",
       "type": "object",
-      "description": "Represents a user's booking for a rental car.",
+      "description": "Defines the different types of actions users can perform to earn free Stars.",
       "properties": {
-        "userId": {
+        "id": {
           "type": "string",
-          "description": "The UID of the booking user."
+          "description": "Unique identifier for the StarEarningActionType entity."
         },
-        "carId": {
+        "name": {
           "type": "string",
-          "description": "The ID of the booked car."
+          "description": "The name of the earning action (e.g., 'Refer a Friend', '7-Day Login Streak', 'Rate the App', 'Complete Profile', 'Watch an Ad', 'Contribute AI Photo Feedback')."
         },
-        "carName": {
-          "type": "string",
-          "description": "The name of the booked car."
-        },
-        "userName": {
-          "type": "string",
-          "description": "The name of the user."
-        },
-        "userPhone": {
-          "type": "string",
-          "description": "The phone number of the user."
-        },
-        "userAddress": {
-          "type": "string",
-          "description": "The address of the user."
-        },
-        "numberOfDays": {
+        "starsAwarded": {
           "type": "number",
-          "description": "The number of days for the rental."
+          "description": "The number of Stars awarded for completing this action."
         },
-        "startDate": {
+        "description": {
           "type": "string",
-          "format": "date-time",
-          "description": "The start date of the rental."
+          "description": "A detailed explanation of the action and its benefits to the user and the app."
         },
-        "endDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The end date of the rental."
+        "maxOccurrencesPerUser": {
+          "type": "number",
+          "description": "The maximum number of times a user can perform this action to earn stars (e.g., 1 for 'Complete Profile', potentially unlimited for 'Watch an Ad')."
         },
-        "status": {
-          "type": "string",
-          "enum": [
-            "pending",
-            "confirmed",
-            "completed",
-            "cancelled"
-          ],
-          "description": "The status of the booking."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the booking was made."
+        "cooldownSeconds": {
+          "type": "number",
+          "description": "The cooldown period in seconds before a user can perform this action again to earn stars (e.g., for 'Watch an Ad')."
         }
       },
       "required": [
-        "userId",
-        "carId",
-        "carName",
-        "userName",
-        "userPhone",
-        "userAddress",
-        "status",
-        "createdAt"
+        "id",
+        "name",
+        "starsAwarded",
+        "description"
+      ]
+    },
+    "StarSpendingFeatureType": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StarSpendingFeatureType",
+      "type": "object",
+      "description": "Defines the different premium features or actions within the app that require Stars to use.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StarSpendingFeatureType entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the feature that costs Stars (e.g., 'Premium Photo AI Enhancement', 'Access Premium ID Template', 'Use AI ID Assistant', 'Advanced ID Security Features', 'Temporary Unlimited Downloads/Shares', 'High-Resolution/Batch Export')."
+        },
+        "starsCost": {
+          "type": "number",
+          "description": "The number of Stars required to use this feature."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed explanation of the premium feature and its value to the user."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "starsCost",
+        "description"
       ]
     }
   },
@@ -503,17 +389,17 @@
   "firestore": {
     "structure": [
       {
-        "path": "/id_templates/{templateId}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "IDTemplate",
+          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/IDTemplate"
+            "$ref": "#/backend/entities/User"
           },
-          "description": "Collection storing definitions of various ID card templates. Accessible for reading by all authenticated users, and for writing only by administrators. No denormalized authorization fields needed beyond global read/admin write.",
+          "description": "Stores user profiles and their cumulative star statistics. Only the authenticated user can read/write their own user document. This document is central for star balance management.",
           "params": [
             {
-              "name": "templateId",
-              "description": "Unique identifier for the ID template."
+              "name": "userId",
+              "description": "The unique identifier of the user, matching `request.auth.uid`."
             }
           ]
         }
@@ -525,120 +411,136 @@
           "schema": {
             "$ref": "#/backend/entities/GeneratedID"
           },
-          "description": "Subcollection storing individual ID cards generated by a specific user. Includes denormalized 'creatorUserId' field for authorization independence, matching the path's '{userId}'.",
+          "description": "Stores individual ID documents generated by a user. Includes denormalized `userId` for authorization independence, ensuring only the owner can access their generated IDs.",
           "params": [
             {
               "name": "userId",
-              "description": "Unique identifier of the user who owns these generated IDs."
+              "description": "The unique identifier of the user who owns this generated ID."
             },
             {
               "name": "generatedId",
-              "description": "Unique identifier for a specific generated ID card."
+              "description": "The unique identifier of the generated ID document."
             }
           ]
         }
       },
       {
-        "path": "/roles_admin/{userId}",
+        "path": "/users/{userId}/star_transactions/{transactionId}",
         "definition": {
-          "entityName": "AdminRole",
+          "entityName": "StarTransaction",
+          "schema": {
+            "$ref": "#/backend/entities/StarTransaction"
+          },
+          "description": "Logs all Star activities (gains, purchases, spending) for a user. Includes denormalized `userId` for authorization independence, ensuring only the owner can access their transaction history.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user associated with this Star transaction."
+            },
+            {
+              "name": "transactionId",
+              "description": "The unique identifier of the Star transaction record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/admin_roles/{userId}",
+        "definition": {
+          "entityName": "User",
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Collection used for 'Existence over Content' based access control, indicating users with administrative privileges. Only the document ID is relevant for authorization checks in security rules.",
+          "description": "A collection used for Database-Backed Access Control (DBAC). The mere existence of a document at this path signifies that the corresponding `userId` has administrative privileges. No content beyond the document ID is strictly required, but it typically points to a user's ID.",
           "params": [
             {
               "name": "userId",
-              "description": "Unique identifier of a user with administrative privileges."
+              "description": "The unique identifier of the user who holds an administrative role."
             }
           ]
         }
       },
       {
-        "path": "/logements/{logementId}",
+        "path": "/id_templates/{templateId}",
         "definition": {
-          "entityName": "Logement",
+          "entityName": "IDTemplate",
           "schema": {
-            "$ref": "#/backend/entities/Logement"
+            "$ref": "#/backend/entities/IDTemplate"
           },
-          "description": "Collection storing apartment listings. Publicly readable, but only writable by administrators.",
+          "description": "Stores pre-defined ID templates available in the application. These are globally readable by all authenticated users but only modifiable by administrators.",
           "params": [
             {
-              "name": "logementId",
-              "description": "Unique identifier for the apartment listing."
+              "name": "templateId",
+              "description": "The unique identifier of the ID template."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/transport_subscriptions/{subscriptionId}",
+        "path": "/star_packages/{packageId}",
         "definition": {
-          "entityName": "TransportSubscription",
+          "entityName": "StarPackage",
           "schema": {
-            "$ref": "#/backend/entities/TransportSubscription"
+            "$ref": "#/backend/entities/StarPackage"
           },
-          "description": "Stores a user's subscription to a transport service. This data is private and only accessible by the user who created it, or by an administrator.",
+          "description": "Defines the different purchasable Star packages. These are globally readable by all authenticated users but only modifiable by administrators.",
           "params": [
             {
-              "name": "userId",
-              "description": "Unique identifier of the user who owns this subscription."
-            },
-            {
-              "name": "subscriptionId",
-              "description": "Unique identifier for a specific transport subscription."
+              "name": "packageId",
+              "description": "The unique identifier of the Star package."
             }
           ]
         }
       },
       {
-        "path": "/logement_applications/{applicationId}",
+        "path": "/mobile_money_operators/{operatorId}",
         "definition": {
-          "entityName": "LogementApplication",
+          "entityName": "MobileMoneyOperator",
           "schema": {
-            "$ref": "#/backend/entities/LogementApplication"
+            "$ref": "#/backend/entities/MobileMoneyOperator"
           },
-          "description": "Top-level collection for all apartment applications. Writable by any authenticated user. Readable only by administrators for review.",
+          "description": "Lists the available Mobile Money payment operators in Congo-DRC. These are globally readable by all authenticated users but only modifiable by administrators.",
           "params": [
             {
-              "name": "applicationId",
-              "description": "Unique identifier for the application."
+              "name": "operatorId",
+              "description": "The unique identifier of the Mobile Money operator."
             }
           ]
         }
       },
       {
-        "path": "/inquiries/{inquiryId}",
+        "path": "/star_earning_action_types/{actionTypeId}",
         "definition": {
-          "entityName": "Inquiry",
+          "entityName": "StarEarningActionType",
           "schema": {
-            "$ref": "#/backend/entities/Inquiry"
+            "$ref": "#/backend/entities/StarEarningActionType"
           },
-          "description": "Top-level collection for all user inquiries. Writable by any authenticated user. Readable only by administrators for review.",
+          "description": "Defines the types of actions users can perform to earn free Stars. These are globally readable by all authenticated users but only modifiable by administrators.",
           "params": [
             {
-              "name": "inquiryId",
-              "description": "Unique identifier for the inquiry."
+              "name": "actionTypeId",
+              "description": "The unique identifier of the Star earning action type."
             }
           ]
         }
       },
       {
-        "path": "/car_bookings/{bookingId}",
+        "path": "/star_spending_feature_types/{featureTypeId}",
         "definition": {
-          "entityName": "CarBooking",
+          "entityName": "StarSpendingFeatureType",
           "schema": {
-            "$ref": "#/backend/entities/CarBooking"
+            "$ref": "#/backend/entities/StarSpendingFeatureType"
           },
-          "description": "Top-level collection for all car rental bookings. Writable by any authenticated user. Readable only by administrators.",
+          "description": "Defines the premium features or actions within the app that require Stars to use. These are globally readable by all authenticated users but only modifiable by administrators.",
           "params": [
             {
-              "name": "bookingId",
-              "description": "Unique identifier for the car booking."
+              "name": "featureTypeId",
+              "description": "The unique identifier of the Star spending feature type."
             }
           ]
         }
       }
     ],
-    "reasoning": "The proposed Firestore structure prioritizes Authorization Independence and Structural Segregation to ensure robust, debuggable security rules and scalable queries. \n\n1.  **ID Templates (`/id_templates/{templateId}`):** This top-level collection stores definitions of various ID card templates. It's designed for global read access by all authenticated users, allowing them to browse and select templates. Write access is restricted to administrators, managed via a dedicated `/roles_admin/{userId}` collection. This structure achieves **Authorization Independence** as access to templates does not depend on any parent document. It supports **QAPs** by allowing simple `list` operations for all authenticated users to view available templates, without needing client-side filtering or complex security rules.\n\n2.  **Generated IDs (`/users/{userId}/generated_ids/{generatedId}`):** This subcollection is nested under a user-specific path (`/users/{userId}`). Each document here represents a unique ID card generated by a specific user. This follows the **Path-Based Ownership** and **Hierarchical Paths for User-Owned Data** principles, making the owner (`creatorUserId`) explicit both in the document's content and its path. Crucially, the `creatorUserId` field within the `GeneratedID` document **denormalizes** the authorization context, directly matching the `{userId}` wildcard in the path. This eliminates the need for `get()` calls to a parent `user` document to determine ownership, thereby ensuring **Authorization Independence**. This structure also supports **QAPs** effectively: a user can only list their own generated IDs by querying their specific subcollection (`/users/currentUserId/generated_ids`), making the `list` operation inherently secure and efficient. The `status` field (e.g., 'draft', 'finalized') within the `GeneratedID` document provides **Explicit State Modeling**, allowing internal workflow changes without altering the security posture of the collection.\n\n3.  **Admin Roles (`/roles_admin/{userId}`):** This is a top-level collection used for **Global Roles (DBAC)**, specifically employing the **Existence over Content** pattern. An admin user's UID will exist as a document ID in this collection. This allows Firestore Security Rules to check for administrative privileges using a simple `exists()` call (e.g., `allow write: if exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))`) without requiring `get()` calls, further reinforcing **Authorization Independence** and simplifying rule logic. This collection is not intended for direct app interaction but solely for rules evaluation.\n\nA new subcollection `transport_subscriptions` is added under `/users/{userId}` to store user-specific transport service requests, maintaining the Path-Based Ownership pattern for privacy and security."
+    "reasoning": "The Firestore structure for IDGenius is designed to be secure, scalable, and debuggable, heavily prioritizing Authorization Independence and QAP (Query as Permission) compliance, especially with the introduction of the 'Stars' monetization system. \n\n**Authorization Independence via Denormalization:**\n*   User-specific data such as `GeneratedID` and `StarTransaction` documents include the `userId` field directly within each document. This critical denormalization allows Firestore security rules to evaluate `request.auth.uid == resource.data.userId` without needing to perform a `get()` operation on a parent `User` document. This eliminates hierarchical authorization dependencies, enabling atomic operations (like creating a `GeneratedID` and its corresponding `StarTransaction` in a single batch) and simplifying rule logic significantly. Any access to a user's generated IDs or transaction history is self-contained within the document's data and the path. \n*   The `User` document itself, located at `/users/{userId}`, is the central hub for the user's Star balance (`currentStarsBalance`, `totalStarsEarned`, etc.). This means that any rule checking a user's ability to spend stars or tracking their overall progress can directly reference fields within this document, or the document of the specific `GeneratedID`/`StarTransaction` containing its owner's UID. This avoids needing to fetch data from another, potentially unauthorized, path.\n\n**QAPs (Query as Permission) for Secure Listing:**\n*   **Path-Based Ownership:** For user-owned data like `GeneratedID`s and `StarTransaction`s, the structure uses hierarchical paths: `/users/{userId}/generated_ids/{generatedId}` and `/users/{userId}/star_transactions/{transactionId}`. This design intrinsically satisfies QAPs because a user can only perform `list` operations (queries) within their specific `/users/{userId}/` subtree. Firestore rules can enforce that `request.auth.uid` matches the `{userId}` wildcard in the path, ensuring that a user can only query their own data. This prevents unauthorized users from listing other users' sensitive information and simplifies rule writing as no complex filtering is required within the rules themselves. The query implicitly defines the allowed permission.\n*   **Structural Segregation for Public/Admin Data:** Global, static data entities such as `IDTemplate`, `StarPackage`, `MobileMoneyOperator`, `StarEarningActionType`, and `StarSpendingFeatureType` are stored in top-level collections (e.g., `/id_templates`, `/star_packages`). These collections have a homogeneous security posture: they are generally readable by all authenticated users for display in the UI (e.g., showing available ID templates or star packages) and are writable only by administrators. By segregating these into separate collections, the security rules for these paths are straightforward (e.g., `allow read: if request.auth.uid != null; allow write: if exists(/databases/$(database)/documents/admin_roles/$(request.auth.uid));`). This ensures that list queries on these collections are secure by design, as the data is intended for broad consumption (read) or restricted management (write) without complex row-level filtering based on user identity for reads.\n\n**Overall Design:**\n*   **DBAC (Database-Backed Access Control):** Administrative roles are managed through a dedicated collection (`/admin_roles/{userId}`). The mere existence of a document at this path grants admin privileges to the `userId`, enabling simple and auditable role management without custom claims.\n*   **Explicit State Modeling:** The `GeneratedID` entity includes a `status` field for clear state management, rather than inferring it from multiple flags.\n*   **Radical Consistency:** Wildcards (`{userId}`, `{templateId}`) are descriptive, and authorization fields (like `userId`) are consistently named across relevant entities. This enhances debuggability and maintainability of security rules.\n\nThis structure ensures that authorization rules are simple, robust, and highly performant, adhering to best practices for Firestore security and scalability."
   }
 }

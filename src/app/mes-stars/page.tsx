@@ -226,7 +226,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                   <Button variant="ghost" onClick={() => setStep(1)} className="flex-1 font-bold">Retour</Button>
                   <Button disabled={!operator || phone.length < 9 || isLoading} onClick={handlePurchase} className="flex-[2] h-12 rounded-xl font-bold">
                     {isLoading ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
-                    Confayer {selectedPack?.price}
+                    Confirmer {selectedPack?.price}
                   </Button>
                 </div>
               </motion.div>
@@ -410,7 +410,7 @@ export default function MesStarsPage() {
                       <p className="text-xs font-bold">Chargement...</p>
                     </div>
                   ) : transactions && transactions.length > 0 ? (
-                    transactions.map(t => <TransactionRow key={transaction.id} transaction={t} />)
+                    transactions.map(t => <TransactionRow key={t.id} transaction={t} />)
                   ) : (
                     <div className="p-10 text-center space-y-4">
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-300">

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -13,7 +14,8 @@ import {
   CheckCircle2, 
   Navigation,
   Activity,
-  Users
+  Users,
+  PlusCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -96,57 +98,7 @@ export default function TrafficReports() {
         };
       });
 
-      const mainRoads = [
-          { name: "Boulevard du 30 Juin", district: "Gombe", flow: 50 },
-          { name: "Avenue Kasa-Vubu", district: "Kalamu", flow: 40 },
-          { name: "Boulevard Lumumba", district: "Limete", flow: 60 },
-          { name: "Avenue de la Libération", district: "Lingwala", flow: 50 },
-          { name: "Route de Matadi", district: "Ngaliema", flow: 50 },
-          { name: "Avenue By-Pass", district: "Lemba", flow: 50 },
-          { name: "Avenue de l'Université", district: "Makala", flow: 40 },
-          { name: "Pont Matete", district: "Limete", flow: 60 },
-          { name: "Avenue Nguma", district: "Ngaliema", flow: 45 },
-          { name: "Boulevard Triomphal", district: "Kasa-Vubu", flow: 50 },
-          { name: "Avenue du Tourisme", district: "Ngaliema", flow: 50 },
-          { name: "Avenue Kabinda", district: "Lingwala", flow: 40 },
-          { name: "Avenue Luambo Makiadi", district: "Barumbu", flow: 40 },
-          { name: "Avenue Mondjiba", district: "Ngaliema", flow: 50 },
-          { name: "Rond-point UPN", district: "Ngaliema", flow: 40 },
-          { name: "Avenue de l'Enseignement", district: "Kasa-Vubu", flow: 40 },
-          { name: "Avenue des Huileries", district: "Lingwala", flow: 45 },
-          { name: "Avenue Colonel Ebeya", district: "Gombe", flow: 35 },
-          { name: "Avenue du Commerce", district: "Gombe", flow: 30 },
-          { name: "Avenue Bokassa", district: "Kinshasa", flow: 35 },
-          { name: "Avenue de la Science", district: "Gombe", flow: 40 },
-          { name: "Avenue des Poids Lourds", district: "Limete", flow: 40 }
-      ];
-
-      let sampledData: Incident[] = mainRoads.map((road, idx) => {
-          const rand = Math.random();
-          let speedFactor = 0.85; 
-          let delay = 0;
-
-          if (rand < 0.15) { speedFactor = 0.05; delay = Math.floor(Math.random() * 30) + 20; } 
-          else if (rand < 0.40) { speedFactor = 0.25; delay = Math.floor(Math.random() * 15) + 10; } 
-          else if (rand < 0.70) { speedFactor = 0.55; delay = Math.floor(Math.random() * 8) + 2; } 
-
-          const speed = Math.round(road.flow * speedFactor);
-          
-          return {
-              id: `sampled-${idx}`,
-              road: road.name,
-              description: speedFactor < 0.4 ? "Congestion importante analysée" : "Navigation fluide",
-              district: road.district,
-              status: classifyTraffic(speed, road.flow),
-              speed,
-              freeFlow: road.flow,
-              delay,
-              updatedAt: "il y a " + (Math.floor(Math.random() * 8) + 1) + " min",
-              source: 'tomtom'
-          };
-      });
-
-      setTomTomIncidents([...realIncidents, ...sampledData]);
+      setTomTomIncidents(realIncidents);
       setCountdown(60);
     } catch (err) {
       console.error("Erreur TomTom:", err);
@@ -219,7 +171,12 @@ export default function TrafficReports() {
             </p>
         </div>
         
-        <div className="flex items-center gap-2 self-end md:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
+            <Button asChild variant="outline" className="rounded-xl h-10 px-6 border-slate-200 bg-white shadow-sm font-bold text-slate-900 hover:bg-slate-50">
+                <Link href="/signaler-embouteillage">
+                    Signaler un incident
+                </Link>
+            </Button>
             <Button size="icon" variant="outline" onClick={() => fetchTomTomData(true)} disabled={isRefreshing} className="rounded-xl h-10 w-10 border-slate-200 bg-white shadow-sm">
                 <RefreshCw className={cn("h-5 w-5 text-slate-600", isRefreshing && "animate-spin")} />
             </Button>

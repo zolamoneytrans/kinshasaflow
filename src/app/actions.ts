@@ -55,7 +55,7 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
 
 /**
  * Récupère les incidents de trafic réels via l'API TomTom pour Kinshasa.
- * Clé API : KGPZ8xhBjIIdThtnB8N3M1M2IlKBseJk
+ * TomTom est plus précis pour les données structurées (vitesse, retard) à Kinshasa.
  */
 export async function getTomTomTrafficIncidents() {
   const TOMTOM_KEY = "KGPZ8xhBjIIdThtnB8N3M1M2IlKBseJk";
@@ -65,7 +65,7 @@ export async function getTomTomTrafficIncidents() {
   const maxLat = -4.1;
   const maxLon = 15.6;
   
-  // Utilisation d'un niveau de zoom 12 pour capturer les axes principaux
+  // Utilisation d'un niveau de zoom 12 pour capturer les axes principaux et secondaires
   const url = `https://api.tomtom.com/traffic/services/5/incidentDetails/s3/${minLat},${minLon},${maxLat},${maxLon}/12/-1/json?key=${TOMTOM_KEY}&language=fr-FR&categoryFilter=0,1,6,9`;
 
   try {

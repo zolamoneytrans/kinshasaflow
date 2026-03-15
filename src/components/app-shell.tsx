@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -340,7 +339,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} tooltip={{children: "Admin Publicités"}} className="hover:bg-sidebar-accent">
                       <Link href="/admin/adverts" className="font-medium">
-                        <VideoIcon className="text-destructive" />
+                        <Video className="text-destructive" />
                         <span>Admin Publicités</span>
                       </Link>
                     </SidebarMenuButton>

@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Trash2, Loader2, Video as VideoIcon, UploadCloud, Play, Info } from 'lucide-react';
+import { Trash2, Loader2, Video as VideoIcon, UploadCloud, Play, Info, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -47,12 +47,13 @@ export default function AdvertsManager() {
         const adId = newAdRef.id;
 
         // ÉTAPE 1: Téléversement vers Firebase Storage
+        // Utilisation d'un chemin autorisé par les règles Storage fournies : /videos/{userId}/...
         let videoUrl = '';
         try {
             const storage = getStorage(firebaseApp);
-            const fileRef = storageRef(storage, `adverts/${adId}`);
+            const fileRef = storageRef(storage, `videos/${user.uid}/adverts/${adId}`);
             
-            console.log("Tentative d'upload vers Storage...");
+            console.log("Tentative d'upload vers Storage à :", fileRef.fullPath);
             const snapshot = await uploadBytes(fileRef, file);
             videoUrl = await getDownloadURL(snapshot.ref);
         } catch (storageError: any) {
@@ -61,12 +62,12 @@ export default function AdvertsManager() {
             
             let errorMessage = storageError.message || "Une erreur inconnue est survenue.";
             if (storageError.code === 'storage/unauthorized') {
-                errorMessage = "Permissions insuffisantes pour Storage. Veuillez vérifier vos règles de sécurité dans la console Firebase.";
+                errorMessage = "Permissions Storage insuffisantes. Vos règles Storage doivent autoriser l'écriture dans le dossier utilisé.";
             }
 
             toast({
                 title: "Échec du téléversement (Étape 1/2)",
-                description: `Erreur: ${storageError.code || 'unknown'} - ${errorMessage}`,
+                description: `Code: ${storageError.code} - ${errorMessage}`,
                 variant: "destructive",
                 duration: 15000,
                 action: <ToastAction altText="Réessayer" onClick={() => onSubmit(data)}>Réessayer</ToastAction>
@@ -101,7 +102,7 @@ export default function AdvertsManager() {
 
             toast({
                 title: "Erreur de base de données (Étape 2/2)",
-                description: "La vidéo a été téléversée mais les informations n'ont pas pu être enregistrées.",
+                description: "La vidéo a été téléversée mais les informations n'ont pas pu être enregistrées dans Firestore.",
                 variant: "destructive"
             });
         } finally {
@@ -112,19 +113,19 @@ export default function AdvertsManager() {
     const handleDelete = async (ad: WithId<AdvertVideo>) => {
         try {
             const storage = getStorage(firebaseApp);
-            const fileRef = storageRef(storage, ad.videoUrl);
-            
+            // On tente de supprimer le fichier du storage s'il existe
             try {
+                const fileRef = storageRef(storage, ad.videoUrl);
                 await deleteObject(fileRef);
             } catch (e) {
-                console.warn("Fichier déjà supprimé du storage ou erreur mineure:", e);
+                console.warn("Fichier non trouvé dans le storage ou erreur mineure:", e);
             }
 
             await deleteDoc(doc(firestore, 'adverts', ad.id));
             toast({ title: "Supprimé", description: "La publicité a été retirée avec succès." });
         } catch (error) {
             console.error("Error deleting ad:", error);
-            toast({ title: "Erreur", description: "Impossible de supprimer la publicité.", variant: "destructive" });
+            toast({ title: "Erreur", description: "Impossible de supprimer la publicité de Firestore.", variant: "destructive" });
         }
     };
 
@@ -137,7 +138,7 @@ export default function AdvertsManager() {
                             <VideoIcon className="text-primary h-8 w-8" />
                             Gestion des Publicités
                         </h1>
-                        <p className="text-muted-foreground">Uploadez des vidéos de 30 secondes pour le système de stars.</p>
+                        <p className="text-muted-foreground">Uploadez des vidéos pour récompenser vos utilisateurs.</p>
                     </div>
 
                     <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
@@ -150,20 +151,20 @@ export default function AdvertsManager() {
                         <DialogContent>
                             <DialogHeader><DialogTitle>Ajouter une publicité vidéo</DialogTitle></DialogHeader>
                             
-                            <Alert variant="default" className="bg-blue-50 border-blue-200">
-                                <Info className="h-4 w-4 text-blue-600" />
-                                <AlertTitle className="text-blue-800">Aide au téléversement</AlertTitle>
-                                <AlertDescription className="text-blue-700 text-xs">
-                                    Assurez-vous que <strong>Firebase Storage</strong> est activé dans votre console. Si vous recevez une erreur 403, vérifiez vos "Storage Rules".
+                            <Alert variant="default" className="bg-amber-50 border-amber-200">
+                                <Info className="h-4 w-4 text-amber-600" />
+                                <AlertTitle className="text-amber-800 font-bold">Important</AlertTitle>
+                                <AlertDescription className="text-amber-700 text-xs">
+                                    Vos vidéos sont stockées dans <code>/videos/{user?.uid}/adverts/</code> pour respecter vos règles de sécurité actuelles.
                                 </AlertDescription>
                             </Alert>
 
                             <Form {...form}>
-                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                                     <FormField control={form.control} name="title" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Nom de la campagne</FormLabel>
-                                            <FormControl><Input placeholder="Ex: Campagne Bracongo 2026" {...field} disabled={isUploading} /></FormControl>
+                                            <FormControl><Input placeholder="Ex: Promotion Taxi Kin 2026" {...field} disabled={isUploading} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
@@ -179,9 +180,9 @@ export default function AdvertsManager() {
                                             {isUploading ? (
                                                 <>
                                                     <Loader2 className="animate-spin mr-2 h-5 w-5" />
-                                                    Traitement en cours...
+                                                    Téléversement en cours...
                                                 </>
-                                            ) : "Démarrer le téléversement"}
+                                            ) : "Publier la vidéo"}
                                         </Button>
                                     </DialogFooter>
                                 </form>
@@ -195,32 +196,33 @@ export default function AdvertsManager() {
                 ) : adverts && adverts.length > 0 ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {adverts.map(ad => (
-                            <Card key={ad.id} className="overflow-hidden group border-none shadow-sm">
+                            <Card key={ad.id} className="overflow-hidden group border-none shadow-sm flex flex-col">
                                 <div className="aspect-video bg-slate-900 relative flex items-center justify-center">
                                     <video src={ad.videoUrl} className="w-full h-full object-cover opacity-60" />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Play className="h-12 w-12 text-white fill-white" />
                                     </div>
+                                    <Badge className="absolute top-2 right-2 bg-black/50 backdrop-blur-md">30s</Badge>
                                 </div>
-                                <CardHeader className="p-4">
+                                <CardHeader className="p-4 flex-1">
                                     <CardTitle className="text-lg line-clamp-1">{ad.title}</CardTitle>
-                                    <CardDescription>30 secondes • +2 ⭐</CardDescription>
+                                    <CardDescription>+2 ⭐ par visionnage</CardDescription>
                                 </CardHeader>
                                 <CardFooter className="p-4 pt-0 justify-between">
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 rounded-lg">
-                                                <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+                                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 rounded-lg w-full">
+                                                <Trash2 className="h-4 w-4 mr-2" /> Supprimer la campagne
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Supprimer cette publicité ?</AlertDialogTitle>
-                                                <AlertDialogDescription>Cette action supprimera définitivement la vidéo de nos serveurs.</AlertDialogDescription>
+                                                <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(ad)} className="bg-destructive text-white hover:bg-destructive/90">Supprimer</AlertDialogAction>
+                                                <AlertDialogAction onClick={() => handleDelete(ad)} className="bg-destructive text-white hover:bg-destructive/90">Confirmer</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
@@ -232,7 +234,7 @@ export default function AdvertsManager() {
                     <div className="text-center py-20 bg-muted/30 rounded-3xl border-2 border-dashed">
                         <VideoIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <p className="font-bold text-slate-600">Aucune publicité active</p>
-                        <p className="text-sm text-muted-foreground">Commencez par ajouter votre première campagne.</p>
+                        <p className="text-sm text-muted-foreground">Cliquez sur "Nouvelle Publicité" pour commencer.</p>
                     </div>
                 )}
             </div>

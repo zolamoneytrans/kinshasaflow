@@ -14,9 +14,10 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Trash2, Loader2, Video as VideoIcon, UploadCloud, Play } from 'lucide-react';
+import { Trash2, Loader2, Video as VideoIcon, UploadCloud, Play, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AdvertsManager() {
     const { firestore, firebaseApp, user } = useFirebase();
@@ -50,22 +51,24 @@ export default function AdvertsManager() {
         try {
             const storage = getStorage(firebaseApp);
             const fileRef = storageRef(storage, `adverts/${adId}`);
+            
+            console.log("Tentative d'upload vers Storage...");
             const snapshot = await uploadBytes(fileRef, file);
             videoUrl = await getDownloadURL(snapshot.ref);
         } catch (storageError: any) {
             console.error("Storage Error:", storageError);
             setIsUploading(false);
             
-            let errorMessage = "Une erreur est survenue lors du téléversement du fichier.";
+            let errorMessage = storageError.message || "Une erreur inconnue est survenue.";
             if (storageError.code === 'storage/unauthorized') {
-                errorMessage = "Permissions insuffisantes pour Firebase Storage. Veuillez vérifier vos règles de sécurité Storage dans la console Firebase.";
+                errorMessage = "Permissions insuffisantes pour Storage. Veuillez vérifier vos règles de sécurité dans la console Firebase.";
             }
 
             toast({
                 title: "Échec du téléversement (Étape 1/2)",
-                description: errorMessage,
+                description: `Erreur: ${storageError.code || 'unknown'} - ${errorMessage}`,
                 variant: "destructive",
-                duration: 10000,
+                duration: 15000,
                 action: <ToastAction altText="Réessayer" onClick={() => onSubmit(data)}>Réessayer</ToastAction>
             });
             return;
@@ -89,7 +92,6 @@ export default function AdvertsManager() {
         } catch (firestoreError: any) {
             console.error("Firestore Error:", firestoreError);
             
-            // Émettre l'erreur contextuelle pour le débogage NextJS si activé
             const permissionError = new FirestorePermissionError({
                 path: newAdRef.path,
                 operation: 'create',
@@ -112,7 +114,6 @@ export default function AdvertsManager() {
             const storage = getStorage(firebaseApp);
             const fileRef = storageRef(storage, ad.videoUrl);
             
-            // Tenter de supprimer le fichier (peut échouer si déjà absent)
             try {
                 await deleteObject(fileRef);
             } catch (e) {
@@ -148,6 +149,15 @@ export default function AdvertsManager() {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader><DialogTitle>Ajouter une publicité vidéo</DialogTitle></DialogHeader>
+                            
+                            <Alert variant="default" className="bg-blue-50 border-blue-200">
+                                <Info className="h-4 w-4 text-blue-600" />
+                                <AlertTitle className="text-blue-800">Aide au téléversement</AlertTitle>
+                                <AlertDescription className="text-blue-700 text-xs">
+                                    Assurez-vous que <strong>Firebase Storage</strong> est activé dans votre console. Si vous recevez une erreur 403, vérifiez vos "Storage Rules".
+                                </AlertDescription>
+                            </Alert>
+
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                                     <FormField control={form.control} name="title" render={({ field }) => (

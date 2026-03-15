@@ -18,6 +18,7 @@ import { Trash2, Loader2, Video as VideoIcon, UploadCloud, Play, Info, AlertTria
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
 export default function AdvertsManager() {
     const { firestore, firebaseApp, user } = useFirebase();
@@ -47,13 +48,12 @@ export default function AdvertsManager() {
         const adId = newAdRef.id;
 
         // ÉTAPE 1: Téléversement vers Firebase Storage
-        // Utilisation d'un chemin autorisé par les règles Storage fournies : /videos/{userId}/...
         let videoUrl = '';
         try {
             const storage = getStorage(firebaseApp);
+            // On utilise un chemin autorisé par les règles Storage existantes
             const fileRef = storageRef(storage, `videos/${user.uid}/adverts/${adId}`);
             
-            console.log("Tentative d'upload vers Storage à :", fileRef.fullPath);
             const snapshot = await uploadBytes(fileRef, file);
             videoUrl = await getDownloadURL(snapshot.ref);
         } catch (storageError: any) {
@@ -62,7 +62,7 @@ export default function AdvertsManager() {
             
             let errorMessage = storageError.message || "Une erreur inconnue est survenue.";
             if (storageError.code === 'storage/unauthorized') {
-                errorMessage = "Permissions Storage insuffisantes. Vos règles Storage doivent autoriser l'écriture dans le dossier utilisé.";
+                errorMessage = "Permissions Storage insuffisantes. Vérifiez vos règles de sécurité.";
             }
 
             toast({
@@ -102,7 +102,7 @@ export default function AdvertsManager() {
 
             toast({
                 title: "Erreur de base de données (Étape 2/2)",
-                description: "La vidéo a été téléversée mais les informations n'ont pas pu être enregistrées dans Firestore.",
+                description: "La vidéo a été téléversée mais les informations n'ont pas pu être enregistrées.",
                 variant: "destructive"
             });
         } finally {
@@ -113,19 +113,18 @@ export default function AdvertsManager() {
     const handleDelete = async (ad: WithId<AdvertVideo>) => {
         try {
             const storage = getStorage(firebaseApp);
-            // On tente de supprimer le fichier du storage s'il existe
             try {
                 const fileRef = storageRef(storage, ad.videoUrl);
                 await deleteObject(fileRef);
             } catch (e) {
-                console.warn("Fichier non trouvé dans le storage ou erreur mineure:", e);
+                console.warn("Fichier Storage non trouvé:", e);
             }
 
             await deleteDoc(doc(firestore, 'adverts', ad.id));
-            toast({ title: "Supprimé", description: "La publicité a été retirée avec succès." });
+            toast({ title: "Supprimé", description: "La publicité a été retirée." });
         } catch (error) {
             console.error("Error deleting ad:", error);
-            toast({ title: "Erreur", description: "Impossible de supprimer la publicité de Firestore.", variant: "destructive" });
+            toast({ title: "Erreur", description: "Impossible de supprimer la publicité.", variant: "destructive" });
         }
     };
 
@@ -153,9 +152,9 @@ export default function AdvertsManager() {
                             
                             <Alert variant="default" className="bg-amber-50 border-amber-200">
                                 <Info className="h-4 w-4 text-amber-600" />
-                                <AlertTitle className="text-amber-800 font-bold">Important</AlertTitle>
+                                <AlertTitle className="text-amber-800 font-bold">Conseil</AlertTitle>
                                 <AlertDescription className="text-amber-700 text-xs">
-                                    Vos vidéos sont stockées dans <code>/videos/{user?.uid}/adverts/</code> pour respecter vos règles de sécurité actuelles.
+                                    Utilisez des vidéos de 30 secondes maximum au format MP4.
                                 </AlertDescription>
                             </Alert>
 

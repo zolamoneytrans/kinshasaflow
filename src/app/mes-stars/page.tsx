@@ -24,7 +24,8 @@ import {
   CheckCircle2, 
   Smartphone, 
   AlertCircle,
-  Clock
+  Clock,
+  Share2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -274,8 +275,11 @@ export default function MesStarsPage() {
     try {
       const transRef = doc(collection(firestore, 'users', user.uid, 'star_transactions'));
       await runTransaction(firestore, async (transaction) => {
-        const newBalance = profile.currentStarsBalance + amount;
-        const newTotalEarned = profile.totalStarsEarned + amount;
+        const userDoc = await transaction.get(userRef!);
+        const currentData = userDoc.data() as UserProfile;
+        
+        const newBalance = (currentData.currentStarsBalance || 0) + amount;
+        const newTotalEarned = (currentData.totalStarsEarned || 0) + amount;
 
         transaction.update(userRef!, {
           currentStarsBalance: newBalance,
@@ -293,13 +297,27 @@ export default function MesStarsPage() {
       });
       toast({ title: 'Félicitations !', description: `Vous avez gagné ${amount} stars pour : ${action}` });
     } catch (e) {
+      console.error(e);
       toast({ title: 'Erreur', description: 'Action impossible.', variant: 'destructive' });
+    }
+  };
+
+  const handleActionClick = async (action: any) => {
+    if (action.title === "Parrainer un ami") {
+      const message = encodeURIComponent("Salut ! J'utilise Kinshasa Flow pour éviter les embouteillages à Kinshasa. Inscris-toi ici : https://kinshasaflow.online");
+      const whatsappUrl = `https://wa.me/?text=${message}`;
+      window.open(whatsappUrl, '_blank');
+      
+      // Credit the stars
+      await handleEarnSim(action.title, action.amount);
+    } else {
+      await handleEarnSim(action.title, action.amount);
     }
   };
 
   const earningActions = [
     { title: "Signaler un incident", amount: 5, icon: AlertCircle, color: "bg-red-500", desc: "Améliore la précision des données" },
-    { title: "Parrainer un ami", amount: 15, icon: UserPlus, color: "bg-blue-500", desc: "Croissance organique" },
+    { title: "Parrainer un ami", amount: 15, icon: UserPlus, color: "bg-blue-500", desc: "WhatsApp : Croissance organique" },
     { title: "Streak de 7 jours", amount: 10, icon: Calendar, color: "bg-amber-500", desc: "Récompense de fidélité" },
     { title: "Évaluer l'application", amount: 5, icon: StarHalf, color: "bg-emerald-500", desc: "Visibilité sur les stores" },
     { title: "Compléter profil", amount: 5, icon: Users, color: "bg-purple-500", desc: "Personnalisation du service" },
@@ -371,18 +389,23 @@ export default function MesStarsPage() {
                   {earningActions.map((action, i) => (
                     <motion.div key={i} whileHover={{ y: -5 }}>
                       <Card 
-                        className="cursor-pointer border-slate-100 hover:border-emerald-200 transition-all"
-                        onClick={() => handleEarnSim(action.title, action.amount)}
+                        className="cursor-pointer border-slate-100 hover:border-emerald-200 transition-all group"
+                        onClick={() => handleActionClick(action)}
                       >
                         <CardContent className="p-5 space-y-3">
-                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-white", action.color)}>
+                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-white relative", action.color)}>
                             <action.icon className="h-5 w-5" />
+                            {action.title === "Parrainer un ami" && (
+                              <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                                <Share2 className="h-3 w-3 text-blue-500" />
+                              </div>
+                            )}
                           </div>
                           <div>
                             <p className="font-bold text-sm">{action.title}</p>
                             <p className="text-[10px] text-muted-foreground font-medium">{action.desc}</p>
                           </div>
-                          <div className="flex items-center gap-1.5 text-emerald-600 font-black text-xs bg-emerald-50 w-fit px-2 py-1 rounded-full">
+                          <div className="flex items-center gap-1.5 text-emerald-600 font-black text-xs bg-emerald-50 w-fit px-2 py-1 rounded-full group-hover:bg-emerald-100 transition-colors">
                             +{action.amount} ⭐
                           </div>
                         </CardContent>

@@ -36,6 +36,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 // --- Components ---
 
@@ -259,6 +260,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
 export default function MesStarsPage() {
   const { user, firestore } = useFirebase();
   const { toast } = useToast();
+  const router = useRouter();
 
   const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userRef);
@@ -310,6 +312,9 @@ export default function MesStarsPage() {
       
       // Credit the stars
       await handleEarnSim(action.title, action.amount);
+    } else if (action.title === "Signaler un incident") {
+      // Redirect to report form to earn stars for real
+      router.push('/signaler-embouteillage');
     } else {
       await handleEarnSim(action.title, action.amount);
     }

@@ -26,9 +26,9 @@ import { Camera, Send, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { reportFormSchema, ReportFormValues } from '@/lib/types';
-import { useFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp } from 'firebase/firestore';
+import { reportFormSchema, ReportFormValues, UserProfile } from '@/lib/types';
+import { useFirebase, useUser } from '@/firebase';
+import { collection, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
 
 
 export default function ReportTrafficForm() {
@@ -45,6 +45,7 @@ export default function ReportTrafficForm() {
         defaultValues: {
             location: '',
             description: '',
+            severity: 'medium',
         },
     });
 
@@ -85,11 +86,49 @@ export default function ReportTrafficForm() {
             };
 
             const eventsCollection = collection(firestore, 'events');
-            await addDocumentNonBlocking(eventsCollection, eventData);
+            
+            // We use an atomic transaction to save the report and reward the user with stars
+            await runTransaction(firestore, async (transaction) => {
+                const userRef = doc(firestore, 'users', user.uid);
+                const userSnap = await transaction.get(userRef);
+                
+                let currentBalance = 0;
+                let totalEarned = 0;
+                
+                if (userSnap.exists()) {
+                    const profile = userSnap.data() as UserProfile;
+                    currentBalance = profile.currentStarsBalance || 0;
+                    totalEarned = profile.totalStarsEarned || 0;
+                }
+                
+                const newBalance = currentBalance + 5;
+                const newTotalEarned = totalEarned + 5;
+
+                // 1. Update user balance
+                transaction.update(userRef, {
+                    currentStarsBalance: newBalance,
+                    totalStarsEarned: newTotalEarned
+                });
+
+                // 2. Save the traffic report
+                const newEventRef = doc(eventsCollection);
+                transaction.set(newEventRef, eventData);
+
+                // 3. Log the star transaction
+                const starTransRef = doc(collection(userRef, 'star_transactions'));
+                transaction.set(starTransRef, {
+                    userId: user.uid,
+                    type: 'earned',
+                    starsChange: 5,
+                    balanceAfterTransaction: newBalance,
+                    description: "Signalement d'incident",
+                    timestamp: serverTimestamp(),
+                });
+            });
 
             toast({
-                title: 'Rapport envoyé !',
-                description: "Merci pour votre contribution. Votre rapport a été soumis avec succès.",
+                title: 'Rapport envoyé +5 ⭐!',
+                description: "Merci ! Vous avez gagné 5 stars pour votre contribution à la communauté.",
                 variant: 'default',
             });
             
@@ -204,15 +243,24 @@ export default function ReportTrafficForm() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full" disabled={isSubmitting || isUserLoading}>
+                        
+                        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between shadow-inner">
+                            <div className="flex flex-col">
+                                <p className="text-xs font-black text-emerald-800 uppercase tracking-widest">Récompense</p>
+                                <p className="text-sm font-medium text-emerald-600">Contribution au trafic</p>
+                            </div>
+                            <span className="text-2xl font-black text-emerald-600">+5 ⭐</span>
+                        </div>
+
+                        <Button type="submit" className="w-full h-14 text-lg font-black" disabled={isSubmitting || isUserLoading}>
                             {isSubmitting ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
                                     Envoi en cours...
                                 </>
                             ) : (
                                 <>
-                                    <Send className="mr-2 h-4 w-4" />
+                                    <Send className="mr-2 h-6 w-6" />
                                     Soumettre le rapport
                                 </>
                             )}

@@ -317,7 +317,7 @@ export default function MesStarsPage() {
 
   const earningActions = [
     { title: "Signaler un incident", amount: 5, icon: AlertCircle, color: "bg-red-500", desc: "Améliore la précision des données" },
-    { title: "Parrainer un ami", amount: 15, icon: UserPlus, color: "bg-blue-500", desc: "WhatsApp : Croissance organique" },
+    { title: "Parrainer un ami", amount: 15, icon: UserPlus, color: "bg-blue-500", desc: "WhatsApp: Gagner 15 stars en invitant un ami" },
     { title: "Streak de 7 jours", amount: 10, icon: Calendar, color: "bg-amber-500", desc: "Récompense de fidélité" },
     { title: "Évaluer l'application", amount: 5, icon: StarHalf, color: "bg-emerald-500", desc: "Visibilité sur les stores" },
     { title: "Compléter profil", amount: 5, icon: Users, color: "bg-purple-500", desc: "Personnalisation du service" },

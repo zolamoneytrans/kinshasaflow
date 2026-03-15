@@ -2,20 +2,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AdvertVideo, advertUploadFormSchema, AdvertUploadFormValues, WithId } from '@/lib/types';
+import { AdvertVideo, advertUploadFormSchema, AdvertUploadFormValues, WithId, FirestorePermissionError } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Trash2, Loader2, Video as VideoIcon, UploadCloud, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 export default function AdvertsManager() {
     const { firestore, firebaseApp, user } = useFirebase();
@@ -34,37 +35,73 @@ export default function AdvertsManager() {
     });
 
     const onSubmit = async (data: AdvertUploadFormValues) => {
-        if (!user || user.email !== 'drnduwa@gmail.com') return;
+        if (!user || user.email !== 'drnduwa@gmail.com') {
+            toast({ title: "Accès refusé", description: "Seul l'administrateur peut effectuer cette action.", variant: 'destructive' });
+            return;
+        }
 
         setIsUploading(true);
         const file = data.video[0];
+        const newAdRef = doc(collection(firestore, 'adverts'));
+        const adId = newAdRef.id;
 
+        // ÉTAPE 1: Téléversement vers Firebase Storage
+        let videoUrl = '';
         try {
-            const newAdRef = doc(collection(firestore, 'adverts'));
-            const adId = newAdRef.id;
-            
             const storage = getStorage(firebaseApp);
             const fileRef = storageRef(storage, `adverts/${adId}`);
+            const snapshot = await uploadBytes(fileRef, file);
+            videoUrl = await getDownloadURL(snapshot.ref);
+        } catch (storageError: any) {
+            console.error("Storage Error:", storageError);
+            setIsUploading(false);
+            
+            let errorMessage = "Une erreur est survenue lors du téléversement du fichier.";
+            if (storageError.code === 'storage/unauthorized') {
+                errorMessage = "Permissions insuffisantes pour Firebase Storage. Veuillez vérifier vos règles de sécurité Storage dans la console Firebase.";
+            }
 
-            await uploadBytes(fileRef, file);
-            const videoUrl = await getDownloadURL(fileRef);
+            toast({
+                title: "Échec du téléversement (Étape 1/2)",
+                description: errorMessage,
+                variant: "destructive",
+                duration: 10000,
+                action: <ToastAction altText="Réessayer" onClick={() => onSubmit(data)}>Réessayer</ToastAction>
+            });
+            return;
+        }
 
-            const adData: AdvertVideo = {
-                title: data.title,
-                videoUrl,
-                thumbnailUrl: `https://picsum.photos/seed/${adId}/1280/720`,
-                duration: 30, // Default 30s as per requirement
-                createdAt: serverTimestamp() as any,
-            };
+        // ÉTAPE 2: Création du document dans Firestore
+        const adData = {
+            title: data.title,
+            videoUrl,
+            thumbnailUrl: `https://picsum.photos/seed/${adId}/1280/720`,
+            duration: 30,
+            createdAt: serverTimestamp(),
+        };
 
+        try {
             await setDoc(newAdRef, adData);
             
-            toast({ title: 'Publicité ajoutée !', description: 'La vidéo est prête à être visionnée par les utilisateurs.' });
+            toast({ title: 'Publicité ajoutée !', description: 'La vidéo est prête à être visionnée.' });
             setUploadDialogOpen(false);
             form.reset();
-        } catch (error) {
-            console.error("Error uploading ad:", error);
-            toast({ title: 'Erreur', description: "Une erreur est survenue lors du téléversement.", variant: 'destructive' });
+        } catch (firestoreError: any) {
+            console.error("Firestore Error:", firestoreError);
+            
+            // Émettre l'erreur contextuelle pour le débogage NextJS si activé
+            const permissionError = new FirestorePermissionError({
+                path: newAdRef.path,
+                operation: 'create',
+                requestResourceData: adData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+
+            toast({
+                title: "Erreur de base de données (Étape 2/2)",
+                description: "La vidéo a été téléversée mais les informations n'ont pas pu être enregistrées.",
+                variant: "destructive"
+            });
         } finally {
             setIsUploading(false);
         }
@@ -74,9 +111,16 @@ export default function AdvertsManager() {
         try {
             const storage = getStorage(firebaseApp);
             const fileRef = storageRef(storage, ad.videoUrl);
-            await deleteObject(fileRef);
+            
+            // Tenter de supprimer le fichier (peut échouer si déjà absent)
+            try {
+                await deleteObject(fileRef);
+            } catch (e) {
+                console.warn("Fichier déjà supprimé du storage ou erreur mineure:", e);
+            }
+
             await deleteDoc(doc(firestore, 'adverts', ad.id));
-            toast({ title: "Supprimé", description: "La publicité a été retirée." });
+            toast({ title: "Supprimé", description: "La publicité a été retirée avec succès." });
         } catch (error) {
             console.error("Error deleting ad:", error);
             toast({ title: "Erreur", description: "Impossible de supprimer la publicité.", variant: "destructive" });
@@ -109,21 +153,25 @@ export default function AdvertsManager() {
                                     <FormField control={form.control} name="title" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Nom de la campagne</FormLabel>
-                                            <FormControl><Input placeholder="Ex: Campagne Bracongo 2026" {...field} /></FormControl>
+                                            <FormControl><Input placeholder="Ex: Campagne Bracongo 2026" {...field} disabled={isUploading} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
                                     <FormField control={form.control} name="video" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Fichier vidéo (MP4/MOV)</FormLabel>
-                                            <FormControl><Input type="file" accept="video/*" onChange={e => field.onChange(e.target.files)} /></FormControl>
+                                            <FormControl><Input type="file" accept="video/*" onChange={e => field.onChange(e.target.files)} disabled={isUploading} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                    <DialogFooter>
-                                        <Button type="submit" disabled={isUploading} className="w-full">
-                                            {isUploading ? <Loader2 className="animate-spin mr-2" /> : null}
-                                            Démarrer le téléversement
+                                    <DialogFooter className="pt-4">
+                                        <Button type="submit" disabled={isUploading} className="w-full h-12 rounded-xl">
+                                            {isUploading ? (
+                                                <>
+                                                    <Loader2 className="animate-spin mr-2 h-5 w-5" />
+                                                    Traitement en cours...
+                                                </>
+                                            ) : "Démarrer le téléversement"}
                                         </Button>
                                     </DialogFooter>
                                 </form>
@@ -137,7 +185,7 @@ export default function AdvertsManager() {
                 ) : adverts && adverts.length > 0 ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {adverts.map(ad => (
-                            <Card key={ad.id} className="overflow-hidden group">
+                            <Card key={ad.id} className="overflow-hidden group border-none shadow-sm">
                                 <div className="aspect-video bg-slate-900 relative flex items-center justify-center">
                                     <video src={ad.videoUrl} className="w-full h-full object-cover opacity-60" />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -151,18 +199,18 @@ export default function AdvertsManager() {
                                 <CardFooter className="p-4 pt-0 justify-between">
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10">
+                                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 rounded-lg">
                                                 <Trash2 className="h-4 w-4 mr-2" /> Supprimer
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Supprimer cette publicité ?</AlertDialogTitle>
-                                                <AlertDialogDescription>Elle ne sera plus disponible pour les utilisateurs.</AlertDialogDescription>
+                                                <AlertDialogDescription>Cette action supprimera définitivement la vidéo de nos serveurs.</AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(ad)} className="bg-destructive text-white">Supprimer</AlertDialogAction>
+                                                <AlertDialogAction onClick={() => handleDelete(ad)} className="bg-destructive text-white hover:bg-destructive/90">Supprimer</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
@@ -173,8 +221,8 @@ export default function AdvertsManager() {
                 ) : (
                     <div className="text-center py-20 bg-muted/30 rounded-3xl border-2 border-dashed">
                         <VideoIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="font-bold">Aucune publicité active</p>
-                        <p className="text-sm text-muted-foreground">Commencez par en uploader une.</p>
+                        <p className="font-bold text-slate-600">Aucune publicité active</p>
+                        <p className="text-sm text-muted-foreground">Commencez par ajouter votre première campagne.</p>
                     </div>
                 )}
             </div>

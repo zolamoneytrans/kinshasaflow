@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -120,6 +121,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/admin/logement') return 'Admin Logement';
     if (pathname === '/admin/messages') return 'Messages';
     if (pathname === '/admin/car-rental') return 'Admin Location';
+    if (pathname === '/admin/adverts') return 'Admin Publicités';
     if (pathname === '/admin/test-push') return 'Test Notifications';
     if (pathname.startsWith('/admin')) return 'Tableau de Bord Admin';
     return 'Kinshasa Flow';
@@ -148,6 +150,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/admin/logement') return 'Gérer les candidatures pour les logements.';
     if (pathname === '/admin/messages') return 'Consulter les messages des utilisateurs.';
     if (pathname === '/admin/car-rental') return 'Gérer les réservations de véhicules.';
+    if (pathname === '/admin/adverts') return 'Gérer les publicités vidéo.';
     if (pathname === '/admin/test-push') return 'Envoyer une notification de test.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
@@ -331,6 +334,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <Link href="/admin/car-rental" className="font-medium">
                         <Car className="text-destructive" />
                         <span>Admin Location</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} tooltip={{children: "Admin Publicités"}} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/adverts" className="font-medium">
+                        <VideoIcon className="text-destructive" />
+                        <span>Admin Publicités</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

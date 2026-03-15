@@ -1,14 +1,5 @@
-rules_version = '2';
 
-/**
- * KINSHASAFLOW FIRESTORE SECURITY RULES
- *
- * CORE PHILOSOPHY:
- * This ruleset implements a strict User-Ownership and Administrative-Control model. 
- * Authorization is the primary focus: we ensure that private user data is only 
- * accessible by the owner, while global configuration and monetization data 
- * are read-only for users and manageable only by administrators.
- */
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -24,7 +15,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admin_roles/$(request.auth.uid));
+      return isSignedIn() && request.auth.token.email == 'drnduwa@gmail.com';
     }
 
     // --- COLLECTION RULES ---
@@ -33,7 +24,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
 
       match /star_transactions/{transactionId} {
@@ -53,6 +44,12 @@ service cloud.firestore {
       match /fcmTokens/{id} {
         allow read, write: if isOwner(userId);
       }
+    }
+
+    /** Adverts */
+    match /adverts/{advertId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     /** Events and Traffic Reports */

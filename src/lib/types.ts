@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 import { Timestamp } from "firebase/firestore";
 
@@ -30,6 +31,22 @@ export const starTransactionSchema = z.object({
   relatedObjectType: z.string().optional(),
 });
 export type StarTransaction = z.infer<typeof starTransactionSchema>;
+
+// Advert Video
+export const advertVideoSchema = z.object({
+  title: z.string(),
+  videoUrl: z.string().url(),
+  thumbnailUrl: z.string().url().optional(),
+  duration: z.number().default(30),
+  createdAt: z.instanceof(Timestamp).or(z.any()),
+});
+export type AdvertVideo = z.infer<typeof advertVideoSchema>;
+
+export const advertUploadFormSchema = z.object({
+    title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
+    video: z.any().refine(file => file?.length == 1, "Un fichier vidéo est requis."),
+});
+export type AdvertUploadFormValues = z.infer<typeof advertUploadFormSchema>;
 
 // Schema for comments to be stored in Firestore
 export const commentSchema = z.object({

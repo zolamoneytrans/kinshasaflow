@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AppShell } from '@/components/app-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,24 +9,24 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, limit, serverTimestamp, runTransaction } from 'firebase/firestore';
-import { UserProfile, StarTransaction, WithId } from '@/lib/types';
+import { UserProfile, StarTransaction, WithId, AdvertVideo } from '@/lib/types';
 import { 
   Star, 
   TrendingUp, 
   ShoppingCart, 
   ArrowDownCircle, 
   Gift, 
-  Users, 
-  Calendar, 
-  StarHalf, 
-  UserPlus, 
   PlayCircle, 
   Loader2, 
   CheckCircle2, 
   Smartphone, 
   AlertCircle,
   Clock,
-  Share2
+  Share2,
+  X,
+  Volume2,
+  VolumeX,
+  UserPlus
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -257,13 +258,104 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
   );
 };
 
+// --- Ad Player Component ---
+const AdPlayer = ({ video, onComplete, onClose }: { video: WithId<AdvertVideo>, onComplete: () => void, onClose: () => void }) => {
+    const [timeLeft, setTimeLeft] = useState(30);
+    const [isMuted, setIsMuted] = useState(false);
+    const [isFinished, setIsFinished] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    setIsFinished(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleClaim = () => {
+        onComplete();
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center overflow-hidden">
+            <div className="relative w-full h-full max-w-lg aspect-[9/16] bg-slate-900">
+                <video 
+                    ref={videoRef}
+                    src={video.videoUrl} 
+                    className="w-full h-full object-cover" 
+                    autoPlay 
+                    muted={isMuted}
+                    playsInline
+                />
+                
+                {/* Header Controls */}
+                <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent">
+                    <Badge variant="secondary" className="bg-white/20 backdrop-blur-md text-white font-bold px-3 py-1">
+                        {timeLeft > 0 ? `Récompense dans ${timeLeft}s` : "Vidéo terminée !"}
+                    </Badge>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => setIsMuted(!isMuted)}>
+                            {isMuted ? <VolumeX /> : <Volume2 />}
+                        </Button>
+                        {timeLeft === 0 && (
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={onClose}>
+                                <X />
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Footer UI */}
+                <div className="absolute bottom-0 left-0 right-0 p-8 space-y-6 bg-gradient-to-t from-black/80 to-transparent">
+                    <div className="space-y-2">
+                        <h3 className="text-xl font-bold text-white">{video.title}</h3>
+                        <p className="text-sm text-slate-300 font-medium">Regardez cette publicité pour soutenir l'application.</p>
+                    </div>
+                    
+                    <AnimatePresence>
+                        {isFinished && (
+                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+                                <Button onClick={handleClaim} className="w-full h-16 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xl shadow-2xl shadow-amber-500/40">
+                                    Récupérer +2 ⭐
+                                </Button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {/* Progress bar */}
+                <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/10">
+                    <motion.div 
+                        className="h-full bg-amber-500" 
+                        initial={{ width: "0%" }} 
+                        animate={{ width: `${((30 - timeLeft) / 30) * 100}%` }}
+                        transition={{ duration: 1, ease: "linear" }}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function MesStarsPage() {
   const { user, firestore } = useFirebase();
   const { toast } = useToast();
   const router = useRouter();
 
+  const [activeAd, setActiveAd] = useState<WithId<AdvertVideo> | null>(null);
+
   const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userRef);
+
+  const advertsQuery = useMemoFirebase(() => collection(firestore, 'adverts'), [firestore]);
+  const { data: adverts } = useCollection<AdvertVideo>(advertsQuery);
 
   const transactionsQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -271,7 +363,7 @@ export default function MesStarsPage() {
   }, [firestore, user]);
   const { data: transactions, isLoading: isTransLoading } = useCollection<StarTransaction>(transactionsQuery);
 
-  const handleEarnSim = async (action: string, amount: number) => {
+  const handleEarn = async (action: string, amount: number) => {
     if (!user || !profile) return;
     
     try {
@@ -309,14 +401,16 @@ export default function MesStarsPage() {
       const message = encodeURIComponent("Salut ! J'utilise Kinshasa Flow pour éviter les embouteillages à Kinshasa. Inscris-toi ici : https://kinshasaflow.online");
       const whatsappUrl = `https://wa.me/?text=${message}`;
       window.open(whatsappUrl, '_blank');
-      
-      // Credit the stars
-      await handleEarnSim(action.title, action.amount);
+      await handleEarn(action.title, action.amount);
     } else if (action.title === "Signaler un incident") {
-      // Redirect to report form to earn stars for real
       router.push('/signaler-embouteillage');
-    } else {
-      await handleEarnSim(action.title, action.amount);
+    } else if (action.title === "Regarder une vidéo") {
+      if (!adverts || adverts.length === 0) {
+          toast({ title: "Oups", description: "Aucune vidéo disponible pour le moment.", variant: "destructive" });
+          return;
+      }
+      const randomAd = adverts[Math.floor(Math.random() * adverts.length)];
+      setActiveAd(randomAd);
     }
   };
 
@@ -333,6 +427,18 @@ export default function MesStarsPage() {
       <div className="w-full h-full overflow-y-auto bg-slate-50/50 pb-20">
         <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
           
+          {/* Ad Modal Player */}
+          {activeAd && (
+              <AdPlayer 
+                video={activeAd} 
+                onClose={() => setActiveAd(null)} 
+                onComplete={() => {
+                    handleEarn("Publicité Vidéo", 2);
+                    setActiveAd(null);
+                }} 
+              />
+          )}
+
           {/* Dashboard Statistique */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard title="Solde actuel" value={`${profile?.currentStarsBalance || 0} ⭐`} icon={Star} color="bg-amber-500" subValue="Disponible" />

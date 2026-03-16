@@ -113,7 +113,6 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     
     setIsLoading(true);
     
-    // Nettoyage du numéro de téléphone : garder uniquement les chiffres, s'assurer du préfixe 243
     let sanitizedPhone = phone.replace(/\D/g, '');
     if (sanitizedPhone.startsWith('0')) {
         sanitizedPhone = '243' + sanitizedPhone.substring(1);
@@ -122,7 +121,6 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     }
 
     try {
-        // 1. Appeler l'API MbiyoPay via l'action serveur
         const result = await initiateMbiyoPaymentAction({
             amount: selectedPack.amount,
             phone: sanitizedPhone,
@@ -131,9 +129,6 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         });
 
         if (result.success) {
-            // 2. Si l'initiation est réussie, on enregistre la transaction dans Firestore
-            // Note: En production réelle, on attendrait le webhook de confirmation pour créditer.
-            // Pour ce prototype, nous créditons de manière optimiste dès l'initiation réussie.
             const userRef = doc(firestore, 'users', user.uid);
             const transRef = doc(collection(userRef, 'star_transactions'));
 
@@ -329,7 +324,6 @@ const AdPlayer = ({ video, onComplete, onClose }: { video: WithId<AdvertVideo>, 
                     playsInline
                 />
                 
-                {/* Header Controls */}
                 <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent">
                     <Badge variant="secondary" className="bg-white/20 backdrop-blur-md text-white font-bold px-3 py-1">
                         {timeLeft > 0 ? `Récompense dans ${timeLeft}s` : "Vidéo terminée !"}
@@ -346,7 +340,6 @@ const AdPlayer = ({ video, onComplete, onClose }: { video: WithId<AdvertVideo>, 
                     </div>
                 </div>
 
-                {/* Footer UI */}
                 <div className="absolute bottom-0 left-0 right-0 p-8 space-y-6 bg-gradient-to-t from-black/80 to-transparent">
                     <div className="space-y-2">
                         <h3 className="text-xl font-bold text-white">{video.title}</h3>
@@ -364,7 +357,6 @@ const AdPlayer = ({ video, onComplete, onClose }: { video: WithId<AdvertVideo>, 
                     </AnimatePresence>
                 </div>
 
-                {/* Progress bar */}
                 <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/10">
                     <motion.div 
                         className="h-full bg-amber-500" 
@@ -461,7 +453,6 @@ export default function MesStarsPage() {
       <div className="w-full h-full overflow-y-auto bg-slate-50/50 pb-20">
         <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
           
-          {/* Ad Modal Player */}
           {activeAd && (
               <AdPlayer 
                 video={activeAd} 
@@ -473,7 +464,6 @@ export default function MesStarsPage() {
               />
           )}
 
-          {/* Dashboard Statistique */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard title="Solde actuel" value={`${profile?.currentStarsBalance || 0} ⭐`} icon={Star} color="bg-amber-500" subValue="Disponible" />
             <StatCard title="Stars Gagnées" value={`${profile?.totalStarsEarned || 0} ⭐`} icon={Gift} color="bg-emerald-500" subValue="Total cumulé" />
@@ -483,10 +473,8 @@ export default function MesStarsPage() {
 
           <div className="grid lg:grid-cols-3 gap-8">
             
-            {/* Colonne de gauche: Balance Hero & Gagner */}
             <div className="lg:col-span-2 space-y-8">
               
-              {/* Balance Hero */}
               <Card className="bg-slate-900 text-white border-none overflow-hidden relative group">
                 <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-amber-500/20 rounded-full blur-3xl group-hover:bg-amber-500/30 transition-all"></div>
                 <CardHeader className="relative z-10">
@@ -518,7 +506,6 @@ export default function MesStarsPage() {
                 </CardContent>
               </Card>
 
-              {/* Gagner Gratuitement */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -558,7 +545,6 @@ export default function MesStarsPage() {
               </div>
             </div>
 
-            {/* Colonne de droite: Historique */}
             <div className="lg:col-span-1">
               <Card className="h-full border-none shadow-sm flex flex-col">
                 <CardHeader className="pb-2 border-b">

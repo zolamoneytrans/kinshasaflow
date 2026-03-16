@@ -56,17 +56,14 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
 
 /**
  * Récupère les incidents de trafic réels via l'API TomTom pour Kinshasa.
- * TomTom est plus précis pour les données structurées (vitesse, retard) à Kinshasa.
  */
 export async function getTomTomTrafficIncidents() {
   const TOMTOM_KEY = "KGPZ8xhBjIIdThtnB8N3M1M2IlKBseJk";
-  // Bounding box couvrant toute la ville de Kinshasa
   const minLat = -4.55;
   const minLon = 15.15;
   const maxLat = -4.1;
   const maxLon = 15.6;
   
-  // Utilisation d'un niveau de zoom 12 pour capturer les axes principaux et secondaires
   const url = `https://api.tomtom.com/traffic/services/5/incidentDetails/s3/${minLat},${minLon},${maxLat},${maxLon}/12/-1/json?key=${TOMTOM_KEY}&language=fr-FR&categoryFilter=0,1,6,9`;
 
   try {
@@ -82,6 +79,7 @@ export async function getTomTomTrafficIncidents() {
 
 /**
  * Initie un paiement Mobile Money via MbiyoPay.
+ * Supporte M-Pesa, Airtel Money et Orange Money.
  */
 export async function initiateMbiyoPaymentAction(params: {
     amount: number;
@@ -91,6 +89,7 @@ export async function initiateMbiyoPaymentAction(params: {
 }) {
     const apiKey = process.env.MBIYO_API_KEY;
     if (!apiKey) {
+        console.error("MBIYO_API_KEY is missing in .env");
         return { success: false, error: "Configuration API manquante sur le serveur." };
     }
 
@@ -100,13 +99,14 @@ export async function initiateMbiyoPaymentAction(params: {
             headers: {
                 "Authorization": `Bearer ${apiKey}`,
                 "Content-Type": "application/json",
+                "Accept": "application/json",
             },
             body: JSON.stringify({
                 amount: params.amount,
                 currency: "CDF",
                 phone: params.phone,
                 network: params.network.toUpperCase(),
-                reference: `STAR-${Date.now()}`,
+                reference: `KFLOW-${Date.now()}`,
                 description: params.description,
                 callback_url: "https://kinshasaflow.online/api/payment-callback",
             }),
@@ -117,11 +117,11 @@ export async function initiateMbiyoPaymentAction(params: {
         if (response.ok) {
             return { success: true, data };
         } else {
-            console.error("MbiyoPay API Error:", data);
-            return { success: false, error: data.message || "Erreur lors de l'initiation du paiement." };
+            console.error("MbiyoPay API Rejection:", data);
+            return { success: false, error: data.message || "La transaction a été rejetée par l'opérateur." };
         }
     } catch (error: any) {
         console.error("Network Error with MbiyoPay:", error);
-        return { success: false, error: "Impossible de contacter le service de paiement." };
+        return { success: false, error: "Impossible de contacter le service de paiement. Vérifiez votre connexion." };
     }
 }

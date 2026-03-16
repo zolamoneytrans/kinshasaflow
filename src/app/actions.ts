@@ -57,14 +57,14 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
  * Récupère le statut réel du trafic via Google Routes API v2.
  * Utilise TRAFFIC_AWARE_OPTIMAL pour une précision maximale.
  */
-export async function getGoogleTrafficStatusAction(axes: { name: string, lat: number, lng: number }[]) {
+export async function getGoogleTrafficStatusAction(axes: { name: string, origin: { lat: number, lng: number }, destination: { lat: number, lng: number } }[]) {
   const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
   const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
   
   const requests = axes.map(axis => {
     const body = {
-      origin: { location: { latLng: { latitude: axis.lat, longitude: axis.lng } } },
-      destination: { location: { latLng: { latitude: axis.lat + 0.005, longitude: axis.lng + 0.005 } } },
+      origin: { location: { latLng: { latitude: axis.origin.lat, longitude: axis.origin.lng } } },
+      destination: { location: { latLng: { latitude: axis.destination.lat, longitude: axis.destination.lng } } },
       travelMode: "DRIVE",
       routingPreference: "TRAFFIC_AWARE_OPTIMAL",
       departureTime: new Date().toISOString(),
@@ -90,31 +90,33 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, lat: nu
     return results.map((data, index) => {
       const route = data.routes?.[0];
       if (route) {
-        // Parsing des durées (format "120s")
-        const duration = parseInt(route.duration.replace('s', ''));
-        const staticDuration = parseInt(route.staticDuration.replace('s', ''));
-        const distance = route.distanceMeters; // en mètres
+        // Parsing sécurisé des durées (format "120s")
+        const duration = parseInt((route.duration ?? "0s").replace('s', ''));
+        const staticDuration = parseInt((route.staticDuration ?? route.duration ?? "0s").replace('s', ''));
+        const distance = route.distanceMeters ?? 0; // en mètres
         
         const delaySeconds = Math.max(0, duration - staticDuration);
         const delayMinutes = Math.round(delaySeconds / 60);
         
-        // Calcul vitesse en km/h : (distance/1000) / (duration/3600)
-        const speedKmh = Math.round((distance / 1000) / (duration / 3600));
+        // Calcul vitesse en km/h avec garde-fous
+        const speedKmh = duration > 0 && distance > 0
+          ? Math.round((distance / 1000) / (duration / 3600))
+          : 40;
 
         /**
-         * Logique de classification demandée :
+         * Logique de classification optimisée :
          * 🔴 EMBOUTEILLAGE : Vitesse < 10 km/h OR retard > 10 min
-         * 🟠 DENSE : Vitesse 10–20 km/h OR retard 5–10 min
-         * 🟡 MODÉRÉ : Vitesse 20–35 km/h OR retard 2–5 min
-         * 🟢 FLUIDE : Vitesse > 35 km/h AND retard < 2 min
+         * 🟠 DENSE : Vitesse 10–20 km/h AND retard >= 5 min
+         * 🟡 MODÉRÉ : Vitesse 20–35 km/h AND retard >= 2 min
+         * 🟢 FLUIDE : Par défaut
          */
         let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" = "FLUIDE";
         
         if (speedKmh < 10 || delayMinutes > 10) {
           status = "EMBOUTEILLAGE";
-        } else if (speedKmh <= 20 || delayMinutes >= 5) {
+        } else if (speedKmh <= 20 && delayMinutes >= 5) {
           status = "DENSE";
-        } else if (speedKmh <= 35 || delayMinutes >= 2) {
+        } else if (speedKmh <= 35 && delayMinutes >= 2) {
           status = "MODÉRÉ";
         } else {
           status = "FLUIDE";

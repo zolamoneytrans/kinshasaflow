@@ -44,28 +44,38 @@ interface Incident {
   destCoords?: { lat: number, lng: number };
 }
 
-// Points de départ et d'arrivée réels pour des segments de 2-5km (meilleure précision Google)
+/**
+ * Liste des axes majeurs de Kinshasa organisée par importance stratégique.
+ * Coordonnées optimisées pour des segments de 2-10km afin de garantir la fiabilité du trafic Google.
+ */
 const MAJOR_AXES = [
-  { name: "Boulevard du 30 Juin", district: "Gombe", origin: { lat: -4.303, lng: 15.315 }, destination: { lat: -4.315, lng: 15.285 } },
-  { name: "Boulevard Lumumba", district: "Limete/Masina", origin: { lat: -4.382, lng: 15.362 }, destination: { lat: -4.410, lng: 15.410 } },
-  { name: "Avenue de la Libération", district: "Lingwala", origin: { lat: -4.342, lng: 15.305 }, destination: { lat: -4.310, lng: 15.300 } },
-  { name: "Avenue Kasa-Vubu", district: "Kalamu", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.315, lng: 15.310 } },
-  { name: "Avenue By-Pass", district: "Lemba/Ngaba", origin: { lat: -4.455, lng: 15.335 }, destination: { lat: -4.410, lng: 15.315 } },
-  { name: "Route de Matadi", district: "Ngaliema", origin: { lat: -4.328, lng: 15.275 }, destination: { lat: -4.375, lng: 15.265 } },
-  { name: "Avenue de l'Université", district: "Makala", origin: { lat: -4.410, lng: 15.315 }, destination: { lat: -4.342, lng: 15.315 } },
-  { name: "Avenue des Huileries", district: "Gombe/Lingwala", origin: { lat: -4.335, lng: 15.305 }, destination: { lat: -4.310, lng: 15.315 } },
-  { name: "Avenue Mondjiba", district: "Ngaliema", origin: { lat: -4.315, lng: 15.285 }, destination: { lat: -4.328, lng: 15.275 } },
+  // CBD & TRANSIT
+  { name: "Boulevard du 30 Juin", district: "Gombe", origin: { lat: -4.303, lng: 15.315 }, destination: { lat: -4.325, lng: 15.275 } },
+  { name: "Boulevard Lumumba (Est)", district: "Limete/Masina", origin: { lat: -4.360, lng: 15.365 }, destination: { lat: -4.400, lng: 15.440 } },
+  { name: "Boulevard Lumumba (N'djili)", district: "N'djili/Masina", origin: { lat: -4.400, lng: 15.440 }, destination: { lat: -4.430, lng: 15.500 } },
+  { name: "Avenue Kasa-Vubu", district: "Kalamu/Gombe", origin: { lat: -4.310, lng: 15.310 }, destination: { lat: -4.355, lng: 15.315 } },
+  
+  // NORD & OUEST
+  { name: "Route de Matadi (Ouest)", district: "Ngaliema", origin: { lat: -4.328, lng: 15.275 }, destination: { lat: -4.385, lng: 15.265 } },
+  { name: "Avenue Mondjiba", district: "Ngaliema", origin: { lat: -4.315, lng: 15.285 }, destination: { lat: -4.350, lng: 15.260 } },
   { name: "Avenue Nguma", district: "Ngaliema", origin: { lat: -4.328, lng: 15.275 }, destination: { lat: -4.355, lng: 15.265 } },
-  { name: "Avenue du Tourisme", district: "Ngaliema", origin: { lat: -4.328, lng: 15.275 }, destination: { lat: -4.345, lng: 15.235 } },
-  { name: "Avenue de l'Elengesa", district: "Makala", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.430, lng: 15.310 } },
-  { name: "Avenue Victoire", district: "Kalamu", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.340, lng: 15.295 } },
+  { name: "Avenue du Tourisme", district: "Ngaliema/Binza", origin: { lat: -4.345, lng: 15.235 }, destination: { lat: -4.328, lng: 15.275 } },
+  
+  // CENTRE & SUD
+  { name: "Avenue de la Libération (24/11)", district: "Lingwala/Gombe", origin: { lat: -4.305, lng: 15.300 }, destination: { lat: -4.335, lng: 15.305 } },
+  { name: "Avenue des Huileries", district: "Gombe/Lingwala", origin: { lat: -4.305, lng: 15.310 }, destination: { lat: -4.335, lng: 15.305 } },
+  { name: "Avenue de l'Université", district: "Kalamu/UNIKIN", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.415, lng: 15.315 } },
+  { name: "Avenue By-Pass (Sud)", district: "Lemba/Ngaba", origin: { lat: -4.455, lng: 15.335 }, destination: { lat: -4.410, lng: 15.315 } },
+  
+  // NOUVEAUX AXES & PERIPHERIE
+  { name: "Avenue Elengesa (Nouveau)", district: "Makala/Selembao", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.430, lng: 15.310 } },
+  { name: "Route Mokali", district: "Kimbanseke/Masina", origin: { lat: -4.415, lng: 15.412 }, destination: { lat: -4.385, lng: 15.365 } },
+  { name: "Avenue des Poids Lourds", district: "Limete Industriel", origin: { lat: -4.303, lng: 15.315 }, destination: { lat: -4.335, lng: 15.345 } },
   { name: "Boulevard Triomphal", district: "Kasa-Vubu", origin: { lat: -4.335, lng: 15.305 }, destination: { lat: -4.330, lng: 15.320 } },
-  { name: "Avenue Kimwenza", district: "Kalamu", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.410, lng: 15.330 } },
-  { name: "Avenue Landu", district: "Selembao", origin: { lat: -4.385, lng: 15.285 }, destination: { lat: -4.342, lng: 15.305 } },
-  { name: "Route de Kinsuka", district: "Ngaliema", origin: { lat: -4.352, lng: 15.235 }, destination: { lat: -4.328, lng: 15.275 } },
-  { name: "Avenue Bokassa", district: "Barumbu", origin: { lat: -4.325, lng: 15.315 }, destination: { lat: -4.305, lng: 15.310 } },
-  { name: "Avenue des Poids Lourds", district: "Limete", origin: { lat: -4.303, lng: 15.315 }, destination: { lat: -4.335, lng: 15.345 } },
-  { name: "Route Mokali", district: "Kimbanseke", origin: { lat: -4.415, lng: 15.412 }, destination: { lat: -4.385, lng: 15.365 } },
+  { name: "Avenue Kimwenza", district: "Kalamu/Yolo", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.410, lng: 15.330 } },
+  { name: "Avenue Landu", district: "Selembao/Ngaba", origin: { lat: -4.385, lng: 15.285 }, destination: { lat: -4.342, lng: 15.305 } },
+  { name: "Avenue Bokassa", district: "Barumbu/Gombe", origin: { lat: -4.305, lng: 15.310 }, destination: { lat: -4.325, lng: 15.315 } },
+  { name: "Avenue Victoire", district: "Kalamu", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.340, lng: 15.295 } },
 ];
 
 export default function TrafficReports() {
@@ -122,7 +132,6 @@ export default function TrafficReports() {
 
   useEffect(() => {
     fetchTrafficData();
-    // Auto-refresh toutes les 60 secondes
     const interval = setInterval(() => {
       fetchTrafficData(true);
     }, 60000);
@@ -184,7 +193,7 @@ export default function TrafficReports() {
                 <div className="flex flex-col gap-1 mt-1">
                     <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
                         <Navigation className="h-3 w-3 text-primary" />
-                        Google Routes API v2 (Analyse en temps réel)
+                        Google Routes API v2 (Segments de 2-10km)
                     </p>
                     {lastUpdated && (
                         <p className="text-[10px] font-black text-primary uppercase flex items-center gap-1.5">

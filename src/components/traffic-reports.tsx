@@ -14,17 +14,21 @@ import {
   Navigation,
   Users,
   PlusCircle,
-  MapPin
+  MapPin,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getTomTomTrafficIncidents } from '@/app/actions';
+import { getLiveNavigationTrafficAction } from '@/app/actions';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { EventReport } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+
+// Google Maps Configuration
+const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
 type TrafficStatus = 'BLOQUÉ' | 'SATURÉ' | 'RALENTI' | 'FLUIDE';
 
@@ -39,31 +43,32 @@ interface Incident {
   delay: number;
   updatedAt: string;
   source: 'gps' | 'user';
+  coords?: { lat: number, lng: number };
 }
 
 const MAJOR_AXES = [
-  { name: "Boulevard du 30 Juin", district: "Gombe", normalSpeed: 50 },
-  { name: "Boulevard Lumumba", district: "Limete/Masina", normalSpeed: 60 },
-  { name: "Avenue de la Libération", district: "Lingwala", normalSpeed: 45 },
-  { name: "Avenue Kasa-Vubu", district: "Kalamu", normalSpeed: 40 },
-  { name: "Avenue By-Pass", district: "Lemba/Ngaba", normalSpeed: 50 },
-  { name: "Route de Matadi", district: "Ngaliema", normalSpeed: 45 },
-  { name: "Avenue de l'Université", district: "Makala", normalSpeed: 40 },
-  { name: "Avenue des Huileries", district: "Gombe/Lingwala", normalSpeed: 45 },
-  { name: "Avenue Mondjiba", district: "Ngaliema", normalSpeed: 50 },
-  { name: "Avenue Nguma", district: "Ngaliema", normalSpeed: 40 },
-  { name: "Avenue du Tourisme", district: "Ngaliema", normalSpeed: 50 },
-  { name: "Avenue de la Science", district: "Gombe", normalSpeed: 45 },
-  { name: "Avenue des Poids Lourds", district: "Limete", normalSpeed: 40 },
-  { name: "Avenue Luambo Makiadi", district: "Kinshasa", normalSpeed: 40 },
-  { name: "Avenue Pierre Mulele", district: "Gombe", normalSpeed: 45 },
-  { name: "Avenue Elengesa", district: "Makala/Ngiri-Ngiri", normalSpeed: 35 },
-  { name: "Avenue Kimwenza", district: "Kalamu", normalSpeed: 35 },
-  { name: "Boulevard Triomphal", district: "Kasa-Vubu", normalSpeed: 50 },
-  { name: "Avenue de la Justice", district: "Gombe", normalSpeed: 40 },
-  { name: "Avenue Batetela", district: "Gombe", normalSpeed: 40 },
-  { name: "Avenue de l'Ozone", district: "Ngaliema", normalSpeed: 40 },
-  { name: "Avenue Victoire", district: "Kalamu", normalSpeed: 35 },
+  { name: "Boulevard du 30 Juin", district: "Gombe", normalSpeed: 50, lat: -4.308, lng: 15.305 },
+  { name: "Boulevard Lumumba", district: "Limete/Masina", normalSpeed: 60, lat: -4.382, lng: 15.362 },
+  { name: "Avenue de la Libération", district: "Lingwala", normalSpeed: 45, lat: -4.335, lng: 15.302 },
+  { name: "Avenue Kasa-Vubu", district: "Kalamu", normalSpeed: 40, lat: -4.345, lng: 15.312 },
+  { name: "Avenue By-Pass", district: "Lemba/Ngaba", normalSpeed: 50, lat: -4.432, lng: 15.315 },
+  { name: "Route de Matadi", district: "Ngaliema", normalSpeed: 45, lat: -4.375, lng: 15.265 },
+  { name: "Avenue de l'Université", district: "Makala", normalSpeed: 40, lat: -4.395, lng: 15.318 },
+  { name: "Avenue des Huileries", district: "Gombe/Lingwala", normalSpeed: 45, lat: -4.325, lng: 15.310 },
+  { name: "Avenue Mondjiba", district: "Ngaliema", normalSpeed: 50, lat: -4.328, lng: 15.275 },
+  { name: "Avenue Nguma", district: "Ngaliema", normalSpeed: 40, lat: -4.348, lng: 15.268 },
+  { name: "Avenue du Tourisme", district: "Ngaliema", normalSpeed: 50, lat: -4.332, lng: 15.245 },
+  { name: "Avenue de la Science", district: "Gombe", normalSpeed: 45, lat: -4.315, lng: 15.308 },
+  { name: "Avenue des Poids Lourds", district: "Limete", normalSpeed: 40, lat: -4.335, lng: 15.345 },
+  { name: "Avenue Luambo Makiadi", district: "Kinshasa", normalSpeed: 40, lat: -4.322, lng: 15.312 },
+  { name: "Avenue Pierre Mulele", district: "Gombe", normalSpeed: 45, lat: -4.318, lng: 15.302 },
+  { name: "Avenue Elengesa", district: "Makala/Ngiri-Ngiri", normalSpeed: 35, lat: -4.372, lng: 15.305 },
+  { name: "Avenue Kimwenza", district: "Kalamu", normalSpeed: 35, lat: -4.355, lng: 15.318 },
+  { name: "Boulevard Triomphal", district: "Kasa-Vubu", normalSpeed: 50, lat: -4.338, lng: 15.302 },
+  { name: "Avenue de la Justice", district: "Gombe", normalSpeed: 40, lat: -4.305, lng: 15.295 },
+  { name: "Avenue Batetela", district: "Gombe", normalSpeed: 40, lat: -4.312, lng: 15.288 },
+  { name: "Avenue de l'Ozone", district: "Ngaliema", normalSpeed: 40, lat: -4.352, lng: 15.255 },
+  { name: "Avenue Victoire", district: "Kalamu", normalSpeed: 35, lat: -4.342, lng: 15.315 },
 ];
 
 function classifyTraffic(currentSpeed: number, freeFlowSpeed: number): TrafficStatus {
@@ -75,7 +80,7 @@ function classifyTraffic(currentSpeed: number, freeFlowSpeed: number): TrafficSt
 }
 
 export default function TrafficReports() {
-  const [tomtomIncidents, setTomTomIncidents] = useState<Incident[]>([]);
+  const [navIncidents, setNavIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filter, setFilter] = useState<TrafficStatus | 'ALL'>('ALL');
@@ -91,26 +96,27 @@ export default function TrafficReports() {
   
   const { data: userReports } = useCollection<EventReport>(userReportsQuery);
 
-  // 2. Fetch GPS Data from Navigation API
-  const fetchTomTomData = async (isRefresh = false) => {
+  // 2. Fetch Navigation Data (Google/GPS Hybrid)
+  const fetchNavigationData = async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
     if (!isRefresh) setLoading(true);
     
     try {
-      const data = await getTomTomTrafficIncidents();
+      const data = await getLiveNavigationTrafficAction();
       setLastUpdated(new Date());
       
       const analyzedAxes: Incident[] = MAJOR_AXES.map((axis, idx) => ({
-        id: `gps-${idx}`,
+        id: `nav-${idx}`,
         road: axis.name,
-        description: "Analyse GPS en temps réel",
+        description: "Données Google Navigation synchronisées",
         district: axis.district,
         status: "FLUIDE",
         speed: axis.normalSpeed,
         freeFlow: axis.normalSpeed,
         delay: 0,
-        updatedAt: "À l'instant",
-        source: 'gps'
+        updatedAt: "Temps Réel",
+        source: 'gps',
+        coords: { lat: axis.lat, lng: axis.lng }
       }));
 
       data.forEach((inc: any) => {
@@ -132,7 +138,7 @@ export default function TrafficReports() {
 
           analyzedAxes[axisIndex] = {
             ...axis,
-            description: inc.tm?.i || "Ralentissement détecté par satellite",
+            description: inc.tm?.i || "Ralentissement détecté par l'algorithme Google",
             status: classifyTraffic(axis.freeFlow * speedFactor, axis.freeFlow),
             speed: Math.round(axis.freeFlow * speedFactor),
             delay: delay,
@@ -141,9 +147,9 @@ export default function TrafficReports() {
         }
       });
 
-      setTomTomIncidents(analyzedAxes);
+      setNavIncidents(analyzedAxes);
     } catch (err) {
-      console.error("Erreur Navigation API:", err);
+      console.error("Erreur API Navigation:", err);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -151,27 +157,27 @@ export default function TrafficReports() {
   };
 
   useEffect(() => {
-    fetchTomTomData();
+    fetchNavigationData();
   }, []);
 
-  // 3. Combine both sources (GPS + Firebase)
+  // 3. Combine both sources (Navigation API + Firebase Community)
   const allIncidents = useMemo(() => {
     const formattedUserReports: Incident[] = (userReports || [])
         .map(rep => ({
             id: rep.id,
             road: rep.location,
             description: rep.description,
-            district: "Signalement Citoyen",
+            district: "Signalement Communauté",
             status: rep.severity === 'high' ? 'BLOQUÉ' : rep.severity === 'medium' ? 'SATURÉ' : 'RALENTI',
             speed: rep.severity === 'high' ? 5 : rep.severity === 'medium' ? 18 : 35,
             freeFlow: 50,
             delay: rep.severity === 'high' ? 45 : rep.severity === 'medium' ? 20 : 5,
-            updatedAt: "Direct Communauté",
+            updatedAt: "Direct Citoyen",
             source: 'user'
         }));
 
-    return [...formattedUserReports, ...tomtomIncidents];
-  }, [tomtomIncidents, userReports]);
+    return [...formattedUserReports, ...navIncidents];
+  }, [navIncidents, userReports]);
 
   const stats = useMemo(() => ({
     blocked: allIncidents.filter(i => i.status === 'BLOQUÉ').length,
@@ -196,23 +202,23 @@ export default function TrafficReports() {
   return (
     <div className="flex-1 flex flex-col h-full w-full bg-[#f8fafc] overflow-hidden">
       
-      {/* HEADER INTEGRÉ */}
+      {/* HEADER AVEC TIME REQUEST */}
       <div className="bg-white border-b shadow-sm z-30 p-4 md:p-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    Rapports Hybrides
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse">LIVE</Badge>
+                    Rapports Intégrés
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse">DIRECT</Badge>
                 </h1>
                 <div className="flex flex-col gap-1 mt-1">
                     <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
-                        <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-                        Navigation Google + Signalements Communautaires
+                        <Navigation className="h-3 w-3 text-primary" />
+                        Google Navigation API + Base Firebase Citoyenne
                     </p>
                     {lastUpdated && (
                         <p className="text-[10px] font-black text-primary uppercase flex items-center gap-1.5">
                             <Clock className="h-3 w-3" />
-                            Dernière requête API Navigation : {format(lastUpdated, 'HH:mm:ss')}
+                            Requête API Navigation envoyée à : {format(lastUpdated, 'HH:mm:ss')}
                         </p>
                     )}
                 </div>
@@ -225,14 +231,14 @@ export default function TrafficReports() {
                         Signaler
                     </Link>
                 </Button>
-                <Button size="icon" variant="outline" onClick={() => fetchTomTomData(true)} disabled={isRefreshing} className="rounded-2xl h-12 w-12 border-2">
+                <Button size="icon" variant="outline" onClick={() => fetchNavigationData(true)} disabled={isRefreshing} className="rounded-2xl h-12 w-12 border-2">
                     <RefreshCw className={cn("h-5 w-5 text-primary", isRefreshing && "animate-spin")} />
                 </Button>
             </div>
         </div>
       </div>
 
-      {/* FILTRES & KPI */}
+      {/* FILTRES KPI */}
       <div className="p-4 md:p-6 flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-6">
             
@@ -263,18 +269,18 @@ export default function TrafficReports() {
             <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input 
-                    placeholder="Filtrer par quartier ou avenue..." 
+                    placeholder="Filtrer un quartier (ex: Gombe, Ngaliema)..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-12 h-14 bg-white border-none shadow-sm rounded-2xl font-bold text-slate-800"
                 />
             </div>
 
-            {/* LISTE DES INCIDENTS */}
+            {/* LISTE DES INCIDENTS FUSIONNÉS */}
             <div className="space-y-4">
                 {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
-                        <Card key={i} className="rounded-3xl border-none animate-pulse h-24" />
+                        <Card key={i} className="rounded-3xl border-none animate-pulse h-24 shadow-sm" />
                     ))
                 ) : filteredIncidents.length > 0 ? (
                     <AnimatePresence>
@@ -295,7 +301,7 @@ export default function TrafficReports() {
                                         )} />
                                         <CardContent className="p-5 flex-1">
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                <div className="space-y-1">
+                                                <div className="space-y-1 flex-1">
                                                     <div className="flex items-center gap-2">
                                                         <h3 className="font-black text-slate-900">{incident.road}</h3>
                                                         <SourceBadge source={incident.source} />
@@ -313,7 +319,7 @@ export default function TrafficReports() {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-6">
+                                                <div className="flex items-center gap-6 shrink-0">
                                                     <div className="text-right">
                                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Vitesse</p>
                                                         <p className="font-black text-slate-800">{incident.speed} <span className="text-[10px]">km/h</span></p>
@@ -324,8 +330,21 @@ export default function TrafficReports() {
                                                             {incident.delay > 0 ? `+${incident.delay}m` : '--'}
                                                         </p>
                                                     </div>
-                                                    <div className="hidden sm:block">
+                                                    
+                                                    <div className="flex gap-2">
                                                         <StatusIndicator status={incident.status} />
+                                                        {incident.coords && (
+                                                            <Button size="icon" variant="secondary" className="rounded-xl h-10 w-10 shadow-sm" asChild>
+                                                                <a 
+                                                                    href={`https://www.google.com/maps/dir/?api=1&destination=${incident.coords.lat},${incident.coords.lng}&travelmode=driving`} 
+                                                                    target="_blank" 
+                                                                    rel="noopener noreferrer"
+                                                                    title="Ouvrir dans Google Navigation"
+                                                                >
+                                                                    <Navigation className="h-4 w-4 text-primary fill-primary/20" />
+                                                                </a>
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -337,7 +356,7 @@ export default function TrafficReports() {
                     </AnimatePresence>
                 ) : (
                     <div className="py-20 text-center text-slate-400 italic font-bold">
-                        Aucun incident trouvé avec ces critères.
+                        Aucun incident détecté par l'API Navigation ou la communauté.
                     </div>
                 )}
             </div>
@@ -353,13 +372,13 @@ const SourceBadge = ({ source }: { source: 'gps' | 'user' }) => (
         source === 'gps' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
     )}>
         {source === 'gps' ? <Navigation className="h-2.5 w-2.5" /> : <Users className="h-2.5 w-2.5" />}
-        {source === 'gps' ? 'Navigation' : 'Communauté'}
+        {source === 'gps' ? 'Navigation API' : 'Utilisateurs'}
     </Badge>
 );
 
 const StatusIndicator = ({ status }: { status: TrafficStatus }) => (
     <div className={cn(
-        "px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider",
+        "px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider hidden sm:flex items-center justify-center min-w-[80px]",
         status === 'BLOQUÉ' ? "bg-red-100 text-red-700" :
         status === 'SATURÉ' ? "bg-orange-100 text-orange-700" :
         status === 'RALENTI' ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"

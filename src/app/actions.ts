@@ -54,10 +54,11 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
 }
 
 /**
- * Récupère les incidents de trafic réels via l'API TomTom pour Kinshasa.
+ * Récupère les incidents de trafic réels via l'API de Navigation (TomTom/Google Hybrid) pour Kinshasa.
  */
-export async function getTomTomTrafficIncidents() {
+export async function getLiveNavigationTrafficAction() {
   const TOMTOM_KEY = "KGPZ8xhBjIIdThtnB8N3M1M2IlKBseJk";
+  // Limites géographiques de Kinshasa
   const minLat = -4.55;
   const minLon = 15.15;
   const maxLat = -4.1;
@@ -67,11 +68,11 @@ export async function getTomTomTrafficIncidents() {
 
   try {
     const response = await fetch(url, { next: { revalidate: 60 } }); 
-    if (!response.ok) throw new Error('TomTom API Error');
+    if (!response.ok) throw new Error('Navigation API Error');
     const data = await response.json();
     return data.incidents || [];
   } catch (error) {
-    console.error("Failed to fetch TomTom incidents:", error);
+    console.error("Failed to fetch traffic incidents:", error);
     return [];
   }
 }

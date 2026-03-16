@@ -1,4 +1,3 @@
-
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -83,6 +82,7 @@ export async function getTomTomTrafficIncidents() {
  */
 export async function initiateMbiyoPaymentAction(params: {
     amount: number;
+    currency: string;
     phone: string;
     network: string;
     description: string;
@@ -96,7 +96,7 @@ export async function initiateMbiyoPaymentAction(params: {
     }
 
     try {
-        console.log(`Initiating MbiyoPay request for ${params.phone} (${params.network}) - Amount: ${params.amount}`);
+        console.log(`Initiating MbiyoPay request for ${params.phone} (${params.network}) - Amount: ${params.amount} ${params.currency}`);
         
         const response = await fetch("https://api.mbiyo.africa/v1/merchant/payin", {
             method: "POST",
@@ -106,8 +106,8 @@ export async function initiateMbiyoPaymentAction(params: {
                 "Accept": "application/json",
             },
             body: JSON.stringify({
-                amount: Math.round(params.amount),
-                currency: "CDF",
+                amount: params.amount,
+                currency: params.currency.toUpperCase(),
                 phone: params.phone,
                 network: params.network.toUpperCase(),
                 reference: `KFLOW-${Date.now()}`,

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -27,7 +26,8 @@ import {
   X,
   Volume2,
   VolumeX,
-  UserPlus
+  UserPlus,
+  Coins
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -39,6 +39,7 @@ import { fr } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // --- Components ---
 
@@ -94,15 +95,16 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
   const [selectedPack, setSelectedPack] = useState<any>(null);
   const [phone, setPhone] = useState('');
   const [operator, setSelectedOperator] = useState('');
+  const [currency, setCurrency] = useState<'CDF' | 'USD'>('CDF');
   const [isLoading, setIsLoading] = useState(false);
   const { user, firestore } = useFirebase();
   const { toast } = useToast();
 
   const packs = [
-    { id: 'starter', stars: 50, amount: 5000, price: '5 000 CDF', label: 'Starter' },
-    { id: 'standard', stars: 150, amount: 12000, price: '12 000 CDF', label: 'Standard', popular: true },
-    { id: 'pro', stars: 400, amount: 25000, price: '25 000 CDF', label: 'Pro' },
-    { id: 'business', stars: 1200, amount: 60000, price: '60 000 CDF', label: 'Business' },
+    { id: 'starter', stars: 50, prices: { CDF: 5000, USD: 2 }, labels: { CDF: '5 000 CDF', USD: '2 USD' }, label: 'Starter' },
+    { id: 'standard', stars: 150, prices: { CDF: 12000, USD: 5 }, labels: { CDF: '12 000 CDF', USD: '5 USD' }, label: 'Standard', popular: true },
+    { id: 'pro', stars: 400, prices: { CDF: 25000, USD: 10 }, labels: { CDF: '25 000 CDF', USD: '10 USD' }, label: 'Pro' },
+    { id: 'business', stars: 1200, prices: { CDF: 60000, USD: 25 }, labels: { CDF: '60 000 CDF', USD: '25 USD' }, label: 'Business' },
   ];
 
   const handlePurchase = async () => {
@@ -120,9 +122,12 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         sanitizedPhone = '243' + sanitizedPhone;
     }
 
+    const amount = selectedPack.prices[currency];
+
     try {
         const result = await initiateMbiyoPaymentAction({
-            amount: selectedPack.amount,
+            amount: amount,
+            currency: currency,
             phone: sanitizedPhone,
             network: operator,
             description: `Achat de ${selectedPack.stars} Stars - Kinshasa Flow`,
@@ -148,7 +153,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                     type: 'purchase',
                     starsChange: selectedPack.stars,
                     balanceAfterTransaction: newBalance,
-                    description: `Achat Pack ${selectedPack.label} via ${operator.toUpperCase()}`,
+                    description: `Achat Pack ${selectedPack.label} via ${operator.toUpperCase()} (${currency})`,
                     timestamp: serverTimestamp(),
                     relatedObjectId: result.data?.id || null,
                     relatedObjectType: 'MbiyoPayTransaction'
@@ -193,7 +198,17 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                <p className="font-bold text-slate-800">Choisissez votre forfait :</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-slate-800">Choisissez votre devise :</p>
+                  <Tabs value={currency} onValueChange={(v: any) => setCurrency(v)}>
+                    <TabsList className="bg-slate-100">
+                      <TabsTrigger value="CDF" className="text-[10px] font-bold">CDF</TabsTrigger>
+                      <TabsTrigger value="USD" className="text-[10px] font-bold">USD</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+                
+                <p className="font-bold text-slate-800 text-sm">Forfaits disponibles :</p>
                 <div className="grid grid-cols-1 gap-3">
                   {packs.map(pack => (
                     <div 
@@ -210,7 +225,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                           <p className="font-black text-lg">{pack.stars} ⭐</p>
                           <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">{pack.label}</p>
                         </div>
-                        <p className="font-bold text-amber-600">{pack.price}</p>
+                        <p className="font-bold text-amber-600">{pack.labels[currency]}</p>
                       </div>
                     </div>
                   ))}
@@ -258,7 +273,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                   <Button variant="ghost" onClick={() => setStep(1)} className="flex-1 font-bold">Retour</Button>
                   <Button disabled={!operator || phone.length < 9 || isLoading} onClick={handlePurchase} className="flex-[2] h-12 rounded-xl font-bold">
                     {isLoading ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
-                    Confirmer {selectedPack?.price}
+                    Confirmer {selectedPack?.labels[currency]}
                   </Button>
                 </div>
               </motion.div>

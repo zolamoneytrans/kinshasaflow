@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -16,7 +15,8 @@ import {
   Zap,
   Info,
   ChevronDown,
-  Lock
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
@@ -56,7 +58,7 @@ const KINSHASA_AXES = [
   { id: "kimwenza", name: "Avenue Kimwenza", coords: { lat: -4.355, lng: 15.318 }, district: "Kalamu" },
 ];
 
-const TrafficLayerComponent = () => {
+const TrafficLayerComponent = ({ refreshKey }: { refreshKey: number }) => {
     const map = useMap();
     useEffect(() => {
         if (!map) return;
@@ -65,11 +67,11 @@ const TrafficLayerComponent = () => {
         const trafficLayer = new g.maps.TrafficLayer();
         trafficLayer.setMap(map);
         return () => trafficLayer.setMap(null);
-    }, [map]);
+    }, [map, refreshKey]); // Re-add layer when refreshKey changes
     return null;
 };
 
-const StatusCard = ({ axis, verified, onVerify, isVerifying }: { axis: typeof KINSHASA_AXES[0], verified: boolean, onVerify: () => void, isVerifying: boolean }) => {
+const StatusCard = ({ axis, verified, onVerify, isVerifying, lastUpdated }: { axis: typeof KINSHASA_AXES[0], verified: boolean, onVerify: () => void, isVerifying: boolean, lastUpdated: Date }) => {
     const mockStatus = useMemo(() => {
         const statuses = ['FLUIDE', 'RALENTI', 'SATURÉ', 'BLOQUÉ'] as const;
         const index = Math.floor(Math.abs(axis.coords.lat * 10) % 4);
@@ -90,10 +92,16 @@ const StatusCard = ({ axis, verified, onVerify, isVerifying }: { axis: typeof KI
                 <div className="flex justify-between items-start mb-4">
                     <div className="space-y-1">
                         <h3 className="text-xl font-black text-slate-900 tracking-tight">{axis.name}</h3>
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {axis.district} • Kinshasa
-                        </p>
+                        <div className="flex flex-col gap-1">
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {axis.district} • Kinshasa
+                            </p>
+                            <p className="text-[9px] font-bold text-primary uppercase flex items-center gap-1">
+                                <Clock className="h-2.5 w-2.5" />
+                                Synchronisé à {format(lastUpdated, 'HH:mm:ss')}
+                            </p>
+                        </div>
                     </div>
                     {verified ? (
                         <Badge className={cn(
@@ -172,6 +180,9 @@ export default function LiveTrafficFeed() {
   const [selectedAxisId, setSelectedAxisId] = useState<string>(KINSHASA_AXES[0].id);
   const [verifiedAxes, setVerifiedAxes] = useState<Set<string>>(new Set());
   const [isVerifying, setIsVerifying] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { user, firestore } = useFirebase();
   const { toast } = useToast();
@@ -181,6 +192,16 @@ export default function LiveTrafficFeed() {
   const selectedAxis = useMemo(() => 
     KINSHASA_AXES.find(a => a.id === selectedAxisId) || KINSHASA_AXES[0]
   , [selectedAxisId]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setRefreshKey(prev => prev + 1);
+    setLastUpdated(new Date());
+    setTimeout(() => {
+        setIsRefreshing(false);
+        toast({ title: "Données actualisées", description: "Le flux Google Navigation est à jour." });
+    }, 800);
+  };
 
   const handleVerify = async () => {
     if (!user || !profile) return;
@@ -232,23 +253,37 @@ export default function LiveTrafficFeed() {
         {/* TOP BAR / SEARCH */}
         <div className="p-4 md:p-6 bg-white border-b shadow-sm z-30">
             <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-4 items-center">
-                <div className="flex-1 w-full">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Rechercher un axe routier</label>
-                    <Select value={selectedAxisId} onValueChange={setSelectedAxisId}>
-                        <SelectTrigger className="h-14 rounded-2xl border-2 border-slate-100 bg-slate-50 font-bold text-slate-800 shadow-inner">
-                            <div className="flex items-center gap-3">
-                                <Search className="h-5 w-5 text-primary" />
-                                <SelectValue placeholder="Choisir une route..." />
-                            </div>
-                        </SelectTrigger>
-                        <SelectContent className="rounded-2xl shadow-2xl border-slate-100">
-                            {KINSHASA_AXES.map(axis => (
-                                <SelectItem key={axis.id} value={axis.id} className="h-12 font-bold cursor-pointer">
-                                    {axis.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                <div className="flex-1 w-full flex items-end gap-2">
+                    <div className="flex-1">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block flex justify-between items-center">
+                            <span>Rechercher un axe routier</span>
+                            <span className="text-primary/60 lowercase italic">Dernière synchro: {format(lastUpdated, 'HH:mm:ss')}</span>
+                        </label>
+                        <Select value={selectedAxisId} onValueChange={(v) => { setSelectedAxisId(v); setLastUpdated(new Date()); }}>
+                            <SelectTrigger className="h-14 rounded-2xl border-2 border-slate-100 bg-slate-50 font-bold text-slate-800 shadow-inner">
+                                <div className="flex items-center gap-3">
+                                    <Search className="h-5 w-5 text-primary" />
+                                    <SelectValue placeholder="Choisir une route..." />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl shadow-2xl border-slate-100">
+                                {KINSHASA_AXES.map(axis => (
+                                    <SelectItem key={axis.id} value={axis.id} className="h-12 font-bold cursor-pointer">
+                                        {axis.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Button 
+                        size="icon" 
+                        variant="outline" 
+                        onClick={handleRefresh} 
+                        disabled={isRefreshing}
+                        className="h-14 w-14 rounded-2xl border-2 border-slate-100 bg-white hover:bg-slate-50 shadow-sm"
+                    >
+                        <RefreshCw className={cn("h-6 w-6 text-primary", isRefreshing && "animate-spin")} />
+                    </Button>
                 </div>
                 
                 <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 rounded-2xl border border-amber-100 shadow-sm shrink-0">
@@ -267,7 +302,7 @@ export default function LiveTrafficFeed() {
             {/* LEFT: STATUS & REPORTS */}
             <div className="flex flex-col gap-6 overflow-y-auto pr-2">
                 <motion.div
-                    key={selectedAxisId}
+                    key={`${selectedAxisId}-${refreshKey}`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                 >
@@ -276,6 +311,7 @@ export default function LiveTrafficFeed() {
                         verified={verifiedAxes.has(selectedAxisId)}
                         onVerify={handleVerify}
                         isVerifying={isVerifying}
+                        lastUpdated={lastUpdated}
                     />
                 </motion.div>
 
@@ -296,15 +332,20 @@ export default function LiveTrafficFeed() {
                                 <p className="text-[10px] text-slate-500 font-medium">Près de {selectedAxis.name} • il y a 5m</p>
                             </div>
                         </div>
-                        <Button variant="ghost" className="w-full text-xs font-bold text-primary hover:bg-primary/5">
-                            Voir plus de signalements
+                        <Button variant="ghost" className="w-full text-xs font-bold text-primary hover:bg-primary/5" asChild>
+                            <Link href="/reports">Voir plus de signalements</Link>
                         </Button>
                     </CardContent>
                 </Card>
             </div>
 
             {/* RIGHT: MAP PREVIEW */}
-            <div className="hidden lg:block h-full min-h-[400px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
+            <div className="hidden lg:block h-full min-h-[400px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white relative">
+                {isRefreshing && (
+                    <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-sm flex items-center justify-center">
+                        <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                    </div>
+                )}
                 <APIProvider apiKey={API_KEY}>
                     <Map
                         center={selectedAxis.coords}
@@ -314,7 +355,7 @@ export default function LiveTrafficFeed() {
                         mapId="live_traffic_mini_map"
                         className="w-full h-full"
                     >
-                        <TrafficLayerComponent />
+                        <TrafficLayerComponent refreshKey={refreshKey} />
                     </Map>
                 </APIProvider>
             </div>

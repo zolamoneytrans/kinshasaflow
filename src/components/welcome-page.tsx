@@ -10,8 +10,8 @@ import React, { useState, useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from './ui/badge';
 
-// Import de l'image personnalisée echangeur2 depuis le dossier src/myimages
-import echangeurBg from '@/myimages/echangeur2.png';
+// Import de l'image personnalisée echangeur depuis le dossier src/myimages
+import echangeurBg from '@/myimages/echangeur.png';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -77,7 +77,7 @@ export default function WelcomePage() {
             <div className="absolute top-[20%] right-[-10%] -z-20 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[130px]"></div>
             <div className="absolute bottom-[-10%] left-[10%] -z-20 h-[600px] w-[600px] rounded-full bg-blue-400/20 blur-[150px]"></div>
 
-            {/* Arrière-plan personnalisé (Echangeur 2) - Positionné pour une visibilité maximale derrière le titre */}
+            {/* Arrière-plan personnalisé (Echangeur) - Positionné pour une visibilité maximale derrière le titre */}
             <div className="absolute top-[10%] left-1/2 -translate-x-1/2 -z-10 w-full max-w-6xl h-[600px] opacity-50 pointer-events-none flex items-center justify-center">
                 <Image 
                     src={echangeurBg} 

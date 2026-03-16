@@ -54,46 +54,75 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
 }
 
 /**
- * Récupère le statut réel du trafic via Google Distance Matrix API.
- * Compare le temps de trajet normal vs temps de trajet actuel.
+ * Récupère le statut réel du trafic via Google Routes API v2.
+ * Utilise TRAFFIC_AWARE_OPTIMAL pour une précision maximale.
  */
 export async function getGoogleTrafficStatusAction(axes: { name: string, lat: number, lng: number }[]) {
   const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
+  const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
   
-  // On crée des segments courts (0.5km) pour tester le trafic local
   const requests = axes.map(axis => {
-    const origin = `${axis.lat},${axis.lng}`;
-    // On simule un point d'arrivée à 500m de distance pour capter le trafic local
-    const destination = `${axis.lat + 0.005},${axis.lng + 0.005}`;
-    return fetch(
-      `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&departure_time=now&key=${GOOGLE_API_KEY}`
-    ).then(res => res.json());
+    const body = {
+      origin: { location: { latLng: { latitude: axis.lat, longitude: axis.lng } } },
+      destination: { location: { latLng: { latitude: axis.lat + 0.005, longitude: axis.lng + 0.005 } } },
+      travelMode: "DRIVE",
+      routingPreference: "TRAFFIC_AWARE_OPTIMAL",
+      departureTime: new Date().toISOString(),
+      computeAlternativeRoutes: false,
+      routeModifiers: { avoidTolls: false, avoidHighways: false, avoidFerries: false },
+      languageCode: "fr-FR",
+      units: "METRIC"
+    };
+
+    return fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_API_KEY,
+        'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters'
+      },
+      body: JSON.stringify(body)
+    }).then(res => res.json());
   });
 
   try {
     const results = await Promise.all(requests);
     return results.map((data, index) => {
-      const element = data.rows?.[0]?.elements?.[0];
-      if (element?.status === "OK") {
-        const duration = element.duration.value; // secondes
-        const durationInTraffic = element.duration_in_traffic.value; // secondes
-        const delay = Math.max(0, durationInTraffic - duration);
-        const ratio = durationInTraffic / duration;
+      const route = data.routes?.[0];
+      if (route) {
+        // Parsing des durées (format "120s")
+        const duration = parseInt(route.duration.replace('s', ''));
+        const staticDuration = parseInt(route.staticDuration.replace('s', ''));
+        const distance = route.distanceMeters; // en mètres
+        
+        const delaySeconds = Math.max(0, duration - staticDuration);
+        const delayMinutes = Math.round(delaySeconds / 60);
+        
+        // Calcul vitesse en km/h : (distance/1000) / (duration/3600)
+        const speedKmh = Math.round((distance / 1000) / (duration / 3600));
+
+        // Classification selon PRD
+        let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" = "FLUIDE";
+        if (speedKmh < 10 || delayMinutes > 10) status = "EMBOUTEILLAGE";
+        else if (speedKmh >= 10 && speedKmh <= 20 && delayMinutes >= 5) status = "DENSE";
+        else if (speedKmh > 20 && speedKmh <= 35 && delayMinutes >= 2) status = "MODÉRÉ";
+        else status = "FLUIDE";
 
         return {
           road: axes[index].name,
           duration,
-          durationInTraffic,
-          delay: Math.round(delay / 60),
-          ratio,
-          status: ratio > 2.0 ? "BLOQUÉ" : ratio > 1.5 ? "SATURÉ" : ratio > 1.2 ? "RALENTI" : "FLUIDE"
+          staticDuration,
+          distance,
+          speed: speedKmh,
+          delay: delayMinutes,
+          status
         };
       }
-      return { road: axes[index].name, status: "FLUIDE", delay: 0, ratio: 1 };
+      return { road: axes[index].name, status: "FLUIDE", speed: 40, delay: 0 };
     });
   } catch (error) {
-    console.error("Google Traffic Status Error:", error);
-    return axes.map(a => ({ road: a.name, status: "FLUIDE", delay: 0, ratio: 1 }));
+    console.error("Google Routes API Error:", error);
+    return axes.map(a => ({ road: a.name, status: "FLUIDE", speed: 40, delay: 0 }));
   }
 }
 

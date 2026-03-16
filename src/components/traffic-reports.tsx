@@ -26,7 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-type TrafficStatus = 'BLOQUÉ' | 'SATURÉ' | 'RALENTI' | 'FLUIDE';
+type TrafficStatus = 'EMBOUTEILLAGE' | 'DENSE' | 'MODÉRÉ' | 'FLUIDE';
 
 interface Incident {
   id: string;
@@ -35,7 +35,6 @@ interface Incident {
   district: string;
   status: TrafficStatus;
   speed: number;
-  freeFlow: number;
   delay: number;
   updatedAt: string;
   source: 'gps' | 'user';
@@ -43,19 +42,19 @@ interface Incident {
 }
 
 const MAJOR_AXES = [
-  { name: "Boulevard du 30 Juin", district: "Gombe", normalSpeed: 50, lat: -4.308, lng: 15.305 },
-  { name: "Boulevard Lumumba", district: "Limete/Masina", normalSpeed: 60, lat: -4.382, lng: 15.362 },
-  { name: "Avenue de la Libération", district: "Lingwala", normalSpeed: 45, lat: -4.335, lng: 15.302 },
-  { name: "Avenue Kasa-Vubu", district: "Kalamu", normalSpeed: 40, lat: -4.345, lng: 15.312 },
-  { name: "Avenue By-Pass", district: "Lemba/Ngaba", normalSpeed: 50, lat: -4.432, lng: 15.315 },
-  { name: "Route de Matadi", district: "Ngaliema", normalSpeed: 45, lat: -4.375, lng: 15.265 },
-  { name: "Avenue de l'Université", district: "Makala", normalSpeed: 40, lat: -4.395, lng: 15.318 },
-  { name: "Avenue des Huileries", district: "Gombe/Lingwala", normalSpeed: 45, lat: -4.325, lng: 15.310 },
-  { name: "Avenue Mondjiba", district: "Ngaliema", normalSpeed: 50, lat: -4.328, lng: 15.275 },
-  { name: "Avenue Nguma", district: "Ngaliema", normalSpeed: 40, lat: -4.348, lng: 15.268 },
-  { name: "Avenue du Tourisme", district: "Ngaliema", normalSpeed: 50, lat: -4.332, lng: 15.245 },
-  { name: "Avenue de l'Elengesa", district: "Makala", normalSpeed: 35, lat: -4.372, lng: 15.305 },
-  { name: "Avenue Victoire", district: "Kalamu", normalSpeed: 35, lat: -4.342, lng: 15.315 },
+  { name: "Boulevard du 30 Juin", district: "Gombe", lat: -4.308, lng: 15.305 },
+  { name: "Boulevard Lumumba", district: "Limete/Masina", lat: -4.382, lng: 15.362 },
+  { name: "Avenue de la Libération", district: "Lingwala", lat: -4.335, lng: 15.302 },
+  { name: "Avenue Kasa-Vubu", district: "Kalamu", lat: -4.345, lng: 15.312 },
+  { name: "Avenue By-Pass", district: "Lemba/Ngaba", lat: -4.432, lng: 15.315 },
+  { name: "Route de Matadi", district: "Ngaliema", lat: -4.375, lng: 15.265 },
+  { name: "Avenue de l'Université", district: "Makala", lat: -4.395, lng: 15.318 },
+  { name: "Avenue des Huileries", district: "Gombe/Lingwala", lat: -4.325, lng: 15.310 },
+  { name: "Avenue Mondjiba", district: "Ngaliema", lat: -4.328, lng: 15.275 },
+  { name: "Avenue Nguma", district: "Ngaliema", lat: -4.348, lng: 15.268 },
+  { name: "Avenue du Tourisme", district: "Ngaliema", lat: -4.332, lng: 15.245 },
+  { name: "Avenue de l'Elengesa", district: "Makala", lat: -4.372, lng: 15.305 },
+  { name: "Avenue Victoire", district: "Kalamu", lat: -4.342, lng: 15.315 },
 ];
 
 export default function TrafficReports() {
@@ -75,7 +74,7 @@ export default function TrafficReports() {
   
   const { data: userReports } = useCollection<EventReport>(userReportsQuery);
 
-  // 2. Fetch Navigation Data (Google Distance Matrix)
+  // 2. Fetch Navigation Data (Google Routes API v2)
   const fetchTrafficData = async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
     if (!isRefresh) setLoading(true);
@@ -86,17 +85,13 @@ export default function TrafficReports() {
       
       const analyzedAxes: Incident[] = data.map((res, idx) => {
         const axis = MAJOR_AXES[idx];
-        // Calculer une vitesse estimée basée sur le ratio
-        const currentSpeed = Math.round(axis.normalSpeed / (res.ratio || 1));
-        
         return {
           id: `google-${idx}`,
           road: res.road,
-          description: res.status === "FLUIDE" ? "Circulation fluide détectée par GPS" : `Retard de ${res.delay} min détecté par Google`,
+          description: res.status === "FLUIDE" ? "Circulation fluide (Données GPS)" : `Retard estimé de ${res.delay} min via Routes API v2`,
           district: axis.district,
           status: res.status as TrafficStatus,
-          speed: currentSpeed,
-          freeFlow: axis.normalSpeed,
+          speed: res.speed,
           delay: res.delay,
           updatedAt: "Temps Réel",
           source: 'gps',
@@ -106,7 +101,7 @@ export default function TrafficReports() {
 
       setNavIncidents(analyzedAxes);
     } catch (err) {
-      console.error("Erreur API Google Traffic:", err);
+      console.error("Erreur API Google Routes v2:", err);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -125,10 +120,9 @@ export default function TrafficReports() {
             road: rep.location,
             description: rep.description,
             district: "Citoyen",
-            status: rep.severity === 'high' ? 'BLOQUÉ' : rep.severity === 'medium' ? 'SATURÉ' : 'RALENTI',
-            speed: rep.severity === 'high' ? 5 : rep.severity === 'medium' ? 18 : 35,
-            freeFlow: 50,
-            delay: rep.severity === 'high' ? 45 : rep.severity === 'medium' ? 20 : 5,
+            status: rep.severity === 'high' ? 'EMBOUTEILLAGE' : rep.severity === 'medium' ? 'DENSE' : 'MODÉRÉ',
+            speed: rep.severity === 'high' ? 8 : rep.severity === 'medium' ? 15 : 28,
+            delay: rep.severity === 'high' ? 15 : rep.severity === 'medium' ? 7 : 3,
             updatedAt: "Direct Communauté",
             source: 'user'
         }));
@@ -137,9 +131,9 @@ export default function TrafficReports() {
   }, [navIncidents, userReports]);
 
   const stats = useMemo(() => ({
-    blocked: allIncidents.filter(i => i.status === 'BLOQUÉ').length,
-    saturated: allIncidents.filter(i => i.status === 'SATURÉ').length,
-    slow: allIncidents.filter(i => i.status === 'RALENTI').length,
+    blocked: allIncidents.filter(i => i.status === 'EMBOUTEILLAGE').length,
+    saturated: allIncidents.filter(i => i.status === 'DENSE').length,
+    slow: allIncidents.filter(i => i.status === 'MODÉRÉ').length,
     fluid: allIncidents.filter(i => i.status === 'FLUIDE').length,
   }), [allIncidents]);
 
@@ -151,7 +145,7 @@ export default function TrafficReports() {
         result = result.filter(i => i.road.toLowerCase().includes(q) || i.district.toLowerCase().includes(q));
     }
     return result.sort((a, b) => {
-        const priority = { 'BLOQUÉ': 0, 'SATURÉ': 1, 'RALENTI': 2, 'FLUIDE': 3 };
+        const priority = { 'EMBOUTEILLAGE': 0, 'DENSE': 1, 'MODÉRÉ': 2, 'FLUIDE': 3 };
         return priority[a.status] - priority[b.status];
     });
   }, [allIncidents, filter, searchQuery]);
@@ -164,18 +158,18 @@ export default function TrafficReports() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    Rapports Intégrés
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse">DIRECT</Badge>
+                    Rapports Navigation
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse">LIVE v2</Badge>
                 </h1>
                 <div className="flex flex-col gap-1 mt-1">
                     <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
                         <Navigation className="h-3 w-3 text-primary" />
-                        Google Navigation API + Signalements Firebase
+                        Google Routes API v2 (TRAFFIC_AWARE_OPTIMAL)
                     </p>
                     {lastUpdated && (
                         <p className="text-[10px] font-black text-primary uppercase flex items-center gap-1.5">
                             <Clock className="h-3 w-3" />
-                            Requête API envoyée à : {format(lastUpdated, 'HH:mm:ss')}
+                            Synchronisé à : {format(lastUpdated, 'HH:mm:ss')}
                         </p>
                     )}
                 </div>
@@ -201,9 +195,9 @@ export default function TrafficReports() {
             
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'BLOQUÉ', count: stats.blocked, icon: Ban, color: 'text-red-600', bg: 'bg-red-50' },
-                    { label: 'SATURÉ', count: stats.saturated, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
-                    { label: 'RALENTI', count: stats.slow, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+                    { label: 'EMBOUTEILLAGE', count: stats.blocked, icon: Ban, color: 'text-red-600', bg: 'bg-red-50' },
+                    { label: 'DENSE', count: stats.saturated, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
+                    { label: 'MODÉRÉ', count: stats.slow, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
                     { label: 'FLUIDE', count: stats.fluid, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' }
                 ].map((kpi) => (
                     <Card key={kpi.label} className={cn(
@@ -226,7 +220,7 @@ export default function TrafficReports() {
             <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input 
-                    placeholder="Filtrer un quartier (ex: Gombe, Ngaliema)..." 
+                    placeholder="Filtrer par quartier ou axe (Gombe, Victoire...)" 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-12 h-14 bg-white border-none shadow-sm rounded-2xl font-bold text-slate-800"
@@ -251,9 +245,9 @@ export default function TrafficReports() {
                                     <div className="flex">
                                         <div className={cn(
                                             "w-2",
-                                            incident.status === 'BLOQUÉ' ? "bg-red-600" :
-                                            incident.status === 'SATURÉ' ? "bg-orange-500" :
-                                            incident.status === 'RALENTI' ? "bg-amber-500" : "bg-emerald-500"
+                                            incident.status === 'EMBOUTEILLAGE' ? "bg-red-600" :
+                                            incident.status === 'DENSE' ? "bg-orange-500" :
+                                            incident.status === 'MODÉRÉ' ? "bg-amber-500" : "bg-emerald-500"
                                         )} />
                                         <CardContent className="p-5 flex-1">
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -311,7 +305,7 @@ export default function TrafficReports() {
                     </AnimatePresence>
                 ) : (
                     <div className="py-20 text-center text-slate-400 italic font-bold">
-                        Aucun incident détecté actuellement.
+                        Aucun incident détecté selon vos critères.
                     </div>
                 )}
             </div>
@@ -327,17 +321,19 @@ const SourceBadge = ({ source }: { source: 'gps' | 'user' }) => (
         source === 'gps' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
     )}>
         {source === 'gps' ? <Navigation className="h-2.5 w-2.5" /> : <Users className="h-2.5 w-2.5" />}
-        {source === 'gps' ? 'GPS Navigation' : 'Communauté'}
+        {source === 'gps' ? 'GPS Nav v2' : 'Communauté'}
     </Badge>
 );
 
 const StatusIndicator = ({ status }: { status: TrafficStatus }) => (
     <div className={cn(
-        "px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider hidden sm:flex items-center justify-center min-w-[80px]",
-        status === 'BLOQUÉ' ? "bg-red-100 text-red-700" :
-        status === 'SATURÉ' ? "bg-orange-100 text-orange-700" :
-        status === 'RALENTI' ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+        "px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider hidden sm:flex items-center justify-center min-w-[100px]",
+        status === 'EMBOUTEILLAGE' ? "bg-red-100 text-red-700" :
+        status === 'DENSE' ? "bg-orange-100 text-orange-700" :
+        status === 'MODÉRÉ' ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
     )}>
-        {status}
+        {status === 'EMBOUTEILLAGE' ? '🔴 BLOQUÉ' : 
+         status === 'DENSE' ? '🟠 DENSE' : 
+         status === 'MODÉRÉ' ? '🟡 MODÉRÉ' : '🟢 FLUIDE'}
     </div>
 );

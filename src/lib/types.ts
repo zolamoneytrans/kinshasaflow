@@ -10,6 +10,7 @@ export const STAR_COSTS = {
   ROUTE_PLAN: 4,
   ALERTS_DAILY: 2,
   EXPORT_REPORT: 10,
+  SIGNUP_BONUS: 25,
 } as const;
 
 // User profile extension for Stars System
@@ -18,6 +19,9 @@ export const userProfileSchema = z.object({
   email: z.string().email(),
   name: z.string().optional(),
   photoURL: z.string().optional(),
+  phone: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
   currentStarsBalance: z.number().default(0),
   totalStarsEarned: z.number().default(0),
   totalStarsPurchased: z.number().default(0),
@@ -176,6 +180,9 @@ export const signupSchema = z.object({
   name: z.string().min(2, { message: "Le nom doit comporter au moins 2 caractères." }),
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }),
   password: z.string().min(8, { message: "Le mot de passe doit comporter au moins 8 caractères." }),
+  phone: z.string().min(9, { message: "Veuillez entrer un numéro de téléphone valide." }),
+  city: z.string().min(2, { message: "Veuillez entrer votre ville." }),
+  country: z.string().min(2, { message: "Veuillez entrer votre pays." }),
 });
 export type SignupValues = z.infer<typeof signupSchema>;
 

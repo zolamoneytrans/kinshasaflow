@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -18,18 +18,22 @@ import {
 } from '@/components/ui/sidebar';
 import { UserNav } from './auth/user-nav';
 import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Logo } from './logo';
 import { NotificationPermission } from './notification-permission';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { doc } from 'firebase/firestore';
 import { UserProfile } from '@/lib/types';
+import { Button } from './ui/button';
+import { sendEmailVerification } from 'firebase/auth';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
-  const { firestore } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const router = useRouter();
+  const { toast } = useToast();
+  const [isResending, setIsResending] = useState(false);
 
   // Watch blocking status
   const profileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
@@ -49,7 +53,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Blocking overlay
+  // 1. Blocking overlay (Banned)
   if (profile?.isBlocked) {
     return (
       <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 text-center">
@@ -67,6 +71,55 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
           <Link href="/contact" className="inline-block text-primary font-bold hover:underline">Nous contacter</Link>
         </div>
       </div>
+    );
+  }
+
+  // 2. Verification overlay (Unactivated)
+  // Note: Anonymous users or users from certain providers might skip this, 
+  // but we enforce it for email/password as requested.
+  if (!user.emailVerified && !user.isAnonymous && user.providerData.some(p => p.providerId === 'password')) {
+    const handleResend = async () => {
+        setIsResending(true);
+        try {
+            if (auth.currentUser) {
+                await sendEmailVerification(auth.currentUser);
+                toast({ title: "Email envoyé !", description: "Vérifiez votre boîte de réception (et vos spams)." });
+            }
+        } catch (e) {
+            toast({ title: "Erreur", description: "Veuillez patienter avant de réessayer.", variant: "destructive" });
+        } finally {
+            setIsResending(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[9998] bg-background/90 backdrop-blur-xl flex items-center justify-center p-6 text-center">
+            <div className="max-w-md space-y-8 bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100">
+                <div className="bg-primary/10 p-6 rounded-full w-24 h-24 flex items-center justify-center mx-auto ring-4 ring-primary/5">
+                    <Mail className="h-12 w-12 text-primary animate-bounce" />
+                </div>
+                <div className="space-y-3">
+                    <h2 className="text-3xl font-black tracking-tight text-slate-900">Activez votre compte</h2>
+                    <p className="text-slate-500 font-medium leading-relaxed">
+                        Un e-mail de confirmation a été envoyé à <span className="font-bold text-primary">{user.email}</span>. 
+                        Veuillez cliquer sur le lien pour débloquer vos <span className="text-amber-600 font-bold">25 stars</span> et l'accès à l'application.
+                    </p>
+                </div>
+                
+                <div className="flex flex-col gap-3">
+                    <Button onClick={() => window.location.reload()} size="lg" className="h-14 rounded-2xl text-lg font-black shadow-xl shadow-primary/20">
+                        J'ai vérifié mon email
+                    </Button>
+                    <Button variant="outline" onClick={handleResend} disabled={isResending} className="h-12 rounded-2xl font-bold border-2">
+                        {isResending ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : "Renvoyer l'email"}
+                    </Button>
+                </div>
+
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    Pensez à vérifier vos courriers indésirables (Spams).
+                </p>
+            </div>
+        </div>
     );
   }
 
@@ -231,7 +284,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />
                     <span>Mes Stars</span>
                   </Link>
-                </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}} className="bg-primary/10 hover:bg-primary/20 mt-2 border border-primary/20">

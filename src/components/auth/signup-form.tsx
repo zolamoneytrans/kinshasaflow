@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,12 +15,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Phone, MapPin, Globe, User, Mail, Lock, CheckCircle2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { SignupValues, signupSchema } from '@/lib/types';
+import { SignupValues, signupSchema, STAR_COSTS } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
-import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup, updateProfile, User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup, updateProfile, User as FirebaseUser, sendEmailVerification } from 'firebase/auth';
+import { doc, setDoc, runTransaction, collection, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -42,7 +43,7 @@ export function SignupForm() {
     const { user, isUserLoading } = useUser();
 
     useEffect(() => {
-        if (user) {
+        if (user && user.emailVerified) {
             router.push('/');
         }
     }, [user, router]);
@@ -53,38 +54,70 @@ export function SignupForm() {
             name: '',
             email: '',
             password: '',
+            phone: '',
+            city: 'Kinshasa',
+            country: 'RDC',
         },
     });
 
-    async function saveUserToFirestore(user: FirebaseUser) {
+    async function initializeUserProfile(user: FirebaseUser, extraInfo: Partial<SignupValues>) {
         const userRef = doc(firestore, 'users', user.uid);
-        const userData = {
-            id: user.uid,
-            email: user.email,
-            name: user.displayName,
-            photoURL: user.photoURL || ''
-        };
-        return setDoc(userRef, userData, { merge: true });
+        const transRef = doc(collection(userRef, 'star_transactions'));
+
+        await runTransaction(firestore, async (transaction) => {
+            const userData = {
+                id: user.uid,
+                email: user.email,
+                name: extraInfo.name || user.displayName,
+                photoURL: user.photoURL || '',
+                phone: extraInfo.phone || '',
+                city: extraInfo.city || 'Kinshasa',
+                country: extraInfo.country || 'RDC',
+                currentStarsBalance: STAR_COSTS.SIGNUP_BONUS,
+                totalStarsEarned: STAR_COSTS.SIGNUP_BONUS,
+                isProfileComplete: true,
+                createdAt: serverTimestamp(),
+            };
+
+            transaction.set(userRef, userData, { merge: true });
+
+            transaction.set(transRef, {
+                userId: user.uid,
+                type: 'earned',
+                starsChange: STAR_COSTS.SIGNUP_BONUS,
+                balanceAfterTransaction: STAR_COSTS.SIGNUP_BONUS,
+                description: "Bonus de bienvenue - Inscription",
+                timestamp: serverTimestamp(),
+            });
+        });
     }
 
     async function onSubmit(data: SignupValues) {
         setIsSubmitting(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-            await updateProfile(userCredential.user, { displayName: data.name });
-            await saveUserToFirestore({ ...userCredential.user, displayName: data.name });
+            const user = userCredential.user;
+
+            await updateProfile(user, { displayName: data.name });
+            
+            // Send verification email
+            await sendEmailVerification(user);
+
+            // Initialize Firestore Profile + Welcome Bonus
+            await initializeUserProfile(user, data);
 
             toast({
-                title: 'Inscription réussie!',
-                description: "Votre compte a été créé.",
+                title: 'Compte créé !',
+                description: "Veuillez vérifier votre e-mail pour activer votre compte. Nous vous avons offert 25 stars !",
                 variant: 'default',
             });
+            
             router.push('/');
         } catch (error: any) {
             console.error("Error signing up:", error);
-            const description = error.code === 'auth/email-already-in-use' 
-                ? "Cette adresse e-mail est déjà utilisée."
-                : "Une erreur s'est produite. Veuillez réessayer.";
+            let description = "Une erreur s'est produite. Veuillez réessayer.";
+            if (error.code === 'auth/email-already-in-use') description = "Cette adresse e-mail est déjà utilisée.";
+            
             toast({
                 title: "Erreur d'inscription",
                 description,
@@ -100,10 +133,16 @@ export function SignupForm() {
         try {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
-            await saveUserToFirestore(result.user);
+            
+            // Google users are usually auto-verified, but we still need profile in Firestore
+            await initializeUserProfile(result.user, {
+                name: result.user.displayName || '',
+                phone: result.user.phoneNumber || '',
+            });
+
             toast({
-                title: 'Inscription réussie!',
-                description: "Vous êtes maintenant connecté avec Google.",
+                title: 'Bienvenue!',
+                description: "Vous êtes connecté avec Google. 25 stars vous ont été offertes.",
                 variant: 'default',
             });
             router.push('/');
@@ -119,32 +158,28 @@ export function SignupForm() {
         }
     }
     
-    if (isUserLoading || user) {
-        return (
-            <div className="flex justify-center items-center h-full">
-                <Loader2 className="w-8 h-8 animate-spin" />
-            </div>
-        )
+    if (isUserLoading) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin" /></div>;
     }
 
     return (
-        <Card className="w-full">
-            <CardHeader>
-                <CardTitle>Créer un compte</CardTitle>
-                <CardDescription>Entrez vos informations pour vous inscrire.</CardDescription>
+        <Card className="w-full shadow-2xl border-none rounded-3xl overflow-hidden">
+            <CardHeader className="bg-primary p-8 text-white">
+                <CardTitle className="text-3xl font-black tracking-tight">Rejoignez la communauté</CardTitle>
+                <CardDescription className="text-primary-foreground/80 font-medium">Créez votre compte et recevez 25 stars gratuites.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8">
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                         <div className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                         <div className="grid md:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
                                 name="name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Nom complet</FormLabel>
+                                        <FormLabel className="flex items-center gap-2"><User className="h-4 w-4" />Nom complet</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="John Doe" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                            <Input placeholder="John Doe" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -152,58 +187,107 @@ export function SignupForm() {
                             />
                             <FormField
                                 control={form.control}
-                                name="email"
+                                name="phone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel className="flex items-center gap-2"><Phone className="h-4 w-4" />Téléphone</FormLabel>
                                         <FormControl>
-                                            <Input type="email" placeholder="nom@exemple.com" {...field} disabled={isSubmitting || isGoogleSubmitting} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Mot de passe</FormLabel>
-                                        <FormControl>
-                                            <Input type="password" placeholder="********" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                            <Input placeholder="08..." className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
-                        <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Créer mon compte
+
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2"><Mail className="h-4 w-4" />Email</FormLabel>
+                                    <FormControl>
+                                        <Input type="email" placeholder="nom@exemple.com" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="city"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><MapPin className="h-4 w-4" />Ville</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Kinshasa" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="country"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4" />Pays</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="RDC" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2"><Lock className="h-4 w-4" />Mot de passe</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="********" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-amber-500 p-2 rounded-lg text-white">
+                                    <CheckCircle2 className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black text-amber-800 uppercase tracking-widest leading-none mb-1">Bonus Inscription</p>
+                                    <p className="text-[10px] text-amber-600 font-bold">Crédité après validation email</p>
+                                </div>
+                            </div>
+                            <span className="text-2xl font-black text-amber-600">+25 ⭐</span>
+                        </div>
+
+                        <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-black shadow-lg shadow-primary/20" disabled={isSubmitting || isGoogleSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Créer mon compte"}
                         </Button>
                     </form>
                 </Form>
-                 <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                        Ou s'inscrire avec
-                        </span>
-                    </div>
+                 <div className="relative my-8">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-4 text-muted-foreground font-bold tracking-widest">Ou s'inscrire avec</span></div>
                 </div>
-                 <Button variant="outline" className="w-full" onClick={onGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
+                 <Button variant="outline" className="w-full h-12 rounded-2xl font-bold border-2" onClick={onGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
                     {isGoogleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
                     Google
                 </Button>
             </CardContent>
-             <CardFooter className="flex justify-center">
-                <p className="text-sm text-muted-foreground">
-                    Vous avez déjà un compte?{" "}
-                    <Link href="/login" className="text-primary hover:underline">
-                        Se connecter
-                    </Link>
+             <CardFooter className="flex justify-center border-t bg-slate-50 p-6">
+                <p className="text-sm text-muted-foreground font-medium">
+                    Déjà inscrit ?{" "}
+                    <Link href="/login" className="text-primary font-bold hover:underline">Se connecter</Link>
                 </p>
             </CardFooter>
         </Card>

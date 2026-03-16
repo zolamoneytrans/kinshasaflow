@@ -77,8 +77,8 @@ export default function WelcomePage() {
             <div className="absolute top-[20%] right-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[130px]"></div>
             <div className="absolute bottom-[-10%] left-[10%] -z-10 h-[600px] w-[600px] rounded-full bg-blue-400/20 blur-[150px]"></div>
 
-            {/* Arrière-plan personnalisé (Echangeur) placé derrière le texte principal - Visibilité améliorée */}
-            <div className="absolute top-[8%] left-1/2 -translate-x-1/2 -z-10 w-full max-w-6xl h-[650px] opacity-20 pointer-events-none">
+            {/* Arrière-plan personnalisé (Echangeur) placé derrière le texte principal - Visibilité améliorée à 50% */}
+            <div className="absolute top-[8%] left-1/2 -translate-x-1/2 -z-10 w-full max-w-6xl h-[650px] opacity-50 pointer-events-none">
                 <Image 
                     src={echangeurBg} 
                     alt="Echangeur Kinshasa Background" 

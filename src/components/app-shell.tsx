@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2 } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -160,6 +160,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     '/signup',
   ].includes(pathname);
 
+  const shareMessage = "Salut ! J'utilise Kinshasa Flow pour éviter les embouteillages à Kinshasa. Inscris-toi ici : https://kinshasaflow.online";
+
   return (
     <div className="flex h-screen bg-background">
       <SidebarProvider>
@@ -297,6 +299,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Mail className={pathname === '/contact' ? "text-accent" : "text-primary"} />
                     <span>Contact</span>
                   </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip={{children: "Partager"}} className="hover:bg-sidebar-accent">
+                  <a 
+                    href={`https://wa.me/?text=${encodeURIComponent(shareMessage)}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="font-medium"
+                  >
+                    <Share2 className="text-primary" />
+                    <span>Partager</span>
+                  </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               

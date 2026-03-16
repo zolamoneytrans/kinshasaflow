@@ -13,7 +13,8 @@ import {
   CheckCircle2, 
   Navigation,
   Users,
-  PlusCircle
+  PlusCircle,
+  MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +38,7 @@ interface Incident {
   freeFlow: number;
   delay: number;
   updatedAt: string;
-  source: 'tomtom' | 'user';
+  source: 'gps' | 'user';
 }
 
 const MAJOR_AXES = [
@@ -83,12 +84,14 @@ export default function TrafficReports() {
 
   const { firestore } = useFirebase();
 
+  // 1. Fetch User Reports from Firebase
   const userReportsQuery = useMemoFirebase(() => {
     return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(30));
   }, [firestore]);
   
   const { data: userReports } = useCollection<EventReport>(userReportsQuery);
 
+  // 2. Fetch GPS Data from Navigation API
   const fetchTomTomData = async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
     if (!isRefresh) setLoading(true);
@@ -98,16 +101,16 @@ export default function TrafficReports() {
       setLastUpdated(new Date());
       
       const analyzedAxes: Incident[] = MAJOR_AXES.map((axis, idx) => ({
-        id: `axis-${idx}`,
+        id: `gps-${idx}`,
         road: axis.name,
-        description: "Circulation fluide",
+        description: "Analyse GPS en temps réel",
         district: axis.district,
         status: "FLUIDE",
         speed: axis.normalSpeed,
         freeFlow: axis.normalSpeed,
         delay: 0,
         updatedAt: "À l'instant",
-        source: 'tomtom'
+        source: 'gps'
       }));
 
       data.forEach((inc: any) => {
@@ -129,18 +132,18 @@ export default function TrafficReports() {
 
           analyzedAxes[axisIndex] = {
             ...axis,
-            description: inc.tm?.i || "Ralentissement détecté par GPS",
+            description: inc.tm?.i || "Ralentissement détecté par satellite",
             status: classifyTraffic(axis.freeFlow * speedFactor, axis.freeFlow),
             speed: Math.round(axis.freeFlow * speedFactor),
             delay: delay,
-            updatedAt: "Mis à jour",
+            updatedAt: "Synchronisé",
           };
         }
       });
 
       setTomTomIncidents(analyzedAxes);
     } catch (err) {
-      console.error("Erreur TomTom:", err);
+      console.error("Erreur Navigation API:", err);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -151,24 +154,19 @@ export default function TrafficReports() {
     fetchTomTomData();
   }, []);
 
+  // 3. Combine both sources (GPS + Firebase)
   const allIncidents = useMemo(() => {
     const formattedUserReports: Incident[] = (userReports || [])
-        .filter(rep => {
-            const loc = rep.location?.toLowerCase() || "";
-            const desc = rep.description?.toLowerCase() || "";
-            return !loc.includes("example") && !desc.includes("example") && 
-                   !loc.includes("test") && !desc.includes("test");
-        })
         .map(rep => ({
             id: rep.id,
             road: rep.location,
             description: rep.description,
-            district: "Communauté",
+            district: "Signalement Citoyen",
             status: rep.severity === 'high' ? 'BLOQUÉ' : rep.severity === 'medium' ? 'SATURÉ' : 'RALENTI',
-            speed: rep.severity === 'high' ? 5 : rep.severity === 'medium' ? 15 : 30,
+            speed: rep.severity === 'high' ? 5 : rep.severity === 'medium' ? 18 : 35,
             freeFlow: 50,
-            delay: rep.severity === 'high' ? 45 : 15,
-            updatedAt: "Signalé en direct",
+            delay: rep.severity === 'high' ? 45 : rep.severity === 'medium' ? 20 : 5,
+            updatedAt: "Direct Communauté",
             source: 'user'
         }));
 
@@ -196,218 +194,152 @@ export default function TrafficReports() {
   }, [allIncidents, filter, searchQuery]);
 
   return (
-    <div className="flex flex-col h-full w-full gap-4 md:gap-6 bg-[#f8fafc] overflow-y-auto pb-10">
+    <div className="flex-1 flex flex-col h-full w-full bg-[#f8fafc] overflow-hidden">
       
-      {/* HEADER ANALYTIQUE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 md:px-6 pt-6">
-        <div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                Analyse du trafic
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] md:text-xs">Direct</Badge>
-            </h1>
-            <div className="flex flex-col gap-1 mt-1">
-                <p className="text-xs md:text-sm text-slate-500 font-semibold flex items-center gap-2">
-                    <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-                    Données réelles Kinshasa
-                </p>
-                {lastUpdated && (
-                    <p className="text-[10px] font-bold text-primary uppercase flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Synchro Google Navigation : {format(lastUpdated, 'HH:mm:ss')}
+      {/* HEADER INTEGRÉ */}
+      <div className="bg-white border-b shadow-sm z-30 p-4 md:p-6">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    Rapports Hybrides
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse">LIVE</Badge>
+                </h1>
+                <div className="flex flex-col gap-1 mt-1">
+                    <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full" />
+                        Navigation Google + Signalements Communautaires
                     </p>
-                )}
+                    {lastUpdated && (
+                        <p className="text-[10px] font-black text-primary uppercase flex items-center gap-1.5">
+                            <Clock className="h-3 w-3" />
+                            Dernière requête API Navigation : {format(lastUpdated, 'HH:mm:ss')}
+                        </p>
+                    )}
+                </div>
             </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-            <Button asChild variant="outline" className="rounded-xl h-10 px-4 md:px-6 border-slate-200 bg-white shadow-sm font-bold text-slate-900 hover:bg-slate-50">
-                <Link href="/signaler-embouteillage" className="flex items-center gap-2">
-                    <PlusCircle className="h-4 w-4 text-primary" />
-                    <span className="hidden xs:inline">Signaler un incident</span>
-                    <span className="xs:hidden">Signaler</span>
-                </Link>
-            </Button>
-            <Button size="icon" variant="outline" onClick={() => fetchTomTomData(true)} disabled={isRefreshing} className="rounded-xl h-10 w-10 border-slate-200 bg-white shadow-sm">
-                <RefreshCw className={cn("h-5 w-5 text-slate-600", isRefreshing && "animate-spin")} />
-            </Button>
-        </div>
-      </div>
-
-      {/* KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-4 md:px-6">
-        {[
-            { label: 'Bloqué', count: stats.blocked, icon: Ban, color: 'text-red-600', bg: 'bg-red-50', sub: '< 10% vitesse' },
-            { label: 'Saturé', count: stats.saturated, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', sub: '10–40% vitesse' },
-            { label: 'Ralenti', count: stats.slow, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50', sub: '40–70% vitesse' },
-            { label: 'Fluide', count: stats.fluid, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', sub: '> 70% vitesse' }
-        ].map((kpi) => (
-            <Card key={kpi.label} className={cn(
-                "rounded-2xl border-none shadow-sm bg-white hover:shadow-md transition-all cursor-pointer ring-2 ring-transparent",
-                filter === kpi.label && "ring-primary/20 bg-slate-50"
-            )} onClick={() => setFilter(kpi.label as TrafficStatus)}>
-                <CardContent className="p-3 md:p-5 flex justify-between items-start">
-                    <div className="space-y-0.5 md:space-y-1">
-                        <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
-                        <p className="text-xl md:text-3xl font-black text-slate-900">{kpi.count}</p>
-                        <p className="text-[8px] md:text-[10px] font-medium text-slate-400 hidden sm:block">{kpi.sub}</p>
-                    </div>
-                    <div className={cn("p-1.5 md:p-2.5 rounded-xl", kpi.bg)}>
-                        <kpi.icon className={cn("h-4 w-4 md:h-6 md:w-6", kpi.color)} />
-                    </div>
-                </CardContent>
-            </Card>
-        ))}
-      </div>
-
-      {/* FILTRES & RECHERCHE */}
-      <div className="px-4 md:px-6 space-y-4">
-        <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4">
-            <h2 className="text-sm md:text-lg font-bold text-slate-800 self-start md:self-auto">
-                Zones ({filteredIncidents.length})
-            </h2>
-            <div className="w-full md:flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input 
-                    placeholder="Filtrer par rue..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-11 bg-white border-slate-200 shadow-sm rounded-xl text-sm w-full"
-                />
-            </div>
-            <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
-                <Button 
-                    variant={filter === 'ALL' ? 'default' : 'outline'} 
-                    onClick={() => setFilter('ALL')}
-                    className={cn("rounded-full px-4 h-8 text-[10px] font-bold whitespace-nowrap", filter === 'ALL' ? "bg-slate-900 text-white" : "bg-white text-slate-500 border-slate-200")}
-                >
-                    Toutes
+            
+            <div className="flex items-center gap-3">
+                <Button asChild className="rounded-2xl h-12 px-6 shadow-lg shadow-primary/20 font-black">
+                    <Link href="/signaler-embouteillage">
+                        <PlusCircle className="mr-2 h-5 w-5" />
+                        Signaler
+                    </Link>
                 </Button>
-                {['BLOQUÉ', 'SATURÉ', 'RALENTI'].map((f) => (
-                    <Button 
-                        key={f}
-                        variant={filter === f ? 'default' : 'outline'} 
-                        onClick={() => setFilter(f as any)}
-                        className={cn("rounded-full px-4 h-8 text-[10px] font-bold whitespace-nowrap", filter === f ? "bg-slate-900 text-white" : "bg-white text-slate-500 border-slate-200")}
-                    >
-                        {f}
-                    </Button>
+                <Button size="icon" variant="outline" onClick={() => fetchTomTomData(true)} disabled={isRefreshing} className="rounded-2xl h-12 w-12 border-2">
+                    <RefreshCw className={cn("h-5 w-5 text-primary", isRefreshing && "animate-spin")} />
+                </Button>
+            </div>
+        </div>
+      </div>
+
+      {/* FILTRES & KPI */}
+      <div className="p-4 md:p-6 flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto space-y-6">
+            
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { label: 'BLOQUÉ', count: stats.blocked, icon: Ban, color: 'text-red-600', bg: 'bg-red-50' },
+                    { label: 'SATURÉ', count: stats.saturated, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
+                    { label: 'RALENTI', count: stats.slow, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+                    { label: 'FLUIDE', count: stats.fluid, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' }
+                ].map((kpi) => (
+                    <Card key={kpi.label} className={cn(
+                        "rounded-3xl border-none shadow-sm cursor-pointer transition-all active:scale-95",
+                        filter === kpi.label ? "ring-2 ring-primary bg-slate-50" : "bg-white hover:shadow-md"
+                    )} onClick={() => setFilter(filter === kpi.label ? 'ALL' : kpi.label as any)}>
+                        <CardContent className="p-4 flex justify-between items-center">
+                            <div>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
+                                <p className="text-2xl font-black text-slate-900">{kpi.count}</p>
+                            </div>
+                            <div className={cn("p-2 rounded-2xl", kpi.bg)}>
+                                <kpi.icon className={cn("h-5 w-5", kpi.color)} />
+                            </div>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
-        </div>
-      </div>
 
-      {/* LISTE DES DONNÉES */}
-      <div className="px-4 md:px-6 flex-1">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            
-            {/* VUE TABLEAU (Desktop) */}
-            <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50/50 border-b border-slate-100">
-                        <tr>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Zone / Rue</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">District / Source</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Statut</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vitesse</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Retard</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Mise à jour</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            Array.from({ length: 8 }).map((_, i) => (
-                                <tr key={i} className="animate-pulse border-b border-slate-50">
-                                    <td colSpan={6} className="px-6 py-6 h-16"><div className="h-4 bg-slate-100 rounded w-3/4"></div></td>
-                                </tr>
-                            ))
-                        ) : filteredIncidents.length > 0 ? (
-                            <AnimatePresence>
-                                {filteredIncidents.map((incident, idx) => (
-                                    <motion.tr 
-                                        key={incident.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.01 }}
-                                        className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
-                                    >
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-slate-800 text-sm">{incident.road}</span>
-                                                <span className="text-[11px] text-slate-400 font-medium line-clamp-1">{incident.description}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[10px] font-black uppercase w-fit">
-                                                    {incident.district}
-                                                </span>
-                                                <span className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase">
-                                                    {incident.source === 'tomtom' ? <Navigation className="h-2 w-2" /> : <Users className="h-2 w-2" />}
-                                                    {incident.source === 'tomtom' ? 'GPS' : 'Communauté'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <StatusBadge status={incident.status} />
-                                        </td>
-                                        <td className="px-6 py-4 min-w-[140px]">
-                                            <SpeedIndicator speed={incident.speed} freeFlow={incident.freeFlow} status={incident.status} />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <DelayText delay={incident.delay} />
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <span className="text-[11px] text-slate-400 font-semibold">{incident.updatedAt}</span>
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                            </AnimatePresence>
-                        ) : <EmptyState />}
-                    </tbody>
-                </table>
+            <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Input 
+                    placeholder="Filtrer par quartier ou avenue..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-12 h-14 bg-white border-none shadow-sm rounded-2xl font-bold text-slate-800"
+                />
             </div>
 
-            {/* VUE MOBILE */}
-            <div className="md:hidden divide-y divide-slate-100">
+            {/* LISTE DES INCIDENTS */}
+            <div className="space-y-4">
                 {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="p-4 animate-pulse space-y-3">
-                            <div className="h-4 bg-slate-100 rounded w-1/2"></div>
-                            <div className="h-3 bg-slate-50 rounded w-3/4"></div>
-                        </div>
+                        <Card key={i} className="rounded-3xl border-none animate-pulse h-24" />
                     ))
                 ) : filteredIncidents.length > 0 ? (
                     <AnimatePresence>
                         {filteredIncidents.map((incident, idx) => (
                             <motion.div 
                                 key={incident.id}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.02 }}
-                                className="p-4 space-y-3"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.05 }}
                             >
-                                <div className="flex justify-between items-start">
-                                    <div className="flex flex-col">
-                                        <span className="font-bold text-slate-800 text-sm leading-tight">{incident.road}</span>
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{incident.district}</span>
+                                <Card className="rounded-3xl border-none shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
+                                    <div className="flex">
+                                        <div className={cn(
+                                            "w-2",
+                                            incident.status === 'BLOQUÉ' ? "bg-red-600" :
+                                            incident.status === 'SATURÉ' ? "bg-orange-500" :
+                                            incident.status === 'RALENTI' ? "bg-amber-500" : "bg-emerald-500"
+                                        )} />
+                                        <CardContent className="p-5 flex-1">
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-black text-slate-900">{incident.road}</h3>
+                                                        <SourceBadge source={incident.source} />
+                                                    </div>
+                                                    <p className="text-sm text-slate-500 font-medium line-clamp-1">{incident.description}</p>
+                                                    <div className="flex items-center gap-3 mt-2">
+                                                        <span className="text-[10px] font-black uppercase text-primary/70 flex items-center gap-1">
+                                                            <MapPin className="h-3 w-3" />
+                                                            {incident.district}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                                            <Clock className="h-3 w-3" />
+                                                            {incident.updatedAt}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-6">
+                                                    <div className="text-right">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Vitesse</p>
+                                                        <p className="font-black text-slate-800">{incident.speed} <span className="text-[10px]">km/h</span></p>
+                                                    </div>
+                                                    <div className="text-right min-w-[60px]">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Retard</p>
+                                                        <p className={cn("font-black", incident.delay > 0 ? "text-red-600" : "text-emerald-600")}>
+                                                            {incident.delay > 0 ? `+${incident.delay}m` : '--'}
+                                                        </p>
+                                                    </div>
+                                                    <div className="hidden sm:block">
+                                                        <StatusIndicator status={incident.status} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
                                     </div>
-                                    <StatusBadge status={incident.status} size="sm" />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                    <SpeedIndicator speed={incident.speed} freeFlow={incident.freeFlow} status={incident.status} />
-                                    <div className="flex justify-between items-center text-[10px] font-bold">
-                                        <DelayText delay={incident.delay} />
-                                        <span className="text-slate-400 flex items-center gap-1">
-                                            <Clock className="h-2.5 w-2.5" />
-                                            {incident.updatedAt}
-                                        </span>
-                                    </div>
-                                </div>
+                                </Card>
                             </motion.div>
                         ))}
                     </AnimatePresence>
-                ) : <EmptyState />}
+                ) : (
+                    <div className="py-20 text-center text-slate-400 italic font-bold">
+                        Aucun incident trouvé avec ces critères.
+                    </div>
+                )}
             </div>
         </div>
       </div>
@@ -415,58 +347,23 @@ export default function TrafficReports() {
   );
 }
 
-const StatusBadge = ({ status, size = 'default' }: { status: TrafficStatus, size?: 'sm' | 'default' }) => (
-    <div className={cn(
-        "inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-black uppercase tracking-wider",
-        size === 'sm' ? "text-[8px]" : "text-[10px]",
-        status === 'BLOQUÉ' && "bg-red-50 text-red-600",
-        status === 'SATURÉ' && "bg-orange-50 text-orange-500",
-        status === 'RALENTI' && "bg-amber-50 text-amber-500",
-        status === 'FLUIDE' && "bg-emerald-50 text-emerald-600"
+const SourceBadge = ({ source }: { source: 'gps' | 'user' }) => (
+    <Badge variant="outline" className={cn(
+        "text-[9px] font-black uppercase px-2 py-0.5 border-none flex items-center gap-1",
+        source === 'gps' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
     )}>
-        <div className={cn(
-            "rounded-full",
-            size === 'sm' ? "w-1 h-1" : "w-1.5 h-1.5",
-            status === 'BLOQUÉ' && "bg-red-600",
-            status === 'SATURÉ' && "bg-orange-500",
-            status === 'RALENTI' && "bg-amber-500",
-            status === 'FLUIDE' && "bg-emerald-600"
-        )} />
+        {source === 'gps' ? <Navigation className="h-2.5 w-2.5" /> : <Users className="h-2.5 w-2.5" />}
+        {source === 'gps' ? 'Navigation' : 'Communauté'}
+    </Badge>
+);
+
+const StatusIndicator = ({ status }: { status: TrafficStatus }) => (
+    <div className={cn(
+        "px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider",
+        status === 'BLOQUÉ' ? "bg-red-100 text-red-700" :
+        status === 'SATURÉ' ? "bg-orange-100 text-orange-700" :
+        status === 'RALENTI' ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+    )}>
         {status}
-    </div>
-);
-
-const SpeedIndicator = ({ speed, freeFlow, status }: { speed: number, freeFlow: number, status: TrafficStatus }) => (
-    <div className="space-y-1.5">
-        <div className="flex justify-between items-baseline text-[10px] font-black">
-            <span className="text-slate-800">{speed} <span className="text-slate-400 font-bold uppercase">KM/H</span></span>
-            <span className="text-slate-300">/ {freeFlow}</span>
-        </div>
-        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-            <div 
-                className={cn(
-                    "h-full rounded-full transition-all duration-1000",
-                    status === 'BLOQUÉ' && "bg-red-600",
-                    status === 'SATURÉ' && "bg-orange-500",
-                    status === 'RALENTI' && "bg-amber-500",
-                    status === 'FLUIDE' && "bg-emerald-500"
-                )}
-                style={{ width: `${Math.min((speed / freeFlow) * 100, 100)}%` }}
-            />
-        </div>
-    </div>
-);
-
-const DelayText = ({ delay }: { delay: number }) => (
-    delay > 0 ? (
-        <span className="text-red-600 font-black text-xs md:text-sm">+{delay} min</span>
-    ) : (
-        <span className="text-slate-300 font-bold text-xs md:text-sm">--</span>
-    )
-);
-
-const EmptyState = () => (
-    <div className="py-20 text-center text-slate-400 italic font-medium text-sm">
-        Aucune donnée réelle disponible pour le moment.
     </div>
 );

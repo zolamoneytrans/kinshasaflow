@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -9,6 +10,9 @@ import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from './ui/badge';
+
+// Import de l'image personnalisée depuis le dossier src/myimages
+import echangeurBg from '@/myimages/echangeur.png';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -73,6 +77,17 @@ export default function WelcomePage() {
             <div className="absolute top-[-5%] left-[-5%] -z-10 h-[600px] w-[600px] rounded-full bg-primary/25 blur-[120px] animate-pulse"></div>
             <div className="absolute top-[20%] right-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[130px]"></div>
             <div className="absolute bottom-[-10%] left-[10%] -z-10 h-[600px] w-[600px] rounded-full bg-blue-400/20 blur-[150px]"></div>
+
+            {/* Arrière-plan personnalisé (Echangeur) placé derrière le texte principal */}
+            <div className="absolute top-[12%] left-1/2 -translate-x-1/2 -z-20 w-full max-w-5xl h-[550px] opacity-[0.07] pointer-events-none blur-[2px]">
+                <Image 
+                    src={echangeurBg} 
+                    alt="Echangeur Kinshasa Background" 
+                    fill 
+                    className="object-contain"
+                    priority
+                />
+            </div>
 
             <motion.header
                 initial={{ opacity: 0, y: -20 }}

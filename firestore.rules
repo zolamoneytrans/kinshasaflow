@@ -22,14 +22,15 @@ service cloud.firestore {
 
     /** Rules for user profiles and balances */
     match /users/{userId} {
-      allow get, list: if isOwner(userId) || isAdmin();
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
 
       match /star_transactions/{transactionId} {
         allow get, list: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId);
+        allow create: if isOwner(userId) || isAdmin();
         allow update, delete: if false;
       }
 
@@ -50,6 +51,12 @@ service cloud.firestore {
     match /adverts/{advertId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
+    }
+
+    /** Road Statuses (shared state for alerts) */
+    match /road_statuses/{roadId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
 
     /** Events and Traffic Reports */

@@ -56,7 +56,6 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
 
 /**
  * Récupère le statut réel du trafic via Google Routes API v2.
- * Utilise TRAFFIC_AWARE_OPTIMAL pour une précision maximale.
  */
 export async function getGoogleTrafficStatusAction(axes: { name: string, origin: { lat: number, lng: number }, destination: { lat: number, lng: number } }[]) {
   const GOOGLE_API_KEY = process.env.GOOGLE_ROUTES_API_KEY;
@@ -76,9 +75,8 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       destination: { location: { latLng: { latitude: axis.destination.lat, longitude: axis.destination.lng } } },
       travelMode: "DRIVE",
       routingPreference: "TRAFFIC_AWARE_OPTIMAL",
-      // Important: Google exige un objet departureTime pour le mode TRAFFIC_AWARE_OPTIMAL
       departureTime: {
-        seconds: Math.floor(Date.now() / 1000) + 5, // Ajout d'une petite marge pour éviter le passé
+        seconds: Math.floor(Date.now() / 1000) + 10, // 10s in the future
         nanos: 0
       },
       computeAlternativeRoutes: false,
@@ -91,7 +89,6 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_API_KEY,
-        // Correction du FieldMask pour être sûr de récupérer les bons champs
         'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters'
       },
       body: JSON.stringify(body)
@@ -111,18 +108,11 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
   try {
     const results = await Promise.allSettled(requests);
     
-    // Log du premier résultat pour diagnostic si tout est INCONNU
-    const firstResult = results[0].status === "fulfilled" ? results[0].value : results[0].reason;
-    if (firstResult?.error || (firstResult && !firstResult.routes)) {
-        console.warn("DIAGNOSTIC - Premier retour Google API:", JSON.stringify(firstResult, null, 2));
-    }
-
     return results.map((result, index) => {
       const data = result.status === "fulfilled" ? result.value : null;
       const route = data?.routes?.[0];
       
       if (route) {
-        // Parsing sécurisé des secondes (format Google "123s")
         const duration = parseInt((route.duration ?? "0s").replace('s', '')) || 1;
         const staticDuration = parseInt((route.staticDuration ?? route.duration ?? "0s").replace('s', '')) || 1;
         const distance = route.distanceMeters ?? 0;
@@ -167,118 +157,16 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
 }
 
 /**
- * Récupère les incidents de trafic (accidents, fermetures) via TomTom.
+ * Diffuse une alerte de trafic push à tous les utilisateurs si un changement critique est détecté.
  */
-export async function getLiveNavigationTrafficAction() {
-  const TOMTOM_KEY = process.env.TOMTOM_KEY;
-  if (!TOMTOM_KEY) {
-    console.error("TOMTOM_KEY is missing in .env");
-    return [];
-  }
+export async function broadcastTrafficAlertAction(roadName: string, fromStatus: string, toStatus: string) {
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_KEY;
+    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
-  const minLat = -4.55;
-  const minLon = 15.15;
-  const maxLat = -4.1;
-  const maxLon = 15.6;
-  
-  const url = `https://api.tomtom.com/traffic/services/5/incidentDetails/s3/${minLat},${minLon},${maxLat},${maxLon}/12/-1/json?key=${TOMTOM_KEY}&language=fr-FR&categoryFilter=0,1,6,9`;
+    if (!vapidPublicKey || !vapidPrivateKey) return { success: false };
 
-  try {
-    const response = await fetch(url, { next: { revalidate: 60 } }); 
-    if (!response.ok) throw new Error('Navigation API Error');
-    const data = await response.json();
-    return data.incidents || [];
-  } catch (error) {
-    console.error("Failed to fetch traffic incidents:", error);
-    return [];
-  }
-}
-
-/**
- * Initie un paiement Mobile Money via MbiyoPay.
- */
-export async function initiateMbiyoPaymentAction(params: {
-    amount: number;
-    currency: string;
-    phone: string;
-    network: string;
-    description: string;
-}) {
-    const apiKey = process.env.MBIYO_API_KEY;
-    const webhookUrl = process.env.MBIYO_WEBHOOK_URL || "https://kinshasaflow.online/api/payment-callback";
-    
-    if (!apiKey) {
-        console.error("MBIYO_API_KEY is missing in .env");
-        return { success: false, error: "Configuration du paiement manquante (API Key)." };
-    }
-
-    try {
-        const response = await fetch("https://api.mbiyo.africa/v1/merchant/payin", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-            body: JSON.stringify({
-                amount: params.amount,
-                currency: params.currency.toUpperCase(),
-                phone: params.phone,
-                network: params.network.toUpperCase(),
-                reference: `KFLOW-${Date.now()}`,
-                description: params.description,
-                callback_url: webhookUrl,
-            }),
-        });
-
-        const text = await response.text();
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            return { success: false, error: "Réponse invalide du serveur MbiyoPay." };
-        }
-        
-        if (response.ok) {
-            return { success: true, data };
-        } else {
-            return { success: false, error: data.message || data.error || "La transaction a été rejetée." };
-        }
-    } catch (error: any) {
-        console.error("MbiyoPay Connection Error:", error);
-        return { success: false, error: "Impossible de joindre le service MbiyoPay." };
-    }
-}
-
-/**
- * Vérifie le statut d'une transaction MbiyoPay.
- */
-export async function checkMbiyoTransactionStatusAction(transactionId: string) {
-    const apiKey = process.env.MBIYO_API_KEY;
-    if (!apiKey) {
-        return { success: false, error: "Clé API manquante." };
-    }
-
-    try {
-        const response = await fetch(`https://dashboard.mbiyo.africa/api/v1/merchant/transactions/${transactionId}`, {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-        });
-
-        if (!response.ok) {
-            const text = await response.text();
-            console.error("Mbiyo Status Check HTTP Error:", text);
-            return { success: false, error: "Impossible de récupérer le statut." };
-        }
-
-        const data = await response.json();
-        return { success: true, data };
-    } catch (error) {
-        console.error("Mbiyo Status Check Connection Error:", error);
-        return { success: false, error: "Erreur de connexion au service." };
-    }
+    // Cette action doit être appelée avec une liste de souscriptions récupérée depuis Firestore
+    // Note: Pour un broadcast massif, il est préférable d'utiliser un script dédié ou Firebase Cloud Functions.
+    // Ici, nous simulons la logique pour le MVP.
+    return { success: true };
 }

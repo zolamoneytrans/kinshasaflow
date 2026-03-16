@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2 } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -27,7 +28,12 @@ import { UserProfile } from '@/lib/types';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
   const router = useRouter();
+
+  // Watch blocking status
+  const profileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  const { data: profile } = useDoc<UserProfile>(profileRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -39,6 +45,27 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Blocking overlay
+  if (profile?.isBlocked) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 text-center">
+        <div className="max-w-md space-y-6">
+          <div className="bg-destructive/10 p-6 rounded-full w-24 h-24 flex items-center justify-center mx-auto">
+            <ShieldAlert className="h-12 w-12 text-destructive" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-3xl font-black tracking-tight">Compte Suspendu</h2>
+            <p className="text-muted-foreground">Votre accès à Kinshasa Flow a été restreint par l'administration suite à un non-respect des conditions d'utilisation.</p>
+          </div>
+          <div className="p-4 bg-muted rounded-xl text-xs font-medium text-muted-foreground italic">
+            Pour toute contestation, veuillez contacter le support à drnduwa@gmail.com
+          </div>
+          <Link href="/contact" className="inline-block text-primary font-bold hover:underline">Nous contacter</Link>
+        </div>
       </div>
     );
   }
@@ -116,13 +143,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/mes-stars') return 'Mes Stars';
     if (pathname === '/login') return 'Se connecter';
     if (pathname === '/signup') return "S'inscrire";
+    if (pathname === '/admin/stars') return 'Admin Stars';
     if (pathname === '/admin/transport') return 'Admin Transport';
     if (pathname === '/admin/logement') return 'Admin Logement';
     if (pathname === '/admin/messages') return 'Messages';
     if (pathname === '/admin/car-rental') return 'Admin Location';
     if (pathname === '/admin/adverts') return 'Admin Publicités';
     if (pathname === '/admin/test-push') return 'Test Notifications';
-    if (pathname.startsWith('/admin')) return 'Tableau de Bord Admin';
     return 'Kinshasa Flow';
   }
 
@@ -143,14 +170,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/assistant') return 'Posez des questions sur les itinéraires à Kinshasa.';
     if (pathname === '/map') return 'Visualisez le trafic en temps réel à Kinshasa.';
     if (pathname === '/mes-stars') return 'Gérez votre solde de stars et monétisez votre usage.';
-    if (pathname === '/login') return 'Accédez à votre compte pour contribuer.';
-    if (pathname === '/signup') return 'Créez un compte pour commencer à signaler des incidents.';
-    if (pathname === '/admin/transport') return 'Gérer les abonnements au transport.';
-    if (pathname === '/admin/logement') return 'Gérer les candidatures pour les logements.';
-    if (pathname === '/admin/messages') return 'Consulter les messages des utilisateurs.';
-    if (pathname === '/admin/car-rental') return 'Gérer les réservations de véhicules.';
-    if (pathname === '/admin/adverts') return 'Gérer les publicités vidéo.';
-    if (pathname === '/admin/test-push') return 'Envoyer une notification de test.';
+    if (pathname === '/admin/stars') return 'Gérer les comptes utilisateurs et les stars.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -216,7 +236,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}} className="bg-primary/10 hover:bg-primary/20 mt-2 border border-primary/20">
                   <Link href="/signaler-embouteillage" className="font-bold text-primary-foreground">
-                    <PlusCircle className="text-accent animate-pulse" />
+                    <PlusCircle className={pathname === '/signaler-embouteillage' ? "text-accent" : "text-primary"} />
                     <span>Signaler</span>
                   </Link>
                 </SidebarMenuButton>
@@ -319,6 +339,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {isAdmin && (
                 <>
                   <SidebarSeparator className="my-4 bg-sidebar-border/30" />
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} tooltip={{children: "Gestion Users/Stars"}} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/stars" className="font-medium">
+                        <Users className="text-destructive" />
+                        <span>Admin Stars</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} tooltip={{children: "Admin Transport"}} className="hover:bg-sidebar-accent">
                       <Link href="/admin/transport" className="font-medium">

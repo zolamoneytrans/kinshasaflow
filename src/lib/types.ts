@@ -2,6 +2,16 @@
 import { z } from "zod";
 import { Timestamp } from "firebase/firestore";
 
+// Star Costs Constants
+export const STAR_COSTS = {
+  AI_MESSAGE: 5,
+  MAP_VIEW: 3,
+  ROAD_VERIFY: 1,
+  ROUTE_PLAN: 4,
+  ALERTS_DAILY: 2,
+  EXPORT_REPORT: 10,
+} as const;
+
 // User profile extension for Stars System
 export const userProfileSchema = z.object({
   id: z.string(),

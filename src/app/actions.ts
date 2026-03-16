@@ -79,7 +79,6 @@ export async function getTomTomTrafficIncidents() {
 
 /**
  * Initie un paiement Mobile Money via MbiyoPay.
- * Supporte M-Pesa, Airtel Money et Orange Money.
  */
 export async function initiateMbiyoPaymentAction(params: {
     amount: number;
@@ -88,12 +87,15 @@ export async function initiateMbiyoPaymentAction(params: {
     description: string;
 }) {
     const apiKey = process.env.MBIYO_API_KEY;
-    if (!apiKey) {
-        console.error("MBIYO_API_KEY is missing in .env");
-        return { success: false, error: "Configuration API manquante sur le serveur." };
+    
+    if (!apiKey || apiKey.includes("REMPLACEZ_MOI")) {
+        console.error("MBIYO_API_KEY is invalid or missing in .env");
+        return { success: false, error: "La clé API MbiyoPay n'est pas configurée dans le fichier .env." };
     }
 
     try {
+        console.log(`Initiating MbiyoPay request for ${params.phone} (${params.network}) - Amount: ${params.amount}`);
+        
         const response = await fetch("https://api.mbiyo.africa/v1/merchant/payin", {
             method: "POST",
             headers: {
@@ -102,7 +104,7 @@ export async function initiateMbiyoPaymentAction(params: {
                 "Accept": "application/json",
             },
             body: JSON.stringify({
-                amount: params.amount,
+                amount: Math.round(params.amount),
                 currency: "CDF",
                 phone: params.phone,
                 network: params.network.toUpperCase(),
@@ -112,16 +114,23 @@ export async function initiateMbiyoPaymentAction(params: {
             }),
         });
 
-        const data = await response.json();
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error("MbiyoPay non-JSON response:", text);
+            return { success: false, error: "Réponse invalide du serveur de paiement." };
+        }
         
         if (response.ok) {
             return { success: true, data };
         } else {
             console.error("MbiyoPay API Rejection:", data);
-            return { success: false, error: data.message || "La transaction a été rejetée par l'opérateur." };
+            return { success: false, error: data.message || "La transaction a été rejetée par MbiyoPay." };
         }
     } catch (error: any) {
-        console.error("Network Error with MbiyoPay:", error);
-        return { success: false, error: "Impossible de contacter le service de paiement. Vérifiez votre connexion." };
+        console.error("MbiyoPay Fetch Error:", error);
+        return { success: false, error: `Erreur de connexion : ${error.message || "Le service MbiyoPay est injoignable."}` };
     }
 }

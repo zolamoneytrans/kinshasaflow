@@ -23,6 +23,7 @@ import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { EventReport } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 type TrafficStatus = 'BLOQUÉ' | 'SATURÉ' | 'RALENTI' | 'FLUIDE';
 
@@ -78,6 +79,7 @@ export default function TrafficReports() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filter, setFilter] = useState<TrafficStatus | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const { firestore } = useFirebase();
 
@@ -93,6 +95,7 @@ export default function TrafficReports() {
     
     try {
       const data = await getTomTomTrafficIncidents();
+      setLastUpdated(new Date());
       
       const analyzedAxes: Incident[] = MAJOR_AXES.map((axis, idx) => ({
         id: `axis-${idx}`,
@@ -149,7 +152,6 @@ export default function TrafficReports() {
   }, []);
 
   const allIncidents = useMemo(() => {
-    // Filtrage strict pour supprimer les exemples de test ("example", "test")
     const formattedUserReports: Incident[] = (userReports || [])
         .filter(rep => {
             const loc = rep.location?.toLowerCase() || "";
@@ -203,10 +205,18 @@ export default function TrafficReports() {
                 Analyse du trafic
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] md:text-xs">Direct</Badge>
             </h1>
-            <p className="text-xs md:text-sm text-slate-500 font-semibold flex items-center gap-2">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-                Données réelles Kinshasa
-            </p>
+            <div className="flex flex-col gap-1 mt-1">
+                <p className="text-xs md:text-sm text-slate-500 font-semibold flex items-center gap-2">
+                    <span className="w-2 h-2 bg-emerald-500 rounded-full" />
+                    Données réelles Kinshasa
+                </p>
+                {lastUpdated && (
+                    <p className="text-[10px] font-bold text-primary uppercase flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Synchro Google Navigation : {format(lastUpdated, 'HH:mm:ss')}
+                    </p>
+                )}
+            </div>
         </div>
         
         <div className="flex items-center gap-2">

@@ -63,8 +63,10 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
   
   if (!GOOGLE_API_KEY) {
     console.error("GOOGLE_ROUTES_API_KEY is missing in .env");
-    return axes.map(a => ({ road: a.name, status: "FLUIDE" as const, speed: 40, delay: 0 }));
+    return axes.map(a => ({ road: a.name, status: "INCONNU" as const, speed: 0, delay: 0 }));
   }
+
+  if (!axes?.length) return [];
 
   const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
   
@@ -74,9 +76,12 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       destination: { location: { latLng: { latitude: axis.destination.lat, longitude: axis.destination.lng } } },
       travelMode: "DRIVE",
       routingPreference: "TRAFFIC_AWARE_OPTIMAL",
-      departureTime: new Date().toISOString(),
+      // Format Protobuf Timestamp requis par l'API v2
+      departureTime: {
+        seconds: Math.floor(Date.now() / 1000),
+        nanos: 0
+      },
       computeAlternativeRoutes: false,
-      routeModifiers: { avoidTolls: false, avoidHighways: false, avoidFerries: false },
       languageCode: "fr-FR",
       units: "METRIC"
     };
@@ -89,13 +94,24 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
         'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters'
       },
       body: JSON.stringify(body)
-    }).then(res => res.json());
+    }).then(async res => {
+        if (!res.ok) {
+            const err = await res.text();
+            throw new Error(err);
+        }
+        return res.json();
+    }).catch(err => {
+        console.error(`Fetch error for ${axis.name}:`, err);
+        return null;
+    });
   });
 
   try {
-    const results = await Promise.all(requests);
-    return results.map((data, index) => {
-      const route = data.routes?.[0];
+    const results = await Promise.allSettled(requests);
+    return results.map((result, index) => {
+      const data = result.status === "fulfilled" ? result.value : null;
+      const route = data?.routes?.[0];
+      
       if (route) {
         // Parsing sécurisé des durées (format "120s")
         const duration = parseInt((route.duration ?? "0s").replace('s', ''));
@@ -108,22 +124,22 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
         // Calcul vitesse en km/h avec garde-fous
         const speedKmh = duration > 0 && distance > 0
           ? Math.round((distance / 1000) / (duration / 3600))
-          : 40;
+          : 0;
 
         /**
          * Logique de classification optimisée :
-         * 🔴 EMBOUTEILLAGE : Vitesse < 10 km/h OR retard > 10 min
-         * 🟠 DENSE : Vitesse 10–20 km/h AND retard >= 5 min
-         * 🟡 MODÉRÉ : Vitesse 20–35 km/h AND retard >= 2 min
-         * 🟢 FLUIDE : Par défaut
+         * Utilisation de OU (||) pour capturer les ralentissements même sur de courts segments
+         * où le retard en minutes peut paraître faible mais la vitesse est critique.
          */
-        let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" = "FLUIDE";
+        let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" | "INCONNU" = "FLUIDE";
         
-        if (speedKmh < 10 || delayMinutes > 10) {
+        if (speedKmh === 0 && distance > 0) {
+            status = "INCONNU";
+        } else if (speedKmh < 10 || delayMinutes > 10) {
           status = "EMBOUTEILLAGE";
-        } else if (speedKmh <= 20 && delayMinutes >= 5) {
+        } else if (speedKmh <= 20 || delayMinutes >= 5) {
           status = "DENSE";
-        } else if (speedKmh <= 35 && delayMinutes >= 2) {
+        } else if (speedKmh <= 35 || delayMinutes >= 2) {
           status = "MODÉRÉ";
         } else {
           status = "FLUIDE";
@@ -139,11 +155,11 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
           status
         };
       }
-      return { road: axes[index].name, status: "FLUIDE" as const, speed: 40, delay: 0 };
+      return { road: axes[index].name, status: "INCONNU" as const, speed: 0, delay: 0 };
     });
   } catch (error) {
     console.error("Google Routes API Error:", error);
-    return axes.map(a => ({ road: a.name, status: "FLUIDE" as const, speed: 40, delay: 0 }));
+    return axes.map(a => ({ road: a.name, status: "INCONNU" as const, speed: 0, delay: 0 }));
   }
 }
 

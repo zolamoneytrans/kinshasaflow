@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -14,7 +15,8 @@ import {
   Navigation,
   Users,
   PlusCircle,
-  MapPin
+  MapPin,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-type TrafficStatus = 'EMBOUTEILLAGE' | 'DENSE' | 'MODÉRÉ' | 'FLUIDE';
+type TrafficStatus = 'EMBOUTEILLAGE' | 'DENSE' | 'MODÉRÉ' | 'FLUIDE' | 'INCONNU';
 
 interface Incident {
   id: string;
@@ -41,7 +43,6 @@ interface Incident {
   coords?: { lat: number, lng: number };
 }
 
-// Axes avec points de départ et d'arrivée pour obtenir des données de trafic fiables (segments > 2km)
 const MAJOR_AXES = [
   { name: "Boulevard du 30 Juin", district: "Gombe", origin: { lat: -4.303, lng: 15.315 }, destination: { lat: -4.315, lng: 15.285 } },
   { name: "Boulevard Lumumba", district: "Limete/Masina", origin: { lat: -4.382, lng: 15.362 }, destination: { lat: -4.410, lng: 15.410 } },
@@ -94,7 +95,9 @@ export default function TrafficReports() {
         return {
           id: `google-${idx}`,
           road: res.road,
-          description: res.status === "FLUIDE" ? "Circulation fluide (Données GPS)" : `Retard estimé de ${res.delay} min sur ce segment`,
+          description: res.status === "FLUIDE" ? "Circulation fluide (Données GPS)" : 
+                       res.status === "INCONNU" ? "Données de trafic indisponibles pour ce segment" :
+                       `Retard estimé de ${res.delay} min sur ce segment`,
           district: axis.district,
           status: res.status as TrafficStatus,
           speed: res.speed,
@@ -150,7 +153,7 @@ export default function TrafficReports() {
         result = result.filter(i => i.road.toLowerCase().includes(q) || i.district.toLowerCase().includes(q));
     }
     return result.sort((a, b) => {
-        const priority = { 'EMBOUTEILLAGE': 0, 'DENSE': 1, 'MODÉRÉ': 2, 'FLUIDE': 3 };
+        const priority = { 'EMBOUTEILLAGE': 0, 'DENSE': 1, 'MODÉRÉ': 2, 'FLUIDE': 3, 'INCONNU': 4 };
         return priority[a.status] - priority[b.status];
     });
   }, [allIncidents, filter, searchQuery]);
@@ -168,12 +171,12 @@ export default function TrafficReports() {
                 <div className="flex flex-col gap-1 mt-1">
                     <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
                         <Navigation className="h-3 w-3 text-primary" />
-                        Google Routes API v2 (Synchronisation TRAFFIC_AWARE)
+                        Google Routes API v2 (Précision Satellite)
                     </p>
                     {lastUpdated && (
                         <p className="text-[10px] font-black text-primary uppercase flex items-center gap-1.5">
                             <Clock className="h-3 w-3" />
-                            Dernière mise à jour : {format(lastUpdated, 'HH:mm:ss')}
+                            Requête API à : {format(lastUpdated, 'HH:mm:ss')}
                         </p>
                     )}
                 </div>
@@ -250,7 +253,8 @@ export default function TrafficReports() {
                                             "w-2",
                                             incident.status === 'EMBOUTEILLAGE' ? "bg-red-600" :
                                             incident.status === 'DENSE' ? "bg-orange-500" :
-                                            incident.status === 'MODÉRÉ' ? "bg-amber-500" : "bg-emerald-500"
+                                            incident.status === 'MODÉRÉ' ? "bg-amber-500" :
+                                            incident.status === 'FLUIDE' ? "bg-emerald-500" : "bg-slate-300"
                                         )} />
                                         <CardContent className="p-5 flex-1">
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -275,12 +279,15 @@ export default function TrafficReports() {
                                                 <div className="flex items-center gap-6 shrink-0">
                                                     <div className="text-right">
                                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Vitesse</p>
-                                                        <p className="font-black text-slate-800">{incident.speed} <span className="text-[10px]">km/h</span></p>
+                                                        <p className="font-black text-slate-800">
+                                                            {incident.status === 'INCONNU' ? '--' : incident.speed} 
+                                                            <span className="text-[10px] ml-0.5">km/h</span>
+                                                        </p>
                                                     </div>
                                                     <div className="text-right min-w-[60px]">
                                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Retard</p>
                                                         <p className={cn("font-black", incident.delay > 0 ? "text-red-600" : "text-emerald-600")}>
-                                                            {incident.delay > 0 ? `+${incident.delay}m` : '--'}
+                                                            {incident.status === 'INCONNU' ? '--' : (incident.delay > 0 ? `+${incident.delay}m` : '--')}
                                                         </p>
                                                     </div>
                                                     
@@ -333,10 +340,12 @@ const StatusIndicator = ({ status }: { status: TrafficStatus }) => (
         "px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider hidden sm:flex items-center justify-center min-w-[100px]",
         status === 'EMBOUTEILLAGE' ? "bg-red-100 text-red-700" :
         status === 'DENSE' ? "bg-orange-100 text-orange-700" :
-        status === 'MODÉRÉ' ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+        status === 'MODÉRÉ' ? "bg-amber-100 text-amber-700" :
+        status === 'FLUIDE' ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
     )}>
         {status === 'EMBOUTEILLAGE' ? '🔴 BLOQUÉ' : 
          status === 'DENSE' ? '🟠 DENSE' : 
-         status === 'MODÉRÉ' ? '🟡 MODÉRÉ' : '🟢 FLUIDE'}
+         status === 'MODÉRÉ' ? '🟡 MODÉRÉ' : 
+         status === 'FLUIDE' ? '🟢 FLUIDE' : '⚪ INCONNU'}
     </div>
 );

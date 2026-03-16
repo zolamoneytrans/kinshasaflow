@@ -175,7 +175,8 @@ export default function WelcomePage() {
                                 src={heroImage.imageUrl} 
                                 alt={heroImage.description} 
                                 fill 
-                                className="object-cover scale-100 hover:scale-110 transition-transform duration-[10000ms]"
+                                className="object-cover scale-100 hover:scale-110 transition-transform"
+                                style={{ transitionDuration: '10000ms' }}
                                 priority
                                 data-ai-hint={heroImage.imageHint}
                             />

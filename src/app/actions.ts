@@ -1,4 +1,3 @@
-
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -157,6 +156,47 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
 }
 
 /**
+ * Initialise un paiement via MbiyoPay.
+ */
+export async function initiateMbiyoPaymentAction(data: {
+    amount: number;
+    currency: string;
+    phone: string;
+    network: string;
+    description: string;
+}) {
+    // Note: Dans un environnement réel, ceci appellerait l'API MbiyoPay.
+    // Ici, nous simulons une réponse positive pour le MVP.
+    console.log("Initiating MbiyoPay Payment:", data);
+    
+    // Simuler un ID de transaction unique
+    const mockTransactionId = `mbiyo_${Math.random().toString(36).substr(2, 9)}`;
+    
+    return {
+        success: true,
+        data: {
+            id: mockTransactionId,
+            status: 'pending'
+        }
+    };
+}
+
+/**
+ * Vérifie le statut d'une transaction MbiyoPay.
+ */
+export async function checkMbiyoTransactionStatusAction(transactionId: string) {
+    console.log("Checking MbiyoPay Transaction Status:", transactionId);
+    
+    // Simulation : 80% de chances que le statut soit encore 'pending' ou passe en 'success'
+    return {
+        success: true,
+        data: {
+            status: Math.random() > 0.5 ? 'success' : 'pending'
+        }
+    };
+}
+
+/**
  * Diffuse une alerte de trafic push à tous les utilisateurs si un changement critique est détecté.
  */
 export async function broadcastTrafficAlertAction(roadName: string, fromStatus: string, toStatus: string) {
@@ -167,6 +207,5 @@ export async function broadcastTrafficAlertAction(roadName: string, fromStatus: 
 
     // Cette action doit être appelée avec une liste de souscriptions récupérée depuis Firestore
     // Note: Pour un broadcast massif, il est préférable d'utiliser un script dédié ou Firebase Cloud Functions.
-    // Ici, nous simulons la logique pour le MVP.
     return { success: true };
 }

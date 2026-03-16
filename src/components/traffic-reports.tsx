@@ -16,17 +16,19 @@ import {
   Users,
   PlusCircle,
   MapPin,
-  HelpCircle
+  HelpCircle,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getGoogleTrafficStatusAction } from '@/app/actions';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { EventReport } from '@/lib/types';
+import { useCollection, useFirebase, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, limit, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { EventReport, UserProfile, STAR_COSTS } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 type TrafficStatus = 'EMBOUTEILLAGE' | 'DENSE' | 'MODÉRÉ' | 'FLUIDE' | 'INCONNU';
 
@@ -44,37 +46,26 @@ interface Incident {
   destCoords?: { lat: number, lng: number };
 }
 
-/**
- * Liste des axes majeurs de Kinshasa organisée par importance stratégique.
- * Coordonnées optimisées pour des segments de 2-10km afin de garantir la fiabilité du trafic Google.
- */
 const MAJOR_AXES = [
-  // CBD & TRANSIT
-  { name: "Boulevard du 30 Juin", district: "Gombe", origin: { lat: -4.303, lng: 15.315 }, destination: { lat: -4.325, lng: 15.275 } },
+  { name: "Boulevard du 30 Juin", district: "Gombe", origin: { lat: -4.3050, lng: 15.3136 }, destination: { lat: -4.3176, lng: 15.2950 } },
+  { name: "Échangeur de Limete", district: "Limete", origin: { lat: -4.3380, lng: 15.3620 }, destination: { lat: -4.3600, lng: 15.3850 } },
   { name: "Boulevard Lumumba (Est)", district: "Limete/Masina", origin: { lat: -4.360, lng: 15.365 }, destination: { lat: -4.400, lng: 15.440 } },
   { name: "Boulevard Lumumba (N'djili)", district: "N'djili/Masina", origin: { lat: -4.400, lng: 15.440 }, destination: { lat: -4.430, lng: 15.500 } },
   { name: "Avenue Kasa-Vubu", district: "Kalamu/Gombe", origin: { lat: -4.310, lng: 15.310 }, destination: { lat: -4.355, lng: 15.315 } },
-  
-  // NORD & OUEST
-  { name: "Route de Matadi (Ouest)", district: "Ngaliema", origin: { lat: -4.328, lng: 15.275 }, destination: { lat: -4.385, lng: 15.265 } },
+  { name: "Route de Matadi (N1)", district: "Ngaliema", origin: { lat: -4.328, lng: 15.275 }, destination: { lat: -4.385, lng: 15.265 } },
+  { name: "Avenue By-Pass", district: "Lemba/Ngaba", origin: { lat: -4.455, lng: 15.335 }, destination: { lat: -4.410, lng: 15.315 } },
+  { name: "Route Mokali", district: "Kimbanseke/Masina", origin: { lat: -4.415, lng: 15.412 }, destination: { lat: -4.385, lng: 15.365 } },
   { name: "Avenue Mondjiba", district: "Ngaliema", origin: { lat: -4.315, lng: 15.285 }, destination: { lat: -4.350, lng: 15.260 } },
   { name: "Avenue Nguma", district: "Ngaliema", origin: { lat: -4.328, lng: 15.275 }, destination: { lat: -4.355, lng: 15.265 } },
   { name: "Avenue du Tourisme", district: "Ngaliema/Binza", origin: { lat: -4.345, lng: 15.235 }, destination: { lat: -4.328, lng: 15.275 } },
-  
-  // CENTRE & SUD
-  { name: "Avenue de la Libération (24/11)", district: "Lingwala/Gombe", origin: { lat: -4.305, lng: 15.300 }, destination: { lat: -4.335, lng: 15.305 } },
+  { name: "Avenue de la Libération", district: "Lingwala/Gombe", origin: { lat: -4.305, lng: 15.300 }, destination: { lat: -4.335, lng: 15.305 } },
   { name: "Avenue des Huileries", district: "Gombe/Lingwala", origin: { lat: -4.305, lng: 15.310 }, destination: { lat: -4.335, lng: 15.305 } },
   { name: "Avenue de l'Université", district: "Kalamu/UNIKIN", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.415, lng: 15.315 } },
-  { name: "Avenue By-Pass (Sud)", district: "Lemba/Ngaba", origin: { lat: -4.455, lng: 15.335 }, destination: { lat: -4.410, lng: 15.315 } },
-  
-  // NOUVEAUX AXES & PERIPHERIE
-  { name: "Avenue Elengesa (Nouveau)", district: "Makala/Selembao", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.430, lng: 15.310 } },
-  { name: "Route Mokali", district: "Kimbanseke/Masina", origin: { lat: -4.415, lng: 15.412 }, destination: { lat: -4.385, lng: 15.365 } },
+  { name: "Avenue Elengesa", district: "Makala/Selembao", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.430, lng: 15.310 } },
   { name: "Avenue des Poids Lourds", district: "Limete Industriel", origin: { lat: -4.303, lng: 15.315 }, destination: { lat: -4.335, lng: 15.345 } },
   { name: "Boulevard Triomphal", district: "Kasa-Vubu", origin: { lat: -4.335, lng: 15.305 }, destination: { lat: -4.330, lng: 15.320 } },
   { name: "Avenue Kimwenza", district: "Kalamu/Yolo", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.410, lng: 15.330 } },
   { name: "Avenue Landu", district: "Selembao/Ngaba", origin: { lat: -4.385, lng: 15.285 }, destination: { lat: -4.342, lng: 15.305 } },
-  { name: "Avenue Bokassa", district: "Barumbu/Gombe", origin: { lat: -4.305, lng: 15.310 }, destination: { lat: -4.325, lng: 15.315 } },
   { name: "Avenue Victoire", district: "Kalamu", origin: { lat: -4.342, lng: 15.315 }, destination: { lat: -4.340, lng: 15.295 } },
 ];
 
@@ -86,7 +77,11 @@ export default function TrafficReports() {
   const [searchQuery, setSearchQuery] = useState('');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
+  const { toast } = useToast();
+
+  const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  const { data: profile } = useDoc<UserProfile>(userRef);
 
   const userReportsQuery = useMemoFirebase(() => {
     return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(30));
@@ -108,7 +103,7 @@ export default function TrafficReports() {
           id: `google-${idx}`,
           road: res.road,
           description: res.status === "FLUIDE" ? "Circulation fluide (Données GPS)" : 
-                       res.status === "INCONNU" ? "Données de trafic indisponibles (Vérifiez la clé API)" :
+                       res.status === "INCONNU" ? "Données de trafic indisponibles" :
                        `Retard estimé de ${res.delay} min sur ce segment`,
           district: axis.district,
           status: res.status as TrafficStatus,
@@ -130,13 +125,56 @@ export default function TrafficReports() {
     }
   }, []);
 
+  const handleManualRefresh = async () => {
+    if (!user || !profile) {
+        toast({ title: "Connexion requise", description: "Veuillez vous connecter pour rafraîchir les données.", variant: "destructive" });
+        return;
+    }
+
+    if (profile.currentStarsBalance < 1) {
+        toast({ 
+            title: "Solde insuffisant", 
+            description: "Le rafraîchissement des données coûte 1 star.", 
+            variant: "destructive",
+            action: <Button asChild variant="outline" size="sm"><Link href="/mes-stars">Boutique</Link></Button>
+        });
+        return;
+    }
+
+    setIsRefreshing(true);
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const userDoc = await transaction.get(userRef!);
+            const data = userDoc.data() as UserProfile;
+            const newBalance = data.currentStarsBalance - 1;
+            
+            transaction.update(userRef!, {
+                currentStarsBalance: newBalance,
+                totalStarsUsed: (data.totalStarsUsed || 0) + 1
+            });
+
+            const starTransRef = doc(collection(userRef!, 'star_transactions'));
+            transaction.set(starTransRef, {
+                userId: user.uid,
+                type: 'spent',
+                starsChange: -1,
+                balanceAfterTransaction: newBalance,
+                description: "Rafraîchissement des Rapports de Navigation",
+                timestamp: serverTimestamp(),
+            });
+        });
+
+        await fetchTrafficData(true);
+        toast({ title: "Données actualisées !", description: "1 star a été déduite pour cette mise à jour." });
+    } catch (e) {
+        toast({ title: "Erreur", description: "Impossible de traiter la demande.", variant: "destructive" });
+    } finally {
+        setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     fetchTrafficData();
-    const interval = setInterval(() => {
-      fetchTrafficData(true);
-    }, 60000);
-
-    return () => clearInterval(interval);
   }, [fetchTrafficData]);
 
   const allIncidents = useMemo(() => {
@@ -188,31 +226,37 @@ export default function TrafficReports() {
             <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                     Rapports Navigation
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse">DIRECT</Badge>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">LIVE</Badge>
                 </h1>
                 <div className="flex flex-col gap-1 mt-1">
-                    <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
-                        <Navigation className="h-3 w-3 text-primary" />
-                        Google Routes API v2 (Segments de 2-10km)
-                    </p>
                     {lastUpdated && (
                         <p className="text-[10px] font-black text-primary uppercase flex items-center gap-1.5">
                             <Clock className="h-3 w-3" />
-                            Synchronisation : {format(lastUpdated, 'HH:mm:ss')}
+                            Dernière synchronisation : {format(lastUpdated, 'HH:mm:ss')}
                         </p>
                     )}
                 </div>
             </div>
             
             <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-100 shadow-sm mr-2">
+                    <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                    <span className="text-sm font-black text-amber-700">{profile?.currentStarsBalance || 0}</span>
+                </div>
                 <Button asChild className="rounded-2xl h-12 px-6 shadow-lg shadow-primary/20 font-black">
                     <Link href="/signaler-embouteillage">
                         <PlusCircle className="mr-2 h-5 w-5" />
                         Signaler
                     </Link>
                 </Button>
-                <Button size="icon" variant="outline" onClick={() => fetchTrafficData(true)} disabled={isRefreshing} className="rounded-2xl h-12 w-12 border-2">
+                <Button 
+                    variant="outline" 
+                    onClick={handleManualRefresh} 
+                    disabled={isRefreshing} 
+                    className="rounded-2xl h-12 px-4 border-2 flex items-center gap-2 font-bold"
+                >
                     <RefreshCw className={cn("h-5 w-5 text-primary", isRefreshing && "animate-spin")} />
+                    <span className="hidden sm:inline">Rafraîchir (-1 ⭐)</span>
                 </Button>
             </div>
         </div>

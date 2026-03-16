@@ -15,7 +15,8 @@ import {
   MapPin, 
   Zap,
   Info,
-  ChevronDown
+  ChevronDown,
+  Lock
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -69,7 +70,6 @@ const TrafficLayerComponent = () => {
 };
 
 const StatusCard = ({ axis, verified, onVerify, isVerifying }: { axis: typeof KINSHASA_AXES[0], verified: boolean, onVerify: () => void, isVerifying: boolean }) => {
-    // Simulated status based on coordinates for variation
     const mockStatus = useMemo(() => {
         const statuses = ['FLUIDE', 'RALENTI', 'SATURÉ', 'BLOQUÉ'] as const;
         const index = Math.floor(Math.abs(axis.coords.lat * 10) % 4);
@@ -79,10 +79,12 @@ const StatusCard = ({ axis, verified, onVerify, isVerifying }: { axis: typeof KI
     return (
         <Card className="border-none shadow-lg bg-white overflow-hidden rounded-3xl">
             <div className={cn(
-                "h-2 w-full",
-                mockStatus === 'FLUIDE' ? "bg-emerald-500" :
-                mockStatus === 'RALENTI' ? "bg-amber-500" :
-                mockStatus === 'SATURÉ' ? "bg-orange-500" : "bg-red-600"
+                "h-2 w-full transition-colors duration-500",
+                verified ? (
+                    mockStatus === 'FLUIDE' ? "bg-emerald-500" :
+                    mockStatus === 'RALENTI' ? "bg-amber-500" :
+                    mockStatus === 'SATURÉ' ? "bg-orange-500" : "bg-red-600"
+                ) : "bg-slate-200"
             )} />
             <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
@@ -93,40 +95,47 @@ const StatusCard = ({ axis, verified, onVerify, isVerifying }: { axis: typeof KI
                             {axis.district} • Kinshasa
                         </p>
                     </div>
-                    <Badge className={cn(
-                        "font-black px-3 py-1",
-                        mockStatus === 'FLUIDE' ? "bg-emerald-100 text-emerald-700" :
-                        mockStatus === 'RALENTI' ? "bg-amber-100 text-amber-700" :
-                        mockStatus === 'SATURÉ' ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"
-                    )}>
-                        {mockStatus}
-                    </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Vitesse Est.</p>
-                        <p className="text-2xl font-black text-slate-800">
-                            {mockStatus === 'FLUIDE' ? '45' : mockStatus === 'RALENTI' ? '25' : mockStatus === 'SATURÉ' ? '12' : '4'}
-                            <span className="text-xs ml-1 font-bold text-slate-400">km/h</span>
-                        </p>
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Retard</p>
-                        <p className={cn(
-                            "text-2xl font-black",
-                            mockStatus === 'FLUIDE' ? "text-emerald-600" : "text-red-600"
+                    {verified ? (
+                        <Badge className={cn(
+                            "font-black px-3 py-1",
+                            mockStatus === 'FLUIDE' ? "bg-emerald-100 text-emerald-700" :
+                            mockStatus === 'RALENTI' ? "bg-amber-100 text-amber-700" :
+                            mockStatus === 'SATURÉ' ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"
                         )}>
-                            {mockStatus === 'FLUIDE' ? '--' : `+${Math.floor(Math.random() * 20) + 5}m`}
-                        </p>
-                    </div>
+                            {mockStatus}
+                        </Badge>
+                    ) : (
+                        <Badge variant="outline" className="text-slate-300 border-slate-200">
+                            <Lock className="h-3 w-3 mr-1" />
+                            Privé
+                        </Badge>
+                    )}
                 </div>
 
                 <div className="relative">
                     <div className={cn(
-                        "space-y-3 transition-all",
-                        !verified && "blur-md select-none pointer-events-none"
+                        "transition-all duration-700 space-y-6",
+                        !verified && "blur-xl opacity-30 select-none pointer-events-none"
                     )}>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Vitesse Est.</p>
+                                <p className="text-2xl font-black text-slate-800">
+                                    {mockStatus === 'FLUIDE' ? '45' : mockStatus === 'RALENTI' ? '25' : mockStatus === 'SATURÉ' ? '12' : '4'}
+                                    <span className="text-xs ml-1 font-bold text-slate-400">km/h</span>
+                                </p>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Retard</p>
+                                <p className={cn(
+                                    "text-2xl font-black",
+                                    mockStatus === 'FLUIDE' ? "text-emerald-600" : "text-red-600"
+                                )}>
+                                    {mockStatus === 'FLUIDE' ? '--' : `+${Math.floor(Math.random() * 20) + 5}m`}
+                                </p>
+                            </div>
+                        </div>
+
                         <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
                             <Info className="h-4 w-4 text-blue-600 shrink-0" />
                             <p className="text-xs font-medium text-blue-800">
@@ -136,15 +145,21 @@ const StatusCard = ({ axis, verified, onVerify, isVerifying }: { axis: typeof KI
                     </div>
 
                     {!verified && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <Button 
-                                onClick={onVerify}
-                                disabled={isVerifying}
-                                className="bg-white hover:bg-slate-50 text-slate-900 border-2 border-amber-200 shadow-2xl rounded-2xl h-14 px-6 font-black"
-                            >
-                                {isVerifying ? <Loader2 className="animate-spin mr-2" /> : <Star className="mr-2 fill-amber-500 text-amber-500" />}
-                                Voir détails ({STAR_COSTS.ROAD_VERIFY} ⭐)
-                            </Button>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+                            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-3xl border border-slate-100 shadow-2xl flex flex-col items-center gap-4">
+                                <div className="text-center space-y-1">
+                                    <p className="text-sm font-black text-slate-900">Information Premium</p>
+                                    <p className="text-[10px] text-slate-500 font-medium">Déverrouillez pour voir l'état réel</p>
+                                </div>
+                                <Button 
+                                    onClick={onVerify}
+                                    disabled={isVerifying}
+                                    className="bg-primary hover:bg-primary/90 text-white rounded-2xl h-12 px-6 font-black shadow-xl"
+                                >
+                                    {isVerifying ? <Loader2 className="animate-spin mr-2" /> : <Star className="mr-2 fill-amber-400 text-amber-400" />}
+                                    Voir détails ({STAR_COSTS.ROAD_VERIFY} ⭐)
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -208,7 +223,7 @@ export default function LiveTrafficFeed() {
     } catch (error) {
         toast({ title: "Erreur", description: "Impossible de déduire les stars.", variant: "destructive" });
     } finally {
-        setIsVerifying(null as any);
+        setIsVerifying(false);
     }
   };
 

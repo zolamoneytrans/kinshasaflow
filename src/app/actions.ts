@@ -1,3 +1,4 @@
+
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -77,4 +78,50 @@ export async function getTomTomTrafficIncidents() {
     console.error("Failed to fetch TomTom incidents:", error);
     return [];
   }
+}
+
+/**
+ * Initie un paiement Mobile Money via MbiyoPay.
+ */
+export async function initiateMbiyoPaymentAction(params: {
+    amount: number;
+    phone: string;
+    network: string;
+    description: string;
+}) {
+    const apiKey = process.env.MBIYO_API_KEY;
+    if (!apiKey) {
+        return { success: false, error: "Configuration API manquante sur le serveur." };
+    }
+
+    try {
+        const response = await fetch("https://api.mbiyo.africa/v1/merchant/payin", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                amount: params.amount,
+                currency: "CDF",
+                phone: params.phone,
+                network: params.network.toUpperCase(),
+                reference: `STAR-${Date.now()}`,
+                description: params.description,
+                callback_url: "https://kinshasaflow.online/api/payment-callback",
+            }),
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            return { success: true, data };
+        } else {
+            console.error("MbiyoPay API Error:", data);
+            return { success: false, error: data.message || "Erreur lors de l'initiation du paiement." };
+        }
+    } catch (error: any) {
+        console.error("Network Error with MbiyoPay:", error);
+        return { success: false, error: "Impossible de contacter le service de paiement." };
+    }
 }

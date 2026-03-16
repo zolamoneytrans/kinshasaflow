@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, limit, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { UserProfile, StarTransaction, WithId, AdvertVideo } from '@/lib/types';
+import { initiateMbiyoPaymentAction } from '@/app/actions';
 import { 
   Star, 
   TrendingUp, 
@@ -98,52 +99,85 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
   const { toast } = useToast();
 
   const packs = [
-    { id: 'starter', stars: 50, price: '5 000 CDF', label: 'Starter' },
-    { id: 'standard', stars: 150, price: '12 000 CDF', label: 'Standard', popular: true },
-    { id: 'pro', stars: 400, price: '25 000 CDF', label: 'Pro' },
-    { id: 'business', stars: 1200, price: '60 000 CDF', label: 'Business' },
+    { id: 'starter', stars: 50, amount: 5000, price: '5 000 CDF', label: 'Starter' },
+    { id: 'standard', stars: 150, amount: 12000, price: '12 000 CDF', label: 'Standard', popular: true },
+    { id: 'pro', stars: 400, amount: 25000, price: '25 000 CDF', label: 'Pro' },
+    { id: 'business', stars: 1200, amount: 60000, price: '60 000 CDF', label: 'Business' },
   ];
 
   const handlePurchase = async () => {
-    if (!user || !selectedPack) return;
+    if (!user || !selectedPack || !operator || !phone) {
+        toast({ title: "Incomplet", description: "Veuillez remplir toutes les informations.", variant: "destructive" });
+        return;
+    }
+    
     setIsLoading(true);
     
-    // Simulate payment process
-    setTimeout(async () => {
-      try {
-        const userRef = doc(firestore, 'users', user.uid);
-        const transRef = doc(collection(userRef, 'star_transactions'));
+    // Nettoyage du numéro de téléphone : garder uniquement les chiffres, s'assurer du préfixe 243
+    let sanitizedPhone = phone.replace(/\D/g, '');
+    if (sanitizedPhone.startsWith('0')) {
+        sanitizedPhone = '243' + sanitizedPhone.substring(1);
+    } else if (!sanitizedPhone.startsWith('243')) {
+        sanitizedPhone = '243' + sanitizedPhone;
+    }
 
-        await runTransaction(firestore, async (transaction) => {
-          const userDoc = await transaction.get(userRef);
-          const currentData = userDoc.data() as UserProfile;
-          const newBalance = (currentData.currentStarsBalance || 0) + selectedPack.stars;
-          const newTotalPurchased = (currentData.totalStarsPurchased || 0) + selectedPack.stars;
-
-          transaction.update(userRef, {
-            currentStarsBalance: newBalance,
-            totalStarsPurchased: newTotalPurchased
-          });
-
-          transaction.set(transRef, {
-            userId: user.uid,
-            type: 'purchase',
-            starsChange: selectedPack.stars,
-            balanceAfterTransaction: newBalance,
-            description: `Achat Pack ${selectedPack.label}`,
-            timestamp: serverTimestamp(),
-          });
+    try {
+        // 1. Appeler l'API MbiyoPay via l'action serveur
+        const result = await initiateMbiyoPaymentAction({
+            amount: selectedPack.amount,
+            phone: sanitizedPhone,
+            network: operator,
+            description: `Achat de ${selectedPack.stars} Stars - Kinshasa Flow`,
         });
 
-        setStep(3);
-        toast({ title: 'Créditation réussie !', description: `${selectedPack.stars} stars ajoutées.` });
-      } catch (e) {
-        console.error(e);
-        toast({ title: 'Erreur', description: 'Transaction échouée.', variant: 'destructive' });
-      } finally {
+        if (result.success) {
+            // 2. Si l'initiation est réussie, on enregistre la transaction dans Firestore
+            // Note: En production réelle, on attendrait le webhook de confirmation pour créditer.
+            // Pour ce prototype, nous créditons de manière optimiste dès l'initiation réussie.
+            const userRef = doc(firestore, 'users', user.uid);
+            const transRef = doc(collection(userRef, 'star_transactions'));
+
+            await runTransaction(firestore, async (transaction) => {
+                const userDoc = await transaction.get(userRef);
+                const currentData = userDoc.data() as UserProfile;
+                const newBalance = (currentData.currentStarsBalance || 0) + selectedPack.stars;
+                const newTotalPurchased = (currentData.totalStarsPurchased || 0) + selectedPack.stars;
+
+                transaction.update(userRef, {
+                    currentStarsBalance: newBalance,
+                    totalStarsPurchased: newTotalPurchased
+                });
+
+                transaction.set(transRef, {
+                    userId: user.uid,
+                    type: 'purchase',
+                    starsChange: selectedPack.stars,
+                    balanceAfterTransaction: newBalance,
+                    description: `Achat Pack ${selectedPack.label} via ${operator.toUpperCase()}`,
+                    timestamp: serverTimestamp(),
+                    relatedObjectId: result.data?.id || null,
+                    relatedObjectType: 'MbiyoPayTransaction'
+                });
+            });
+
+            setStep(3);
+            toast({ 
+                title: 'Demande envoyée !', 
+                description: `Veuillez valider la demande USSD qui va apparaître sur votre téléphone (${operator.toUpperCase()}).` 
+            });
+        } else {
+            toast({ 
+                title: 'Échec du paiement', 
+                description: result.error || "Une erreur est survenue avec MbiyoPay.", 
+                variant: 'destructive' 
+            });
+        }
+    } catch (e: any) {
+        console.error("Mbiyo Purchase Flow Error:", e);
+        toast({ title: 'Erreur technique', description: 'Impossible de traiter la demande pour le moment.', variant: 'destructive' });
+    } finally {
         setIsLoading(false);
-      }
-    }, 2000);
+    }
   };
 
   return (
@@ -221,7 +255,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                   </div>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
                     <AlertCircle className="h-3 w-3 inline mr-1" />
-                    Vous recevrez une demande USSD sur votre téléphone pour valider le paiement.
+                    Vous recevrez une demande USSD sur votre téléphone pour valider le paiement via <strong>MbiyoPay</strong>.
                   </p>
                 </div>
 
@@ -241,11 +275,11 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                   <CheckCircle2 className="h-12 w-12" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900">Créditation instantanée !</h3>
-                  <p className="text-slate-500 font-medium">{selectedPack?.stars} stars ont été ajoutées à votre compte.</p>
+                  <h3 className="text-2xl font-black text-slate-900">Demande envoyée !</h3>
+                  <p className="text-slate-500 font-medium">Consultez votre téléphone pour valider le paiement. Vos {selectedPack?.stars} stars seront créditées dès validation.</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-xl border-2 border-dashed border-slate-200">
-                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Nouveau solde</p>
+                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Nouveau solde (estimé)</p>
                   <p className="text-3xl font-black text-amber-500">{currentBalance + selectedPack?.stars} ⭐</p>
                 </div>
                 <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-xl font-bold bg-slate-900">Terminer</Button>

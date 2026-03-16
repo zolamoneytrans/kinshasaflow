@@ -69,16 +69,16 @@ export default function WelcomePage() {
 
     return (
         <div className="relative min-h-screen w-full bg-background text-foreground overflow-x-hidden flex flex-col">
-            {/* Dots Background */}
-            <div className="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.15] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
+            {/* Dots Background - Couche la plus basse */}
+            <div className="absolute inset-0 -z-30 h-full w-full bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.15] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
             
-            {/* Mesh Gradients */}
-            <div className="absolute top-[-5%] left-[-5%] -z-10 h-[600px] w-[600px] rounded-full bg-primary/25 blur-[120px] animate-pulse"></div>
-            <div className="absolute top-[20%] right-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[130px]"></div>
-            <div className="absolute bottom-[-10%] left-[10%] -z-10 h-[600px] w-[600px] rounded-full bg-blue-400/20 blur-[150px]"></div>
+            {/* Mesh Gradients - Couche intermédiaire */}
+            <div className="absolute top-[-5%] left-[-5%] -z-20 h-[600px] w-[600px] rounded-full bg-primary/25 blur-[120px] animate-pulse"></div>
+            <div className="absolute top-[20%] right-[-10%] -z-20 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[130px]"></div>
+            <div className="absolute bottom-[-10%] left-[10%] -z-20 h-[600px] w-[600px] rounded-full bg-blue-400/20 blur-[150px]"></div>
 
-            {/* Arrière-plan personnalisé (Echangeur) placé derrière le texte principal - Visibilité améliorée à 50% */}
-            <div className="absolute top-[8%] left-1/2 -translate-x-1/2 -z-10 w-full max-w-6xl h-[650px] opacity-50 pointer-events-none">
+            {/* Arrière-plan personnalisé (Echangeur) - Placée au dessus des gradients pour être visible */}
+            <div className="absolute top-[12%] left-1/2 -translate-x-1/2 -z-10 w-full max-w-5xl h-[550px] opacity-50 pointer-events-none">
                 <Image 
                     src={echangeurBg} 
                     alt="Echangeur Kinshasa Background" 

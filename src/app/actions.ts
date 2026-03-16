@@ -101,12 +101,24 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, lat: nu
         // Calcul vitesse en km/h : (distance/1000) / (duration/3600)
         const speedKmh = Math.round((distance / 1000) / (duration / 3600));
 
-        // Classification selon PRD
+        /**
+         * Logique de classification demandée :
+         * 🔴 EMBOUTEILLAGE : Vitesse < 10 km/h OR retard > 10 min
+         * 🟠 DENSE : Vitesse 10–20 km/h OR retard 5–10 min
+         * 🟡 MODÉRÉ : Vitesse 20–35 km/h OR retard 2–5 min
+         * 🟢 FLUIDE : Vitesse > 35 km/h AND retard < 2 min
+         */
         let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" = "FLUIDE";
-        if (speedKmh < 10 || delayMinutes > 10) status = "EMBOUTEILLAGE";
-        else if (speedKmh >= 10 && speedKmh <= 20 && delayMinutes >= 5) status = "DENSE";
-        else if (speedKmh > 20 && speedKmh <= 35 && delayMinutes >= 2) status = "MODÉRÉ";
-        else status = "FLUIDE";
+        
+        if (speedKmh < 10 || delayMinutes > 10) {
+          status = "EMBOUTEILLAGE";
+        } else if (speedKmh <= 20 || delayMinutes >= 5) {
+          status = "DENSE";
+        } else if (speedKmh <= 35 || delayMinutes >= 2) {
+          status = "MODÉRÉ";
+        } else {
+          status = "FLUIDE";
+        }
 
         return {
           road: axes[index].name,

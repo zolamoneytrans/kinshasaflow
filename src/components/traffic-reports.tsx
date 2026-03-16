@@ -55,6 +55,13 @@ const MAJOR_AXES = [
   { name: "Avenue du Tourisme", district: "Ngaliema", lat: -4.332, lng: 15.245 },
   { name: "Avenue de l'Elengesa", district: "Makala", lat: -4.372, lng: 15.305 },
   { name: "Avenue Victoire", district: "Kalamu", lat: -4.342, lng: 15.315 },
+  { name: "Boulevard Triomphal", district: "Kasa-Vubu", lat: -4.338, lng: 15.302 },
+  { name: "Avenue Kimwenza", district: "Kalamu", lat: -4.355, lng: 15.318 },
+  { name: "Avenue Landu", district: "Selembao", lat: -4.385, lng: 15.285 },
+  { name: "Route de Kinsuka", district: "Ngaliema", lat: -4.352, lng: 15.235 },
+  { name: "Avenue Bokassa", district: "Barumbu", lat: -4.315, lng: 15.315 },
+  { name: "Avenue des Poids Lourds", district: "Limete", lat: -4.335, lng: 15.345 },
+  { name: "Route Mokali", district: "Kimbanseke", lat: -4.415, lng: 15.412 },
 ];
 
 export default function TrafficReports() {
@@ -67,14 +74,14 @@ export default function TrafficReports() {
 
   const { firestore } = useFirebase();
 
-  // 1. Fetch User Reports from Firebase
+  // 1. Récupérer les signalements Firebase
   const userReportsQuery = useMemoFirebase(() => {
     return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(30));
   }, [firestore]);
   
   const { data: userReports } = useCollection<EventReport>(userReportsQuery);
 
-  // 2. Fetch Navigation Data (Google Routes API v2)
+  // 2. Récupérer les données de Navigation (Google Routes API v2)
   const fetchTrafficData = async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
     if (!isRefresh) setLoading(true);
@@ -88,12 +95,12 @@ export default function TrafficReports() {
         return {
           id: `google-${idx}`,
           road: res.road,
-          description: res.status === "FLUIDE" ? "Circulation fluide (Données GPS)" : `Retard estimé de ${res.delay} min via Routes API v2`,
+          description: res.status === "FLUIDE" ? "Circulation fluide (Données GPS)" : `Retard estimé de ${res.delay} min (Routes v2)`,
           district: axis.district,
           status: res.status as TrafficStatus,
           speed: res.speed,
           delay: res.delay,
-          updatedAt: "Temps Réel",
+          updatedAt: "Direct GPS",
           source: 'gps',
           coords: { lat: axis.lat, lng: axis.lng }
         };
@@ -112,7 +119,7 @@ export default function TrafficReports() {
     fetchTrafficData();
   }, []);
 
-  // 3. Combine both sources
+  // 3. Fusionner les sources (GPS + Firebase)
   const allIncidents = useMemo(() => {
     const formattedUserReports: Incident[] = (userReports || [])
         .map(rep => ({
@@ -123,7 +130,7 @@ export default function TrafficReports() {
             status: rep.severity === 'high' ? 'EMBOUTEILLAGE' : rep.severity === 'medium' ? 'DENSE' : 'MODÉRÉ',
             speed: rep.severity === 'high' ? 8 : rep.severity === 'medium' ? 15 : 28,
             delay: rep.severity === 'high' ? 15 : rep.severity === 'medium' ? 7 : 3,
-            updatedAt: "Direct Communauté",
+            updatedAt: "Communauté",
             source: 'user'
         }));
 
@@ -153,23 +160,23 @@ export default function TrafficReports() {
   return (
     <div className="flex-1 flex flex-col h-full w-full bg-[#f8fafc] overflow-hidden">
       
-      {/* HEADER */}
+      {/* EN-TÊTE AVEC HORODATAGE API */}
       <div className="bg-white border-b shadow-sm z-30 p-4 md:p-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                     Rapports Navigation
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse">LIVE v2</Badge>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse">DIRECT</Badge>
                 </h1>
                 <div className="flex flex-col gap-1 mt-1">
                     <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
                         <Navigation className="h-3 w-3 text-primary" />
-                        Google Routes API v2 (TRAFFIC_AWARE_OPTIMAL)
+                        Google Routes API v2 (Synchronisation en temps réel)
                     </p>
                     {lastUpdated && (
                         <p className="text-[10px] font-black text-primary uppercase flex items-center gap-1.5">
                             <Clock className="h-3 w-3" />
-                            Synchronisé à : {format(lastUpdated, 'HH:mm:ss')}
+                            Dernière requête API : {format(lastUpdated, 'HH:mm:ss')}
                         </p>
                     )}
                 </div>
@@ -220,7 +227,7 @@ export default function TrafficReports() {
             <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input 
-                    placeholder="Filtrer par quartier ou axe (Gombe, Victoire...)" 
+                    placeholder="Chercher une route ou commune..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-12 h-14 bg-white border-none shadow-sm rounded-2xl font-bold text-slate-800"
@@ -284,7 +291,7 @@ export default function TrafficReports() {
                                                     <div className="flex gap-2">
                                                         <StatusIndicator status={incident.status} />
                                                         {incident.coords && (
-                                                            <Button size="icon" variant="secondary" className="rounded-xl h-10 w-10 shadow-sm" asChild>
+                                                            <Button size="icon" variant="secondary" className="rounded-xl h-10 w-10 shadow-sm" asChild title="Naviguer vers ce point">
                                                                 <a 
                                                                     href={`https://www.google.com/maps/dir/?api=1&destination=${incident.coords.lat},${incident.coords.lng}&travelmode=driving`} 
                                                                     target="_blank" 
@@ -321,7 +328,7 @@ const SourceBadge = ({ source }: { source: 'gps' | 'user' }) => (
         source === 'gps' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
     )}>
         {source === 'gps' ? <Navigation className="h-2.5 w-2.5" /> : <Users className="h-2.5 w-2.5" />}
-        {source === 'gps' ? 'GPS Nav v2' : 'Communauté'}
+        {source === 'gps' ? 'GPS Nav v2' : 'Citoyen'}
     </Badge>
 );
 

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Activity, Bot, Megaphone, Siren, Download, ArrowRight, MapPin, ShieldCheck, Zap } from 'lucide-react';
+import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
@@ -59,12 +59,12 @@ export default function WelcomePage() {
         };
     }, []);
 
-    const handleInstallClick = () => {
+    const handleInstallClick = async () => {
         if (!installPrompt) return;
-        installPrompt.prompt();
-        installPrompt.userChoice.then((choiceResult: { outcome: string }) => {
-            setInstallPrompt(null);
-        });
+        await installPrompt.prompt();
+        const { outcome } = await installPrompt.userChoice;
+        console.log(`[PWA] Install outcome: ${outcome}`);
+        setInstallPrompt(null);
     };
 
     return (
@@ -78,13 +78,16 @@ export default function WelcomePage() {
             <div className="absolute bottom-[-10%] left-[10%] -z-20 h-[600px] w-[600px] rounded-full bg-blue-400/12 blur-[150px]"></div>
 
             {/* Echangeur background — between dots and gradients */}
-            <div className="absolute inset-0 -z-[15] pointer-events-none overflow-hidden">
+            <div 
+                className="absolute inset-0 pointer-events-none overflow-hidden"
+                style={{ zIndex: -15 }}
+            >
                 <Image
                     src={echangeurBg}
                     alt=""
                     fill
                     className="object-cover object-center"
-                    style={{ opacity: 0.18 }}
+                    style={{ opacity: 0.25 }}
                     priority
                 />
             </div>
@@ -97,12 +100,16 @@ export default function WelcomePage() {
             >
                 <Logo className="h-10 w-auto text-primary" />
                 <div className="flex items-center gap-4">
-                    <Button asChild variant="ghost" className="hidden sm:inline-flex hover:bg-primary/10">
-                        <Link href="/login">Se connecter</Link>
-                    </Button>
-                    <Button asChild className="shadow-lg shadow-primary/20">
-                        <Link href="/signup">Commencer</Link>
-                    </Button>
+                    <Link href="/login">
+                        <Button variant="ghost" className="hidden sm:inline-flex hover:bg-primary/10">
+                            Se connecter
+                        </Button>
+                    </Link>
+                    <Link href="/signup">
+                        <Button className="shadow-lg shadow-primary/20">
+                            Commencer
+                        </Button>
+                    </Link>
                 </div>
             </motion.header>
 
@@ -136,12 +143,12 @@ export default function WelcomePage() {
 
                     <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-center gap-6">
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                            <Button asChild size="lg" className="text-xl py-8 px-10 rounded-2xl shadow-2xl shadow-primary/30 group">
-                                <Link href="/reports">
+                            <Link href="/reports">
+                                <Button size="lg" className="text-xl py-8 px-10 rounded-2xl shadow-2xl shadow-primary/30 group">
                                     Accéder au Direct
                                     <ArrowRight className="ml-2 w-6 h-6 transition-transform group-hover:translate-x-1" />
-                                </Link>
-                            </Button>
+                                </Button>
+                            </Link>
                         </motion.div>
                         
                         {installPrompt && (
@@ -168,8 +175,7 @@ export default function WelcomePage() {
                                 src={heroImage.imageUrl} 
                                 alt={heroImage.description} 
                                 fill 
-                                className="object-cover"
-                                style={{ transition: 'transform 10s linear' }}
+                                className="object-cover transition-transform duration-[10000ms] hover:scale-110"
                                 priority
                                 data-ai-hint={heroImage.imageHint}
                             />
@@ -187,7 +193,10 @@ export default function WelcomePage() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.1 }}
-                variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+                variants={{ 
+                    hidden: { opacity: 1 }, 
+                    visible: { transition: { staggerChildren: 0.1 } } 
+                }}
                 className="container mx-auto px-4 py-24"
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

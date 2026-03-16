@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -75,8 +74,6 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   }
 
   // 2. Verification overlay (Unactivated)
-  // Note: Anonymous users or users from certain providers might skip this, 
-  // but we enforce it for email/password as requested.
   if (!user.emailVerified && !user.isAnonymous && user.providerData.some(p => p.providerId === 'password')) {
     const handleResend = async () => {
         setIsResending(true);
@@ -284,7 +281,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />
                     <span>Mes Stars</span>
                   </Link>
-                </SidebarMenuItem>
+                </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}} className="bg-primary/10 hover:bg-primary/20 mt-2 border border-primary/20">

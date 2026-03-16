@@ -88,9 +88,9 @@ export async function initiateMbiyoPaymentAction(params: {
 }) {
     const apiKey = process.env.MBIYO_API_KEY;
     
-    if (!apiKey || apiKey.includes("REMPLACEZ_MOI")) {
-        console.error("MBIYO_API_KEY is invalid or missing in .env");
-        return { success: false, error: "La clé API MbiyoPay n'est pas configurée dans le fichier .env." };
+    if (!apiKey) {
+        console.error("MBIYO_API_KEY is missing in .env");
+        return { success: false, error: "Configuration du paiement manquante (API Key)." };
     }
 
     try {
@@ -115,22 +115,22 @@ export async function initiateMbiyoPaymentAction(params: {
         });
 
         const text = await response.text();
+        console.log("MbiyoPay API Raw Response:", text);
+
         let data;
         try {
             data = JSON.parse(text);
         } catch (e) {
-            console.error("MbiyoPay non-JSON response:", text);
-            return { success: false, error: "Réponse invalide du serveur de paiement." };
+            return { success: false, error: "Réponse invalide du serveur MbiyoPay." };
         }
         
         if (response.ok) {
             return { success: true, data };
         } else {
-            console.error("MbiyoPay API Rejection:", data);
-            return { success: false, error: data.message || "La transaction a été rejetée par MbiyoPay." };
+            return { success: false, error: data.message || "La transaction a été rejetée." };
         }
     } catch (error: any) {
-        console.error("MbiyoPay Fetch Error:", error);
-        return { success: false, error: `Erreur de connexion : ${error.message || "Le service MbiyoPay est injoignable."}` };
+        console.error("MbiyoPay Connection Error:", error);
+        return { success: false, error: "Impossible de joindre le service MbiyoPay. Vérifiez votre connexion internet serveur." };
     }
 }

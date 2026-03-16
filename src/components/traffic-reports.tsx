@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +15,7 @@ import {
   Navigation,
   Users,
   PlusCircle,
-  MapPin,
-  HelpCircle
+  MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,7 +81,7 @@ export default function TrafficReports() {
   
   const { data: userReports } = useCollection<EventReport>(userReportsQuery);
 
-  const fetchTrafficData = async (isRefresh = false) => {
+  const fetchTrafficData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
     if (!isRefresh) setLoading(true);
     
@@ -115,20 +114,29 @@ export default function TrafficReports() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTrafficData();
-  }, []);
+    // Auto-refresh interval (every 60 seconds)
+    const interval = setInterval(() => {
+      fetchTrafficData(true);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [fetchTrafficData]);
 
   const allIncidents = useMemo(() => {
     const formattedUserReports: Incident[] = (userReports || [])
         .map(rep => ({
-            id: rep.id,
+            id: rep.id ?? `user-${Math.random().toString(36).substr(2, 9)}`,
             road: rep.location,
             description: rep.description,
             district: "Citoyen",
-            status: rep.severity === 'high' ? 'EMBOUTEILLAGE' : rep.severity === 'medium' ? 'DENSE' : 'MODÉRÉ',
+            status: rep.severity === 'high' ? 'EMBOUTEILLAGE' 
+                  : rep.severity === 'medium' ? 'DENSE' 
+                  : rep.severity === 'low' ? 'MODÉRÉ'
+                  : 'FLUIDE',
             speed: rep.severity === 'high' ? 8 : rep.severity === 'medium' ? 15 : 28,
             delay: rep.severity === 'high' ? 15 : rep.severity === 'medium' ? 7 : 3,
             updatedAt: "Communauté",
@@ -143,6 +151,7 @@ export default function TrafficReports() {
     saturated: allIncidents.filter(i => i.status === 'DENSE').length,
     slow: allIncidents.filter(i => i.status === 'MODÉRÉ').length,
     fluid: allIncidents.filter(i => i.status === 'FLUIDE').length,
+    unknown: allIncidents.filter(i => i.status === 'INCONNU').length,
   }), [allIncidents]);
 
   const filteredIncidents = useMemo(() => {
@@ -209,7 +218,7 @@ export default function TrafficReports() {
                     <Card key={kpi.label} className={cn(
                         "rounded-3xl border-none shadow-sm cursor-pointer transition-all active:scale-95",
                         filter === kpi.label ? "ring-2 ring-primary bg-slate-50" : "bg-white hover:shadow-md"
-                    )} onClick={() => setFilter(filter === kpi.label ? 'ALL' : kpi.label as any)}>
+                    )} onClick={() => setFilter(filter === kpi.label ? 'ALL' : kpi.label as TrafficStatus)}>
                         <CardContent className="p-4 flex justify-between items-center">
                             <div>
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
@@ -245,7 +254,7 @@ export default function TrafficReports() {
                                 key={incident.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.05 }}
+                                transition={{ delay: Math.min(idx * 0.05, 0.3) }}
                             >
                                 <Card className="rounded-3xl border-none shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                                     <div className="flex">

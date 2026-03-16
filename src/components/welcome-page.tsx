@@ -68,7 +68,7 @@ export default function WelcomePage() {
     };
 
     return (
-        <div className="relative min-h-screen w-full bg-background text-foreground overflow-x-hidden flex flex-col">
+        <div className="relative min-h-screen w-full text-foreground overflow-x-hidden flex flex-col">
             {/* Dots Background - Couche la plus basse */}
             <div className="absolute inset-0 -z-30 h-full w-full bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.15] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
             
@@ -175,7 +175,7 @@ export default function WelcomePage() {
                                 src={heroImage.imageUrl} 
                                 alt={heroImage.description} 
                                 fill 
-                                className="object-cover transition-transform duration-[10000ms] hover:scale-110"
+                                className="object-cover scale-100 hover:scale-110 transition-transform duration-[10000ms]"
                                 priority
                                 data-ai-hint={heroImage.imageHint}
                             />

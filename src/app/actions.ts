@@ -78,7 +78,6 @@ export async function getTomTomTrafficIncidents() {
 
 /**
  * Initie un paiement Mobile Money via MbiyoPay.
- * Utilise les clés de production et l'URL de webhook fournies par l'utilisateur.
  */
 export async function initiateMbiyoPaymentAction(params: {
     amount: number;
@@ -96,8 +95,6 @@ export async function initiateMbiyoPaymentAction(params: {
     }
 
     try {
-        console.log(`Initiating MbiyoPay request for ${params.phone} (${params.network}) - Amount: ${params.amount} ${params.currency}`);
-        
         const response = await fetch("https://api.mbiyo.africa/v1/merchant/payin", {
             method: "POST",
             headers: {
@@ -117,23 +114,53 @@ export async function initiateMbiyoPaymentAction(params: {
         });
 
         const text = await response.text();
-        console.log("MbiyoPay API Raw Response:", text);
-
         let data;
         try {
             data = JSON.parse(text);
         } catch (e) {
-            console.error("Invalid JSON from MbiyoPay:", text);
             return { success: false, error: "Réponse invalide du serveur MbiyoPay." };
         }
         
         if (response.ok) {
             return { success: true, data };
         } else {
-            return { success: false, error: data.message || data.error || "La transaction a été rejetée par l'API MbiyoPay." };
+            return { success: false, error: data.message || data.error || "La transaction a été rejetée." };
         }
     } catch (error: any) {
         console.error("MbiyoPay Connection Error:", error);
-        return { success: false, error: "Impossible de joindre le service MbiyoPay. Vérifiez votre connexion internet serveur." };
+        return { success: false, error: "Impossible de joindre le service MbiyoPay." };
+    }
+}
+
+/**
+ * Vérifie le statut d'une transaction MbiyoPay.
+ */
+export async function checkMbiyoTransactionStatusAction(transactionId: string) {
+    const apiKey = process.env.MBIYO_API_KEY;
+    if (!apiKey) {
+        return { success: false, error: "Clé API manquante." };
+    }
+
+    try {
+        const response = await fetch(`https://dashboard.mbiyo.africa/api/v1/merchant/transactions/${transactionId}`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            console.error("Mbiyo Status Check HTTP Error:", text);
+            return { success: false, error: "Impossible de récupérer le statut." };
+        }
+
+        const data = await response.json();
+        return { success: true, data };
+    } catch (error) {
+        console.error("Mbiyo Status Check Connection Error:", error);
+        return { success: false, error: "Erreur de connexion au service." };
     }
 }

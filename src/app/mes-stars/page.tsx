@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, limit, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { UserProfile, StarTransaction, WithId, AdvertVideo } from '@/lib/types';
-import { initiateMbiyoPaymentAction } from '@/app/actions';
+import { initiateMbiyoPaymentAction, checkMbiyoTransactionStatusAction } from '@/app/actions';
 import { 
   Star, 
   TrendingUp, 
@@ -27,7 +27,7 @@ import {
   Volume2,
   VolumeX,
   UserPlus,
-  Coins
+  RefreshCw
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -97,6 +97,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
   const [operator, setSelectedOperator] = useState('');
   const [currency, setCurrency] = useState<'CDF' | 'USD'>('CDF');
   const [isLoading, setIsLoading] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [pendingTransactionId, setPendingTransactionId] = useState<string | null>(null);
   const { user, firestore } = useFirebase();
   const { toast } = useToast();
 
@@ -134,6 +136,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         });
 
         if (result.success) {
+            setPendingTransactionId(result.data?.id || null);
+            
             const userRef = doc(firestore, 'users', user.uid);
             const transRef = doc(collection(userRef, 'star_transactions'));
 
@@ -177,6 +181,28 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         toast({ title: 'Erreur technique', description: 'Impossible de traiter la demande pour le moment.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
+    }
+  };
+
+  const checkStatus = async () => {
+    if (!pendingTransactionId) return;
+    setIsChecking(true);
+    try {
+        const result = await checkMbiyoTransactionStatusAction(pendingTransactionId);
+        if (result.success) {
+            const status = result.data?.status;
+            if (status === 'success') {
+                toast({ title: "Paiement confirmé !", description: "Vos stars ont été créditées avec succès." });
+            } else if (status === 'failed') {
+                toast({ title: "Paiement échoué", description: "La transaction a été rejetée ou annulée.", variant: "destructive" });
+            } else {
+                toast({ title: "En attente", description: "Le paiement n'a pas encore été validé sur votre téléphone." });
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        setIsChecking(false);
     }
   };
 
@@ -286,13 +312,19 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-slate-900">Demande envoyée !</h3>
-                  <p className="text-slate-500 font-medium">Consultez votre téléphone pour valider le paiement. Vos {selectedPack?.stars} stars seront créditées dès validation.</p>
+                  <p className="text-slate-500 font-medium text-sm">Consultez votre téléphone pour valider le paiement. Vos {selectedPack?.stars} stars seront créditées dès validation.</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-xl border-2 border-dashed border-slate-200">
                   <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Nouveau solde (estimé)</p>
                   <p className="text-3xl font-black text-amber-500">{currentBalance + selectedPack?.stars} ⭐</p>
                 </div>
-                <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-xl font-bold bg-slate-900">Terminer</Button>
+                <div className="space-y-2">
+                    <Button onClick={checkStatus} disabled={isChecking} variant="outline" className="w-full h-12 rounded-xl font-bold border-amber-500 text-amber-600 hover:bg-amber-50">
+                        {isChecking ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                        Vérifier mon paiement
+                    </Button>
+                    <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-xl font-bold bg-slate-900">Terminer</Button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

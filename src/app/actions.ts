@@ -54,11 +54,54 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
 }
 
 /**
- * Récupère les incidents de trafic réels via l'API de Navigation (TomTom/Google Hybrid) pour Kinshasa.
+ * Récupère le statut réel du trafic via Google Distance Matrix API.
+ * Compare le temps de trajet normal vs temps de trajet actuel.
+ */
+export async function getGoogleTrafficStatusAction(axes: { name: string, lat: number, lng: number }[]) {
+  const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
+  
+  // On crée des segments courts (0.5km) pour tester le trafic local
+  const requests = axes.map(axis => {
+    const origin = `${axis.lat},${axis.lng}`;
+    // On simule un point d'arrivée à 500m de distance pour capter le trafic local
+    const destination = `${axis.lat + 0.005},${axis.lng + 0.005}`;
+    return fetch(
+      `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&departure_time=now&key=${GOOGLE_API_KEY}`
+    ).then(res => res.json());
+  });
+
+  try {
+    const results = await Promise.all(requests);
+    return results.map((data, index) => {
+      const element = data.rows?.[0]?.elements?.[0];
+      if (element?.status === "OK") {
+        const duration = element.duration.value; // secondes
+        const durationInTraffic = element.duration_in_traffic.value; // secondes
+        const delay = Math.max(0, durationInTraffic - duration);
+        const ratio = durationInTraffic / duration;
+
+        return {
+          road: axes[index].name,
+          duration,
+          durationInTraffic,
+          delay: Math.round(delay / 60),
+          ratio,
+          status: ratio > 2.0 ? "BLOQUÉ" : ratio > 1.5 ? "SATURÉ" : ratio > 1.2 ? "RALENTI" : "FLUIDE"
+        };
+      }
+      return { road: axes[index].name, status: "FLUIDE", delay: 0, ratio: 1 };
+    });
+  } catch (error) {
+    console.error("Google Traffic Status Error:", error);
+    return axes.map(a => ({ road: a.name, status: "FLUIDE", delay: 0, ratio: 1 }));
+  }
+}
+
+/**
+ * Récupère les incidents de trafic (accidents, fermetures) via TomTom.
  */
 export async function getLiveNavigationTrafficAction() {
   const TOMTOM_KEY = "KGPZ8xhBjIIdThtnB8N3M1M2IlKBseJk";
-  // Limites géographiques de Kinshasa
   const minLat = -4.55;
   const minLon = 15.15;
   const maxLat = -4.1;

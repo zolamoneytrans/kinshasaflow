@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -36,8 +37,6 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-const API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
-
 const KINSHASA_AXES = [
   { id: "30juin", name: "Boulevard du 30 Juin", coords: { lat: -4.308, lng: 15.305 }, district: "Gombe" },
   { id: "lumumba", name: "Boulevard Lumumba", coords: { lat: -4.382, lng: 15.362 }, district: "Limete/Masina" },
@@ -67,7 +66,7 @@ const TrafficLayerComponent = ({ refreshKey }: { refreshKey: number }) => {
         const trafficLayer = new g.maps.TrafficLayer();
         trafficLayer.setMap(map);
         return () => trafficLayer.setMap(null);
-    }, [map, refreshKey]); // Re-add layer when refreshKey changes
+    }, [map, refreshKey]); 
     return null;
 };
 
@@ -248,9 +247,10 @@ export default function LiveTrafficFeed() {
     }
   };
 
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-hidden">
-        {/* TOP BAR / SEARCH */}
         <div className="p-4 md:p-6 bg-white border-b shadow-sm z-30">
             <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-4 items-center">
                 <div className="flex-1 w-full flex items-end gap-2">
@@ -296,10 +296,7 @@ export default function LiveTrafficFeed() {
             </div>
         </div>
 
-        {/* MAIN CONTENT AREA */}
         <div className="flex-1 grid lg:grid-cols-2 gap-6 p-4 md:p-6 overflow-hidden">
-            
-            {/* LEFT: STATUS & REPORTS */}
             <div className="flex flex-col gap-6 overflow-y-auto pr-2">
                 <motion.div
                     key={`${selectedAxisId}-${refreshKey}`}
@@ -339,14 +336,13 @@ export default function LiveTrafficFeed() {
                 </Card>
             </div>
 
-            {/* RIGHT: MAP PREVIEW */}
             <div className="hidden lg:block h-full min-h-[400px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white relative">
                 {isRefreshing && (
                     <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-sm flex items-center justify-center">
                         <Loader2 className="h-12 w-12 text-primary animate-spin" />
                     </div>
                 )}
-                <APIProvider apiKey={API_KEY}>
+                <APIProvider apiKey={googleMapsApiKey || ""}>
                     <Map
                         center={selectedAxis.coords}
                         zoom={15}
@@ -361,7 +357,6 @@ export default function LiveTrafficFeed() {
             </div>
         </div>
 
-        {/* MOBILE MAP TRIGGER */}
         <div className="lg:hidden fixed bottom-6 right-6 z-50">
             <Button size="lg" className="rounded-full h-16 w-16 shadow-2xl" asChild>
                 <Link href="/map">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -13,7 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 const initialCenter = { lat: -4.330, lng: 15.313 };
 
 const TrafficLayerComponent = () => {
@@ -88,10 +88,11 @@ export default function TrafficMap() {
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!searchQuery.trim() || !isUnlocked) return;
+        const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (!searchQuery.trim() || !isUnlocked || !googleMapsApiKey) return;
 
         try {
-            const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${API_KEY}&components=country:CD&bounds=-4.55,15.15|-4.1,15.6`);
+            const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${googleMapsApiKey}&components=country:CD&bounds=-4.55,15.15|-4.1,15.6`);
             const data = await response.json();
             if (data.status === 'OK' && data.results[0]) {
                 const location = data.results[0].geometry.location;
@@ -102,6 +103,8 @@ export default function TrafficMap() {
             console.error('Error during geocoding API call:', error);
         }
     };
+
+    const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     return (
         <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl relative bg-slate-900">
@@ -144,7 +147,7 @@ export default function TrafficMap() {
                 )}
             </AnimatePresence>
 
-            <APIProvider apiKey={API_KEY}>
+            <APIProvider apiKey={googleMapsApiKey || ""}>
                 {isUnlocked && (
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4">
                         <form onSubmit={handleSearch} className="flex w-full items-center gap-2">

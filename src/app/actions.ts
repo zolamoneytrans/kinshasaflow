@@ -1,3 +1,4 @@
+
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -58,7 +59,13 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
  * Utilise TRAFFIC_AWARE_OPTIMAL pour une précision maximale.
  */
 export async function getGoogleTrafficStatusAction(axes: { name: string, origin: { lat: number, lng: number }, destination: { lat: number, lng: number } }[]) {
-  const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
+  const GOOGLE_API_KEY = process.env.GOOGLE_ROUTES_API_KEY;
+  
+  if (!GOOGLE_API_KEY) {
+    console.error("GOOGLE_ROUTES_API_KEY is missing in .env");
+    return axes.map(a => ({ road: a.name, status: "FLUIDE" as const, speed: 40, delay: 0 }));
+  }
+
   const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
   
   const requests = axes.map(axis => {
@@ -132,11 +139,11 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
           status
         };
       }
-      return { road: axes[index].name, status: "FLUIDE", speed: 40, delay: 0 };
+      return { road: axes[index].name, status: "FLUIDE" as const, speed: 40, delay: 0 };
     });
   } catch (error) {
     console.error("Google Routes API Error:", error);
-    return axes.map(a => ({ road: a.name, status: "FLUIDE", speed: 40, delay: 0 }));
+    return axes.map(a => ({ road: a.name, status: "FLUIDE" as const, speed: 40, delay: 0 }));
   }
 }
 
@@ -144,7 +151,12 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
  * Récupère les incidents de trafic (accidents, fermetures) via TomTom.
  */
 export async function getLiveNavigationTrafficAction() {
-  const TOMTOM_KEY = "KGPZ8xhBjIIdThtnB8N3M1M2IlKBseJk";
+  const TOMTOM_KEY = process.env.TOMTOM_KEY;
+  if (!TOMTOM_KEY) {
+    console.error("TOMTOM_KEY is missing in .env");
+    return [];
+  }
+
   const minLat = -4.55;
   const minLon = 15.15;
   const maxLat = -4.1;
@@ -174,7 +186,7 @@ export async function initiateMbiyoPaymentAction(params: {
     description: string;
 }) {
     const apiKey = process.env.MBIYO_API_KEY;
-    const webhookUrl = process.env.MBIYO_WEBHOOK_URL || "https://www.zolamoneytrans.com/mbiyopay/notifications.php";
+    const webhookUrl = process.env.MBIYO_WEBHOOK_URL || "https://kinshasaflow.online/api/payment-callback";
     
     if (!apiKey) {
         console.error("MBIYO_API_KEY is missing in .env");

@@ -62,7 +62,7 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
   const GOOGLE_API_KEY = process.env.GOOGLE_ROUTES_API_KEY;
   
   if (!GOOGLE_API_KEY) {
-    console.error("GOOGLE_ROUTES_API_KEY is missing in .env");
+    console.error("CRITICAL: GOOGLE_ROUTES_API_KEY is missing in .env file.");
     return axes.map(a => ({ road: a.name, status: "INCONNU" as const, speed: 0, delay: 0 }));
   }
 
@@ -76,9 +76,9 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       destination: { location: { latLng: { latitude: axis.destination.lat, longitude: axis.destination.lng } } },
       travelMode: "DRIVE",
       routingPreference: "TRAFFIC_AWARE_OPTIMAL",
-      // Protobuf Timestamp format required by API v2
+      // Important: Google exige un objet departureTime pour le mode TRAFFIC_AWARE_OPTIMAL
       departureTime: {
-        seconds: Math.floor(Date.now() / 1000),
+        seconds: Math.floor(Date.now() / 1000) + 5, // Ajout d'une petite marge pour éviter le passé
         nanos: 0
       },
       computeAlternativeRoutes: false,
@@ -91,31 +91,30 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_API_KEY,
+        // Correction du FieldMask pour être sûr de récupérer les bons champs
         'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters'
       },
       body: JSON.stringify(body)
     }).then(async res => {
         if (!res.ok) {
             const errText = await res.text();
-            console.error(`API Error for ${axis.name}:`, errText);
-            throw new Error(errText);
+            console.error(`API Error for ${axis.name}: HTTP ${res.status}`, errText);
+            return { error: errText, status: res.status };
         }
         return res.json();
     }).catch(err => {
         console.error(`Fetch error for ${axis.name}:`, err);
-        return null;
+        return { error: err.message };
     });
   });
 
   try {
     const results = await Promise.allSettled(requests);
     
-    // Log the raw result of the first axis to debug "INCONNU" issues
-    if (results.length > 0) {
-        console.log("DEBUG: Google API First Result:", JSON.stringify(
-            results[0].status === "fulfilled" ? results[0].value : results[0].reason, 
-            null, 2
-        ));
+    // Log du premier résultat pour diagnostic si tout est INCONNU
+    const firstResult = results[0].status === "fulfilled" ? results[0].value : results[0].reason;
+    if (firstResult?.error || (firstResult && !firstResult.routes)) {
+        console.warn("DIAGNOSTIC - Premier retour Google API:", JSON.stringify(firstResult, null, 2));
     }
 
     return results.map((result, index) => {
@@ -123,9 +122,9 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       const route = data?.routes?.[0];
       
       if (route) {
-        // Parsing safely
-        const duration = parseInt((route.duration ?? "0s").replace('s', ''));
-        const staticDuration = parseInt((route.staticDuration ?? route.duration ?? "0s").replace('s', ''));
+        // Parsing sécurisé des secondes (format Google "123s")
+        const duration = parseInt((route.duration ?? "0s").replace('s', '')) || 1;
+        const staticDuration = parseInt((route.staticDuration ?? route.duration ?? "0s").replace('s', '')) || 1;
         const distance = route.distanceMeters ?? 0;
         
         const delaySeconds = Math.max(0, duration - staticDuration);

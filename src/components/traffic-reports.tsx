@@ -44,6 +44,7 @@ interface Incident {
   destCoords?: { lat: number, lng: number };
 }
 
+// Points de départ et d'arrivée réels pour des segments de 2-5km (meilleure précision Google)
 const MAJOR_AXES = [
   { name: "Boulevard du 30 Juin", district: "Gombe", origin: { lat: -4.303, lng: 15.315 }, destination: { lat: -4.315, lng: 15.285 } },
   { name: "Boulevard Lumumba", district: "Limete/Masina", origin: { lat: -4.382, lng: 15.362 }, destination: { lat: -4.410, lng: 15.410 } },
@@ -121,7 +122,7 @@ export default function TrafficReports() {
 
   useEffect(() => {
     fetchTrafficData();
-    // Auto-refresh interval (every 60 seconds)
+    // Auto-refresh toutes les 60 secondes
     const interval = setInterval(() => {
       fetchTrafficData(true);
     }, 60000);

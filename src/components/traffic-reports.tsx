@@ -15,7 +15,8 @@ import {
   Navigation,
   Users,
   PlusCircle,
-  MapPin
+  MapPin,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,7 @@ interface Incident {
   updatedAt: string;
   source: 'gps' | 'user';
   coords?: { lat: number, lng: number };
+  destCoords?: { lat: number, lng: number };
 }
 
 const MAJOR_AXES = [
@@ -95,7 +97,7 @@ export default function TrafficReports() {
           id: `google-${idx}`,
           road: res.road,
           description: res.status === "FLUIDE" ? "Circulation fluide (Données GPS)" : 
-                       res.status === "INCONNU" ? "Données de trafic indisponibles pour ce segment" :
+                       res.status === "INCONNU" ? "Données de trafic indisponibles (Vérifiez la clé API)" :
                        `Retard estimé de ${res.delay} min sur ce segment`,
           district: axis.district,
           status: res.status as TrafficStatus,
@@ -103,7 +105,8 @@ export default function TrafficReports() {
           delay: res.delay,
           updatedAt: "Direct GPS",
           source: 'gps',
-          coords: { lat: axis.origin.lat, lng: axis.origin.lng }
+          coords: { lat: axis.origin.lat, lng: axis.origin.lng },
+          destCoords: { lat: axis.destination.lat, lng: axis.destination.lng }
         };
       });
 
@@ -180,12 +183,12 @@ export default function TrafficReports() {
                 <div className="flex flex-col gap-1 mt-1">
                     <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
                         <Navigation className="h-3 w-3 text-primary" />
-                        Google Routes API v2 (Précision Satellite)
+                        Google Routes API v2 (Analyse en temps réel)
                     </p>
                     {lastUpdated && (
                         <p className="text-[10px] font-black text-primary uppercase flex items-center gap-1.5">
                             <Clock className="h-3 w-3" />
-                            Requête API à : {format(lastUpdated, 'HH:mm:ss')}
+                            Synchronisation : {format(lastUpdated, 'HH:mm:ss')}
                         </p>
                     )}
                 </div>
@@ -208,12 +211,13 @@ export default function TrafficReports() {
       <div className="p-4 md:p-6 flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-6">
             
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
                     { label: 'EMBOUTEILLAGE', count: stats.blocked, icon: Ban, color: 'text-red-600', bg: 'bg-red-50' },
                     { label: 'DENSE', count: stats.saturated, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
                     { label: 'MODÉRÉ', count: stats.slow, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-                    { label: 'FLUIDE', count: stats.fluid, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' }
+                    { label: 'FLUIDE', count: stats.fluid, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                    { label: 'INCONNU', count: stats.unknown, icon: HelpCircle, color: 'text-slate-500', bg: 'bg-slate-100' }
                 ].map((kpi) => (
                     <Card key={kpi.label} className={cn(
                         "rounded-3xl border-none shadow-sm cursor-pointer transition-all active:scale-95",
@@ -305,7 +309,7 @@ export default function TrafficReports() {
                                                         {incident.coords && (
                                                             <Button size="icon" variant="secondary" className="rounded-xl h-10 w-10 shadow-sm" asChild title="Naviguer vers ce point">
                                                                 <a 
-                                                                    href={`https://www.google.com/maps/dir/?api=1&destination=${incident.coords.lat},${incident.coords.lng}&travelmode=driving`} 
+                                                                    href={`https://www.google.com/maps/dir/?api=1&destination=${incident.destCoords?.lat ?? incident.coords.lat},${incident.destCoords?.lng ?? incident.coords.lng}&travelmode=driving`} 
                                                                     target="_blank" 
                                                                     rel="noopener noreferrer"
                                                                 >

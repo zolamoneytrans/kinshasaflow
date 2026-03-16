@@ -76,7 +76,7 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       destination: { location: { latLng: { latitude: axis.destination.lat, longitude: axis.destination.lng } } },
       travelMode: "DRIVE",
       routingPreference: "TRAFFIC_AWARE_OPTIMAL",
-      // Format Protobuf Timestamp requis par l'API v2
+      // Protobuf Timestamp format required by API v2
       departureTime: {
         seconds: Math.floor(Date.now() / 1000),
         nanos: 0
@@ -96,8 +96,9 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       body: JSON.stringify(body)
     }).then(async res => {
         if (!res.ok) {
-            const err = await res.text();
-            throw new Error(err);
+            const errText = await res.text();
+            console.error(`API Error for ${axis.name}:`, errText);
+            throw new Error(errText);
         }
         return res.json();
     }).catch(err => {
@@ -108,29 +109,32 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
 
   try {
     const results = await Promise.allSettled(requests);
+    
+    // Log the raw result of the first axis to debug "INCONNU" issues
+    if (results.length > 0) {
+        console.log("DEBUG: Google API First Result:", JSON.stringify(
+            results[0].status === "fulfilled" ? results[0].value : results[0].reason, 
+            null, 2
+        ));
+    }
+
     return results.map((result, index) => {
       const data = result.status === "fulfilled" ? result.value : null;
       const route = data?.routes?.[0];
       
       if (route) {
-        // Parsing sécurisé des durées (format "120s")
+        // Parsing safely
         const duration = parseInt((route.duration ?? "0s").replace('s', ''));
         const staticDuration = parseInt((route.staticDuration ?? route.duration ?? "0s").replace('s', ''));
-        const distance = route.distanceMeters ?? 0; // en mètres
+        const distance = route.distanceMeters ?? 0;
         
         const delaySeconds = Math.max(0, duration - staticDuration);
         const delayMinutes = Math.round(delaySeconds / 60);
         
-        // Calcul vitesse en km/h avec garde-fous
         const speedKmh = duration > 0 && distance > 0
           ? Math.round((distance / 1000) / (duration / 3600))
           : 0;
 
-        /**
-         * Logique de classification optimisée :
-         * Utilisation de OU (||) pour capturer les ralentissements même sur de courts segments
-         * où le retard en minutes peut paraître faible mais la vitesse est critique.
-         */
         let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" | "INCONNU" = "FLUIDE";
         
         if (speedKmh === 0 && distance > 0) {
@@ -158,7 +162,7 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       return { road: axes[index].name, status: "INCONNU" as const, speed: 0, delay: 0 };
     });
   } catch (error) {
-    console.error("Google Routes API Error:", error);
+    console.error("Global Traffic Action Error:", error);
     return axes.map(a => ({ road: a.name, status: "INCONNU" as const, speed: 0, delay: 0 }));
   }
 }

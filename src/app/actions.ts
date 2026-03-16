@@ -79,6 +79,7 @@ export async function getTomTomTrafficIncidents() {
 
 /**
  * Initie un paiement Mobile Money via MbiyoPay.
+ * Utilise les clés de production et l'URL de webhook fournies par l'utilisateur.
  */
 export async function initiateMbiyoPaymentAction(params: {
     amount: number;
@@ -87,6 +88,7 @@ export async function initiateMbiyoPaymentAction(params: {
     description: string;
 }) {
     const apiKey = process.env.MBIYO_API_KEY;
+    const webhookUrl = process.env.MBIYO_WEBHOOK_URL || "https://www.zolamoneytrans.com/mbiyopay/notifications.php";
     
     if (!apiKey) {
         console.error("MBIYO_API_KEY is missing in .env");
@@ -110,7 +112,7 @@ export async function initiateMbiyoPaymentAction(params: {
                 network: params.network.toUpperCase(),
                 reference: `KFLOW-${Date.now()}`,
                 description: params.description,
-                callback_url: "https://kinshasaflow.online/api/payment-callback",
+                callback_url: webhookUrl,
             }),
         });
 
@@ -121,13 +123,14 @@ export async function initiateMbiyoPaymentAction(params: {
         try {
             data = JSON.parse(text);
         } catch (e) {
+            console.error("Invalid JSON from MbiyoPay:", text);
             return { success: false, error: "Réponse invalide du serveur MbiyoPay." };
         }
         
         if (response.ok) {
             return { success: true, data };
         } else {
-            return { success: false, error: data.message || "La transaction a été rejetée." };
+            return { success: false, error: data.message || data.error || "La transaction a été rejetée par l'API MbiyoPay." };
         }
     } catch (error: any) {
         console.error("MbiyoPay Connection Error:", error);

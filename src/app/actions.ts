@@ -164,7 +164,7 @@ export async function initiateMbiyoPaymentAction(data: {
     phone: string;
     network: string;
     description: string;
-}) {
+}): Promise<{ success: boolean; data?: { id: string; status: string }; error?: string }> {
     // Note: Dans un environnement réel, ceci appellerait l'API MbiyoPay.
     // Ici, nous simulons une réponse positive pour le MVP.
     console.log("Initiating MbiyoPay Payment:", data);
@@ -184,7 +184,7 @@ export async function initiateMbiyoPaymentAction(data: {
 /**
  * Vérifie le statut d'une transaction MbiyoPay.
  */
-export async function checkMbiyoTransactionStatusAction(transactionId: string) {
+export async function checkMbiyoTransactionStatusAction(transactionId: string): Promise<{ success: boolean; data?: { status: string }; error?: string }> {
     console.log("Checking MbiyoPay Transaction Status:", transactionId);
     
     // Simulation : 80% de chances que le statut soit encore 'pending' ou passe en 'success'

@@ -135,8 +135,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
             description: `Achat de ${selectedPack.stars} Stars - Kinshasa Flow`,
         });
 
-        if (result.success) {
-            setPendingTransactionId(result.data?.id || null);
+        if (result.success && result.data) {
+            setPendingTransactionId(result.data.id);
             
             const userRef = doc(firestore, 'users', user.uid);
             const transRef = doc(collection(userRef, 'star_transactions'));
@@ -189,8 +189,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     setIsChecking(true);
     try {
         const result = await checkMbiyoTransactionStatusAction(pendingTransactionId);
-        if (result.success) {
-            const status = result.data?.status;
+        if (result.success && result.data) {
+            const status = result.data.status;
             if (status === 'success') {
                 toast({ title: "Paiement confirmé !", description: "Vos stars ont été créditées avec succès." });
             } else if (status === 'failed') {

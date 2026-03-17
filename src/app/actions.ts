@@ -70,15 +70,12 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
   const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
   
   const requests = axes.map(axis => {
-    // Utiliser une chaîne ISO pour le temps de départ pour une compatibilité maximale
-    const departureTime = new Date(Date.now() + 10000).toISOString();
-
     const body = {
       origin: { location: { latLng: { latitude: axis.origin.lat, longitude: axis.origin.lng } } },
       destination: { location: { latLng: { latitude: axis.destination.lat, longitude: axis.destination.lng } } },
       travelMode: "DRIVE",
       routingPreference: "TRAFFIC_AWARE_OPTIMAL",
-      departureTime: departureTime,
+      departureTime: new Date(Date.now() + 10000).toISOString(),
       computeAlternativeRoutes: false,
       languageCode: "fr-FR",
       units: "METRIC"

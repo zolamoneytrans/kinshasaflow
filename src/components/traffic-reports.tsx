@@ -1,30 +1,24 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   RefreshCw, 
   Search, 
   Clock, 
-  Navigation,
   Star,
-  X,
   Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getGoogleTrafficStatusAction } from '@/app/actions';
 import { useCollection, useFirebase, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, orderBy, limit, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
-import { EventReport, UserProfile, STAR_COSTS } from '@/lib/types';
+import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { EventReport, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
-const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
 type TrafficStatus = 'EMBOUTEILLAGE' | 'DENSE' | 'MODÉRÉ' | 'FLUIDE' | 'INCONNU';
 
@@ -61,8 +55,6 @@ export default function TrafficReports() {
   const [filter, setFilter] = useState<TrafficStatus | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [navTarget, setNavTarget] = useState<{lat: number, lng: number, name: string} | null>(null);
-  const [isStartingNav, setIsStartingNav] = useState(false);
 
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
@@ -111,51 +103,6 @@ export default function TrafficReports() {
 
   useEffect(() => { fetchTrafficData(); }, [fetchTrafficData]);
 
-  const handleStartNavigation = async (target: {lat: number, lng: number, name: string}) => {
-    if (!user || !profile) return;
-
-    if (profile.currentStarsBalance < STAR_COSTS.NAVIGATION_SESSION) {
-        toast({ 
-            title: "Solde insuffisant", 
-            description: `La navigation premium coûte ${STAR_COSTS.NAVIGATION_SESSION} stars.`, 
-            variant: "destructive",
-            action: <Button asChild variant="outline" size="sm"><Link href="/mes-stars">Boutique</Link></Button>
-        });
-        return;
-    }
-
-    setIsStartingNav(true);
-    try {
-        await runTransaction(firestore, async (transaction) => {
-            const userDoc = await transaction.get(userRef!);
-            const data = userDoc.data() as UserProfile;
-            const newBalance = data.currentStarsBalance - STAR_COSTS.NAVIGATION_SESSION;
-            
-            transaction.update(userRef!, {
-                currentStarsBalance: newBalance,
-                totalStarsUsed: (data.totalStarsUsed || 0) + STAR_COSTS.NAVIGATION_SESSION
-            });
-
-            const starTransRef = doc(collection(userRef!, 'star_transactions'));
-            transaction.set(starTransRef, {
-                userId: user.uid,
-                type: 'spent',
-                starsChange: -STAR_COSTS.NAVIGATION_SESSION,
-                balanceAfterTransaction: newBalance,
-                description: `Navigation vers : ${target.name}`,
-                timestamp: serverTimestamp(),
-            });
-        });
-
-        setNavTarget(target);
-        toast({ title: "Navigation lancée", description: `${STAR_COSTS.NAVIGATION_SESSION} stars déduites.` });
-    } catch (e) {
-        toast({ title: "Erreur", description: "Impossible de traiter le paiement.", variant: "destructive" });
-    } finally {
-        setIsStartingNav(false);
-    }
-  };
-
   const allIncidents = useMemo(() => {
     const formattedUserReports: Incident[] = (userReports || []).map(rep => ({
         id: rep.id,
@@ -186,7 +133,7 @@ export default function TrafficReports() {
             <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                     Navigation Live
-                    <Badge className="bg-primary/10 text-primary border-primary/20" variant="outline">PREMIUM</Badge>
+                    <Badge className="bg-primary/10 text-primary border-primary/20" variant="outline">OFFICIEL</Badge>
                 </h1>
                 {lastUpdated && <p className="text-[10px] font-black text-primary uppercase mt-1">Dernier flux : {format(lastUpdated, 'HH:mm:ss')}</p>}
             </div>
@@ -243,18 +190,6 @@ export default function TrafficReports() {
                                         <p className="text-[10px] font-black text-slate-400 uppercase">Vitesse</p>
                                         <p className="font-black text-slate-800">{incident.speed || '--'} km/h</p>
                                     </div>
-                                    <Button 
-                                        disabled={isStartingNav}
-                                        onClick={() => handleStartNavigation({
-                                            lat: incident.coords?.lat || 0,
-                                            lng: incident.coords?.lng || 0,
-                                            name: incident.road
-                                        })}
-                                        className="rounded-2xl h-12 px-6 shadow-lg shadow-primary/20 font-black"
-                                    >
-                                        {isStartingNav ? <Loader2 className="animate-spin" /> : <Navigation className="h-4 w-4 mr-2" />}
-                                        Naviguer
-                                    </Button>
                                 </div>
                             </CardContent>
                         </div>
@@ -263,40 +198,6 @@ export default function TrafficReports() {
             </div>
         </div>
       </div>
-
-      <Dialog open={!!navTarget} onOpenChange={(open) => !open && setNavTarget(null)}>
-        <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden rounded-3xl border-none">
-            <div className="flex flex-col h-full">
-                <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
-                    <DialogTitle className="text-lg font-black flex items-center gap-2">
-                        <Navigation className="text-primary fill-primary/20" />
-                        Navigation vers {navTarget?.name}
-                    </DialogTitle>
-                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => setNavTarget(null)}>
-                        <X />
-                    </Button>
-                </div>
-                <div className="flex-1 bg-slate-100 relative">
-                    {navTarget && (
-                        <iframe
-                            width="100%"
-                            height="100%"
-                            style={{ border: 0 }}
-                            loading="lazy"
-                            allowFullScreen
-                            referrerPolicy="no-referrer-when-downgrade"
-                            src={`https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_API_KEY}&origin=-4.313,15.313&destination=${navTarget.lat},${navTarget.lng}&mode=driving`}
-                        ></iframe>
-                    )}
-                </div>
-                <div className="p-4 bg-white border-t flex justify-center">
-                    <Button variant="destructive" onClick={() => setNavTarget(null)} className="rounded-xl font-bold h-12 px-8">
-                        Quitter la navigation
-                    </Button>
-                </div>
-            </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

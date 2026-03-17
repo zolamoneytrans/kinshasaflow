@@ -13,7 +13,6 @@ import {
   Navigation, 
   MapPin, 
   Zap,
-  Info,
   Lock,
   RefreshCw,
   X
@@ -35,6 +34,8 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
 const KINSHASA_AXES = [
   { id: "30juin", name: "Boulevard du 30 Juin", coords: { lat: -4.308, lng: 15.305 }, district: "Gombe" },
@@ -281,8 +282,6 @@ export default function LiveTrafficFeed() {
     }
   };
 
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-hidden">
         <div className="p-4 md:p-6 bg-white border-b shadow-sm z-30">
@@ -378,7 +377,7 @@ export default function LiveTrafficFeed() {
                         <Loader2 className="h-12 w-12 text-primary animate-spin" />
                     </div>
                 )}
-                <APIProvider apiKey={googleMapsApiKey || ""}>
+                <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
                     <Map
                         center={selectedAxis.coords}
                         zoom={15}
@@ -413,7 +412,7 @@ export default function LiveTrafficFeed() {
                                 style={{ border: 0 }}
                                 loading="lazy"
                                 allowFullScreen
-                                src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk&origin=-4.313,15.313&destination=${navTarget.lat},${navTarget.lng}&mode=driving`}
+                                src={`https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_API_KEY}&origin=-4.313,15.313&destination=${navTarget.lat},${navTarget.lng}&mode=driving`}
                             ></iframe>
                         )}
                     </div>

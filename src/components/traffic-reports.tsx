@@ -7,15 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { 
   RefreshCw, 
   Search, 
-  Ban, 
-  AlertTriangle, 
   Clock, 
-  CheckCircle2, 
   Navigation,
-  Users,
-  PlusCircle,
-  MapPin,
-  HelpCircle,
   Star,
   X,
   Loader2
@@ -26,11 +19,12 @@ import { getGoogleTrafficStatusAction } from '@/app/actions';
 import { useCollection, useFirebase, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { EventReport, UserProfile, STAR_COSTS } from '@/lib/types';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
 type TrafficStatus = 'EMBOUTEILLAGE' | 'DENSE' | 'MODÉRÉ' | 'FLUIDE' | 'INCONNU';
 
@@ -291,7 +285,7 @@ export default function TrafficReports() {
                             loading="lazy"
                             allowFullScreen
                             referrerPolicy="no-referrer-when-downgrade"
-                            src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk&destination=${navTarget.lat},${navTarget.lng}&mode=driving`}
+                            src={`https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_API_KEY}&origin=-4.313,15.313&destination=${navTarget.lat},${navTarget.lng}&mode=driving`}
                         ></iframe>
                     )}
                 </div>

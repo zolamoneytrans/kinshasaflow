@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { Timestamp } from "firebase/firestore";
 
@@ -11,6 +10,7 @@ export const STAR_COSTS = {
   ALERTS_DAILY: 2,
   EXPORT_REPORT: 10,
   SIGNUP_BONUS: 25,
+  NAVIGATION_SESSION: 3,
 } as const;
 
 // User profile extension for Stars System
@@ -31,6 +31,7 @@ export const userProfileSchema = z.object({
   referralCode: z.string().optional(),
   isProfileComplete: z.boolean().default(false),
   isBlocked: z.boolean().default(false),
+  createdAt: z.instanceof(Timestamp).or(z.any()).optional(),
 });
 export type UserProfile = z.infer<typeof userProfileSchema>;
 
@@ -69,7 +70,7 @@ export const commentSchema = z.object({
   author: z.string(),
   avatar: z.string(),
   text: z.string().min(1, "Le commentaire ne peut pas être vide."),
-  createdAt: z.instanceof(Timestamp).or(z.any()), // Allow server timestamp
+  createdAt: z.instanceof(Timestamp).or(z.any()),
 });
 export type Comment = z.infer<typeof commentSchema>;
 export type WithId<T> = T & { id: string };
@@ -83,11 +84,10 @@ export const eventReportSchema = z.object({
   user: z.string(),
   userAvatar: z.string(),
   picture: z.string().optional(),
-  createdAt: z.instanceof(Timestamp).or(z.any()), // Allow server timestamp
+  createdAt: z.instanceof(Timestamp).or(z.any()),
 });
 export type EventReport = z.infer<typeof eventReportSchema>;
 
-// For client-side form validation which doesn't have server timestamps yet
 export const reportFormSchema = z.object({
   location: z.string().min(5, {
     message: 'Le lieu doit comporter au moins 5 caractères.',
@@ -102,8 +102,6 @@ export const reportFormSchema = z.object({
 });
 export type ReportFormValues = z.infer<typeof reportFormSchema>;
 
-
-// Schemas for AI flow
 export const TrafficTipsInputSchema = z.object({
   location: z.string().describe("Le lieu de l'incident de la circulation à Kinshasa."),
   description: z.string().describe("Une description de l'incident de la circulation."),
@@ -115,7 +113,6 @@ export const TrafficTipsOutputSchema = z.object({
 });
 export type TrafficTipsOutput = z.infer<typeof TrafficTipsOutputSchema>;
 
-// Schemas for AI Assistant Flow
 export const AssistantInputSchema = z.object({
   question: z.string().describe("The user's question about a route in Kinshasa."),
 });
@@ -126,25 +123,6 @@ export const AssistantOutputSchema = z.object({
 });
 export type AssistantOutput = z.infer<typeof AssistantOutputSchema>;
 
-
-// Schema for Announcements
-export const annonceSchema = z.object({
-  title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
-  content: z.string().min(10, "Le contenu doit comporter au moins 10 caractères."),
-  source: z.string().min(3, "La source doit comporter au moins 3 caractères."),
-  createdAt: z.instanceof(Timestamp).or(z.any()), // Allow server timestamp
-});
-export type Annonce = z.infer<typeof annonceSchema>;
-
-export const annonceFormSchema = z.object({
-    title: z.string().min(5, "Le titre doit faire au moins 5 caractères."),
-    content: z.string().min(10, "Le contenu doit faire au moins 10 caractères."),
-    source: z.string().min(3, "La source doit faire au moins 3 caractères."),
-});
-export type AnnonceFormValues = z.infer<typeof annonceFormSchema>;
-
-
-// Dummy data for components that haven't been migrated to Firebase yet
 export const policeReportSchema = z.object({
   location: z.string(),
   note: z.string(),
@@ -156,20 +134,8 @@ export const dummyPoliceReports: (PoliceReport & { id: number, time: string })[]
     { id: 2, location: "Boulevard du 30 Juin", note: "Gestion du trafic suite à un événement.", type: "traffic_management", time: "il y a 30m" },
     { id: 3, location: "Pont Matete", note: "Présence renforcée pour la sécurité.", type: "control", time: "il y a 5m" },
     { id: 4, location: "Avenue Kasa-Vubu", note: "Intervention suite à un petit accrochage.", type: "incident", time: "il y a 45m" },
-    { id: 5, location: "Gombe, près de l'Hôtel de Ville", note: "Escorte d'un convoi officiel.", type: "traffic_management", time: "il y a 1h" },
-    { id: 6, location: "Limete, 7ème Rue", note: "Contrôle de vitesse.", type: "control", time: "il y a 20m" },
-    { id: 7, location: "UPN", note: "Présence préventive.", type: "control", time: "il y a 2h" },
-    { id: 8, location: "Marché Central", note: "Patrouille pour la sécurité des commerçants.", type: "control", time: "il y a 1h 15m" },
 ];
 
-export const trafficReportSchema = z.object({
-  location: z.string().min(3, "Location is too short."),
-  description: z.string().min(10, "Description is too short."),
-  severity: z.enum(["low", "medium", "high"]),
-});
-export type TrafficReport = z.infer<typeof trafficReportSchema>;
-
-// Schemas for Auth
 export const loginSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }),
   password: z.string().min(1, { message: "Veuillez entrer votre mot de passe." }),
@@ -186,7 +152,6 @@ export const signupSchema = z.object({
 });
 export type SignupValues = z.infer<typeof signupSchema>;
 
-// Schema for Videos to be stored in Firestore
 export const videoSchema = z.object({
   title: z.string(),
   user: z.string(),
@@ -199,7 +164,6 @@ export const videoSchema = z.object({
 });
 export type Video = z.infer<typeof videoSchema>;
 
-// New schema for the upload form
 export const videoUploadFormSchema = z.object({
     title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
     video: z.any().refine(file => file?.length == 1, "Un fichier vidéo est requis."),
@@ -216,7 +180,6 @@ export const pushSubscriptionSchema = z.object({
 });
 export type PushSubscription = z.infer<typeof pushSubscriptionSchema>;
 
-// Schema for Logement
 export const logementSchema = z.object({
   title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
   description: z.string().min(20, "La description doit être plus détaillée."),
@@ -229,7 +192,6 @@ export const logementSchema = z.object({
 });
 export type Logement = z.infer<typeof logementSchema>;
 
-// Schema for the Add Logement form
 export const logementFormSchema = z.object({
   title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
   description: z.string().min(20, "La description doit être plus détaillée."),
@@ -242,7 +204,6 @@ export const logementFormSchema = z.object({
 });
 export type LogementFormValues = z.infer<typeof logementFormSchema>;
 
-// Schema for the Edit Logement form
 export const editLogementFormSchema = z.object({
   title: z.string().min(5, "Le titre doit comporter au moins 5 caractères."),
   description: z.string().min(20, "La description doit être plus détaillée."),
@@ -252,7 +213,6 @@ export const editLogementFormSchema = z.object({
 });
 export type EditLogementFormValues = z.infer<typeof editLogementFormSchema>;
 
-// Schema for Transport Subscription Form
 export const transportSubscriptionFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis."),
   phone: z.string().min(9, "Un numéro de téléphone valide est requis."),
@@ -266,7 +226,6 @@ export const transportSubscriptionFormSchema = z.object({
 });
 export type TransportSubscriptionFormValues = z.infer<typeof transportSubscriptionFormSchema>;
 
-// Schema for Transport Subscription document in Firestore
 export const transportSubscriptionSchema = transportSubscriptionFormSchema.extend({
     userId: z.string(),
     transportType: z.enum(['covoiturage', 'taxi_prive', 'mini_bus', 'entreprise']),
@@ -283,11 +242,8 @@ export const transportSubscriptionSchema = transportSubscriptionFormSchema.exten
 });
 export type TransportSubscription = z.infer<typeof transportSubscriptionSchema>;
 
-
-// Custom error for Firestore permissions, to be used with the global error handler
 export { FirestorePermissionError } from '@/firebase/errors';
 
-// Schema for Logement Application
 export const logementApplicationSchema = z.object({
   logementId: z.string(),
   logementTitle: z.string(),
@@ -313,7 +269,6 @@ export const logementApplicationFormSchema = logementApplicationSchema.omit({
 });
 export type LogementApplicationFormValues = z.infer<typeof logementApplicationFormSchema>;
 
-// Schema for Inquiry
 export const inquirySchema = z.object({
   userId: z.string(),
   userEmail: z.string().email(),
@@ -337,7 +292,6 @@ export const inquiryFormSchema = z.object({
 });
 export type InquiryFormValues = z.infer<typeof inquiryFormSchema>;
 
-// Schema for Car Booking
 export const carBookingSchema = z.object({
   userId: z.string(),
   carId: z.string(),
@@ -361,7 +315,6 @@ export const carBookingFormSchema = z.object({
 });
 export type CarBookingFormValues = z.infer<typeof carBookingFormSchema>;
 
-// Schema for Police Station
 export const policeStationSchema = z.object({
   commune: z.string(),
   name: z.string(),

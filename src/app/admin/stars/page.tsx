@@ -1,17 +1,16 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
 import { AppShell } from "@/components/app-shell";
 import { useUser, useFirebase, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, doc, runTransaction, serverTimestamp, orderBy } from "firebase/firestore";
+import { collection, doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { UserProfile, WithId } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Star, ShieldAlert, ShieldCheck, UserX, UserCheck, Plus, Minus } from "lucide-react";
+import { Loader2, Search, Star, ShieldAlert, UserX, UserCheck, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -166,7 +165,7 @@ export default function AdminStarsPage() {
                             <UserX className="h-3 w-3" /> Bloqué
                           </Badge>
                         ) : (
-                          <Badge variant="success" className="flex items-center gap-1 w-fit bg-emerald-100 text-emerald-700">
+                          <Badge variant="success" className="flex items-center gap-1 w-fit">
                             <UserCheck className="h-3 w-3" /> Actif
                           </Badge>
                         )}
@@ -192,8 +191,8 @@ export default function AdminStarsPage() {
 
                         <Button 
                           size="icon" 
-                          variant={u.isBlocked ? "success" : "destructive"} 
-                          className="h-8 w-8 rounded-lg"
+                          variant={u.isBlocked ? "default" : "destructive"} 
+                          className={`h-8 w-8 rounded-lg ${u.isBlocked ? "bg-emerald-500 hover:bg-emerald-600" : ""}`}
                           onClick={() => handleToggleBlock(u)}
                           disabled={isUpdating === u.id}
                         >

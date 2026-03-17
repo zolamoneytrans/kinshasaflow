@@ -130,7 +130,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
-  // Star Balance monitoring for low balance toast
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc<UserProfile>(userProfileRef);
 
@@ -148,29 +147,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       });
     }
   }, [profile, pathname, toast]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      const handleControllerChange = () => {
-        toast({
-          title: 'Mise à jour disponible',
-          description: "Une nouvelle version de l'application est prête.",
-          duration: Infinity,
-          action: (
-            <ToastAction altText="Actualiser" onClick={() => window.location.reload()}>
-              Actualiser
-            </ToastAction>
-          ),
-        });
-      };
-      
-      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
-
-      return () => {
-        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
-      };
-    }
-  }, [toast]);
 
   const isAdmin = user?.email === 'drnduwa@gmail.com';
   
@@ -191,8 +167,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/assistant') return 'Assistant IA';
     if (pathname === '/map') return 'Carte du Trafic';
     if (pathname === '/mes-stars') return 'Mes Stars';
-    if (pathname === '/login') return 'Se connecter';
-    if (pathname === '/signup') return "S'inscrire";
     if (pathname === '/admin/stars') return 'Admin Stars';
     if (pathname === '/admin/transport') return 'Admin Transport';
     if (pathname === '/admin/logement') return 'Admin Logement';

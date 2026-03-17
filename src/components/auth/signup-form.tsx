@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -65,30 +64,35 @@ export function SignupForm() {
         const transRef = doc(collection(userRef, 'star_transactions'));
 
         await runTransaction(firestore, async (transaction) => {
-            const userData = {
-                id: user.uid,
-                email: user.email,
-                name: extraInfo.name || user.displayName,
-                photoURL: user.photoURL || '',
-                phone: extraInfo.phone || '',
-                city: extraInfo.city || 'Kinshasa',
-                country: extraInfo.country || 'RDC',
-                currentStarsBalance: STAR_COSTS.SIGNUP_BONUS,
-                totalStarsEarned: STAR_COSTS.SIGNUP_BONUS,
-                isProfileComplete: true,
-                createdAt: serverTimestamp(),
-            };
+            const userSnap = await transaction.get(userRef);
+            
+            // On n'initialise que si le profil n'existe pas déjà (cas Google)
+            if (!userSnap.exists()) {
+                const userData = {
+                    id: user.uid,
+                    email: user.email,
+                    name: extraInfo.name || user.displayName,
+                    photoURL: user.photoURL || '',
+                    phone: extraInfo.phone || '',
+                    city: extraInfo.city || 'Kinshasa',
+                    country: extraInfo.country || 'RDC',
+                    currentStarsBalance: STAR_COSTS.SIGNUP_BONUS,
+                    totalStarsEarned: STAR_COSTS.SIGNUP_BONUS,
+                    isProfileComplete: true,
+                    createdAt: serverTimestamp(),
+                };
 
-            transaction.set(userRef, userData, { merge: true });
+                transaction.set(userRef, userData, { merge: true });
 
-            transaction.set(transRef, {
-                userId: user.uid,
-                type: 'earned',
-                starsChange: STAR_COSTS.SIGNUP_BONUS,
-                balanceAfterTransaction: STAR_COSTS.SIGNUP_BONUS,
-                description: "Bonus de bienvenue - Inscription",
-                timestamp: serverTimestamp(),
-            });
+                transaction.set(transRef, {
+                    userId: user.uid,
+                    type: 'earned',
+                    starsChange: STAR_COSTS.SIGNUP_BONUS,
+                    balanceAfterTransaction: STAR_COSTS.SIGNUP_BONUS,
+                    description: "Bonus de bienvenue - Inscription",
+                    timestamp: serverTimestamp(),
+                });
+            }
         });
     }
 
@@ -96,15 +100,15 @@ export function SignupForm() {
         setIsSubmitting(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-            const user = userCredential.user;
+            const firebaseUser = userCredential.user;
 
-            await updateProfile(user, { displayName: data.name });
+            await updateProfile(firebaseUser, { displayName: data.name });
             
-            // Send verification email
-            await sendEmailVerification(user);
+            // Envoyer l'email de vérification
+            await sendEmailVerification(firebaseUser);
 
-            // Initialize Firestore Profile + Welcome Bonus
-            await initializeUserProfile(user, data);
+            // Initialiser le profil avec le bonus
+            await initializeUserProfile(firebaseUser, data);
 
             toast({
                 title: 'Compte créé !',
@@ -134,7 +138,6 @@ export function SignupForm() {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
             
-            // Google users are usually auto-verified, but we still need profile in Firestore
             await initializeUserProfile(result.user, {
                 name: result.user.displayName || '',
                 phone: result.user.phoneNumber || '',

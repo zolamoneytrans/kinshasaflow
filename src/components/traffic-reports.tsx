@@ -45,7 +45,6 @@ interface Incident {
   updatedAt: string;
   source: 'gps' | 'user';
   coords?: { lat: number, lng: number };
-  destCoords?: { lat: number, lng: number };
 }
 
 const MAJOR_AXES = [
@@ -70,7 +69,6 @@ export default function TrafficReports() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [navTarget, setNavTarget] = useState<{lat: number, lng: number, name: string} | null>(null);
   const [isStartingNav, setIsStartingNav] = useState(false);
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
@@ -104,8 +102,7 @@ export default function TrafficReports() {
           delay: res.delay,
           updatedAt: "GPS Live",
           source: 'gps',
-          coords: axis.origin,
-          destCoords: axis.destination
+          coords: axis.origin
         };
       });
 
@@ -134,24 +131,6 @@ export default function TrafficReports() {
     }
 
     setIsStartingNav(true);
-    
-    // Essayer de récupérer la position GPS réelle
-    navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-            const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            setUserLocation(loc);
-            await processNavPayment(target);
-        },
-        async (err) => {
-            console.warn("GPS Access Denied, using Gombe as default origin.");
-            setUserLocation({ lat: -4.308, lng: 15.305 }); // Repli sur Gombe
-            await processNavPayment(target);
-        },
-        { enableHighAccuracy: true, timeout: 5000 }
-    );
-  };
-
-  const processNavPayment = async (target: {lat: number, lng: number, name: string}) => {
     try {
         await runTransaction(firestore, async (transaction) => {
             const userDoc = await transaction.get(userRef!);
@@ -273,8 +252,8 @@ export default function TrafficReports() {
                                     <Button 
                                         disabled={isStartingNav}
                                         onClick={() => handleStartNavigation({
-                                            lat: incident.destCoords?.lat || incident.coords?.lat || 0,
-                                            lng: incident.destCoords?.lng || incident.coords?.lng || 0,
+                                            lat: incident.coords?.lat || 0,
+                                            lng: incident.coords?.lng || 0,
                                             name: incident.road
                                         })}
                                         className="rounded-2xl h-12 px-6 shadow-lg shadow-primary/20 font-black"
@@ -312,7 +291,7 @@ export default function TrafficReports() {
                             loading="lazy"
                             allowFullScreen
                             referrerPolicy="no-referrer-when-downgrade"
-                            src={`https://www.google.com/maps/embed/v1/directions?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&origin=${userLocation?.lat},${userLocation?.lng}&destination=${navTarget.lat},${navTarget.lng}&mode=driving`}
+                            src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk&destination=${navTarget.lat},${navTarget.lng}&mode=driving`}
                         ></iframe>
                     )}
                 </div>

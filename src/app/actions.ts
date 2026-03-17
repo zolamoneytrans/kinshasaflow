@@ -58,10 +58,10 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
  * Version optimisée pour éviter les statuts "INCONNU".
  */
 export async function getGoogleTrafficStatusAction(axes: { name: string, origin: { lat: number, lng: number }, destination: { lat: number, lng: number } }[]) {
-  const GOOGLE_API_KEY = process.env.GOOGLE_ROUTES_API_KEY;
+  const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
   
   if (!GOOGLE_API_KEY) {
-    console.error("CRITICAL: GOOGLE_ROUTES_API_KEY is missing in .env file.");
+    console.error("CRITICAL: GOOGLE_ROUTES_API_KEY is missing.");
     return axes.map(a => ({ road: a.name, status: "INCONNU" as const, speed: 0, delay: 0 }));
   }
 
@@ -127,7 +127,7 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
         let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" | "INCONNU" = "FLUIDE";
         
         if (speedKmh === 0 && distance > 0) {
-            status = "EMBOUTEILLAGE"; // Une vitesse nulle avec distance signifie un blocage
+            status = "EMBOUTEILLAGE";
         } else if (speedKmh < 10 || delayMinutes > 10) {
           status = "EMBOUTEILLAGE";
         } else if (speedKmh <= 20 || delayMinutes >= 5) {

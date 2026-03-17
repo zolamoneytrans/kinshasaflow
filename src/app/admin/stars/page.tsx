@@ -191,8 +191,8 @@ export default function AdminStarsPage() {
 
                         <Button 
                           size="icon" 
-                          variant={u.isBlocked ? "default" : "destructive"} 
-                          className={`h-8 w-8 rounded-lg ${u.isBlocked ? "bg-emerald-500 hover:bg-emerald-600" : ""}`}
+                          variant={u.isBlocked ? "success" : "destructive"} 
+                          className="h-8 w-8 rounded-lg"
                           onClick={() => handleToggleBlock(u)}
                           disabled={isUpdating === u.id}
                         >

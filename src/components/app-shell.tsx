@@ -168,12 +168,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/map') return 'Carte du Trafic';
     if (pathname === '/mes-stars') return 'Mes Stars';
     if (pathname === '/admin/stars') return 'Admin Stars';
-    if (pathname === '/admin/transport') return 'Admin Transport';
-    if (pathname === '/admin/logement') return 'Admin Logement';
-    if (pathname === '/admin/messages') return 'Messages';
-    if (pathname === '/admin/car-rental') return 'Admin Location';
-    if (pathname === '/admin/adverts') return 'Admin Publicités';
-    if (pathname === '/admin/test-push') return 'Test Notifications';
     return 'Kinshasa Flow';
   }
 
@@ -368,54 +362,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <Link href="/admin/stars" className="font-medium">
                         <Users className="text-destructive" />
                         <span>Admin Stars</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} tooltip={{children: "Admin Transport"}} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/transport" className="font-medium">
-                        <Shield className="text-destructive" />
-                        <span>Admin Transport</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} tooltip={{children: "Admin Logement"}} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/logement" className="font-medium">
-                        <BedDouble className="text-destructive" />
-                        <span>Admin Logement</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} tooltip={{children: "Messages"}} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/messages" className="font-medium">
-                        <Mail className="text-destructive" />
-                        <span>Messages</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} tooltip={{children: "Admin Location"}} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/car-rental" className="font-medium">
-                        <Car className="text-destructive" />
-                        <span>Admin Location</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} tooltip={{children: "Admin Publicités"}} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/adverts" className="font-medium">
-                        <Video className="text-destructive" />
-                        <span>Admin Publicités</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/test-push'} tooltip={{children: "Test Push"}} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/test-push" className="font-medium">
-                        <Bell className="text-destructive" />
-                        <span>Test Push</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

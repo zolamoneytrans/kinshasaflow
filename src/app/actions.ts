@@ -164,6 +164,7 @@ export async function initiateMbiyoPaymentAction(data: {
     description: string;
 }): Promise<{ success: boolean; data?: { id: string; status: string }; error?: string }> {
     console.log("Initiating MbiyoPay Payment:", data);
+    // Note: Pour une implémentation réelle, ceci devrait aussi appeler l'API Mbiyo /api/v1/merchant/collect/
     const mockTransactionId = `mbiyo_${Math.random().toString(36).substr(2, 9)}`;
     return {
         success: true,
@@ -175,13 +176,47 @@ export async function initiateMbiyoPaymentAction(data: {
 }
 
 /**
- * Vérifie le statut d'une transaction MbiyoPay.
+ * Vérifie le statut d'une transaction via l'API MbiyoPay.
  */
 export async function checkMbiyoTransactionStatusAction(transactionId: string): Promise<{ success: boolean; data?: { status: string }; error?: string }> {
-    return {
-        success: true,
-        data: {
-            status: Math.random() > 0.5 ? 'success' : 'pending'
+    try {
+        const response = await fetch(
+            `https://dashboard.mbiyo.africa/api/v1/merchant/transactions/${transactionId}`,
+            {
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer COjbIMdkfbeZ8RJUH03oj0kNKJLzCK",
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            return { success: false, error: `Erreur API MbiyoPay: ${response.status} - ${errorText}` };
         }
-    };
+
+        const data = await response.json();
+        
+        // Mappage des statuts MbiyoPay vers les statuts de l'application
+        // Les statuts typiques MbiyoPay sont : SUCCESSFUL, PENDING, FAILED, CANCELLED
+        const remoteStatus = String(data.status || data.state || '').toLowerCase();
+        
+        let mappedStatus = 'pending';
+        if (remoteStatus.includes('success')) {
+            mappedStatus = 'success';
+        } else if (remoteStatus.includes('fail') || remoteStatus.includes('reject') || remoteStatus.includes('cancel')) {
+            mappedStatus = 'failed';
+        }
+
+        return {
+            success: true,
+            data: {
+                status: mappedStatus
+            }
+        };
+    } catch (error: any) {
+        console.error("MbiyoPay check status error:", error);
+        return { success: false, error: error.message };
+    }
 }

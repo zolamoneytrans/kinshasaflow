@@ -129,11 +129,11 @@ const announcements: Record<string, Annonce[]> = {
 
 const CategoryBadge = ({ category }: { category: Category }) => {
   const styles = {
-    Accord: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-    Flotte: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    Sécurité: "bg-red-500/10 text-red-500 border-red-500/20",
-    Régulation: "bg-slate-500/10 text-slate-400 border-slate-500/20",
-    Tarifs: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+    Accord: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    Flotte: "bg-blue-100 text-blue-700 border-blue-200",
+    Sécurité: "bg-red-100 text-red-700 border-red-200",
+    Régulation: "bg-slate-100 text-slate-700 border-slate-200",
+    Tarifs: "bg-amber-100 text-amber-700 border-amber-200",
   };
 
   return (
@@ -144,26 +144,26 @@ const CategoryBadge = ({ category }: { category: Category }) => {
 };
 
 const AnnonceCard = ({ annonce }: { annonce: Annonce }) => (
-  <Card className="border-none shadow-sm bg-slate-900/40 hover:bg-slate-900/60 transition-colors rounded-2xl overflow-hidden group">
+  <Card className="border-none shadow-sm bg-white hover:bg-slate-50 transition-colors rounded-2xl overflow-hidden group">
     <CardContent className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <CategoryBadge category={annonce.category} />
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+        <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
           <Calendar className="h-3 w-3" />
           {annonce.date}
         </div>
       </div>
       
-      <h3 className="text-lg font-bold text-slate-100 group-hover:text-primary transition-colors leading-tight">
+      <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors leading-tight">
         {annonce.title}
       </h3>
       
-      <p className="text-sm text-slate-400 leading-relaxed">
+      <p className="text-sm text-muted-foreground leading-relaxed">
         {annonce.details}
       </p>
       
-      <div className="pt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-800/50">
-        <span className="text-[10px] font-black uppercase text-slate-600 tracking-widest">Sources :</span>
+      <div className="pt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100">
+        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sources :</span>
         {annonce.source.map((s, i) => (
           <span key={i} className="text-[10px] font-bold text-primary flex items-center gap-1">
             <ChevronRight className="h-3 w-3" />
@@ -176,7 +176,7 @@ const AnnonceCard = ({ annonce }: { annonce: Annonce }) => (
 );
 
 const StatCard = ({ icon: Icon, label, value, subLabel }: { icon: any, label: string, value: string | number, subLabel: string }) => (
-  <Card className="bg-slate-900/50 border-none shadow-xl rounded-2xl">
+  <Card className="bg-white border-none shadow-sm rounded-2xl">
     <CardContent className="p-6">
       <div className="flex items-start justify-between">
         <div className="space-y-4">
@@ -184,11 +184,11 @@ const StatCard = ({ icon: Icon, label, value, subLabel }: { icon: any, label: st
             <Icon className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <p className="text-3xl font-black text-white">{value}</p>
-            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mt-1">{label}</p>
+            <p className="text-3xl font-black text-foreground">{value}</p>
+            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">{label}</p>
           </div>
         </div>
-        <Badge variant="secondary" className="bg-slate-800 text-[10px] font-bold text-slate-400">{subLabel}</Badge>
+        <Badge variant="secondary" className="bg-slate-100 text-[10px] font-bold text-slate-500">{subLabel}</Badge>
       </div>
     </CardContent>
   </Card>
@@ -211,7 +211,7 @@ export default function AnnoncesFeed() {
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto bg-slate-950/50">
+    <div className="w-full h-full overflow-y-auto bg-slate-50/50">
       <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-12 pb-20">
         
         {/* Stats Grid */}
@@ -223,19 +223,19 @@ export default function AnnoncesFeed() {
         </div>
 
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-6">
           <div className="space-y-2">
-            <h2 className="text-2xl font-black text-white flex items-center gap-3">
+            <h2 className="text-2xl font-black text-foreground flex items-center gap-3">
               <Landmark className="text-primary h-6 w-6" />
               Annonces Officielles (2025–2026)
             </h2>
-            <p className="text-slate-500 text-sm font-medium">Mises à jour du gouvernement pour les automobilistes • Actualisé le 18 mars 2026</p>
+            <p className="text-muted-foreground text-sm font-medium">Mises à jour du gouvernement pour les automobilistes • Actualisé le 18 mars 2026</p>
           </div>
           <Button 
             variant="outline" 
             onClick={handleRefresh} 
             disabled={isRefreshing}
-            className="rounded-xl border-primary/20 text-primary font-bold bg-primary/5 hover:bg-primary/10 h-11 px-6"
+            className="rounded-xl border-primary/20 text-primary font-bold bg-white hover:bg-primary/5 h-11 px-6 shadow-sm"
           >
             {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             Actualiser
@@ -265,11 +265,11 @@ export default function AnnoncesFeed() {
               <div className="bg-primary p-2 rounded-lg">
                 <Info className="h-4 w-4 text-white" />
               </div>
-              <p className="text-xs font-bold text-slate-400">
+              <p className="text-xs font-bold text-slate-500">
                 Sources : Radio Okapi • RTNC • Actualite.cd • ACP • Congo Quotidien • Bankable Africa • Le Potentiel • Strong2kin Moov • Netic News • Top Congo FM
               </p>
             </div>
-            <Button variant="outline" size="sm" className="rounded-xl border-primary/20 text-primary font-bold">
+            <Button variant="outline" size="sm" className="rounded-xl border-primary/20 text-primary font-bold bg-white">
               Tous les arrêtés
               <ExternalLink className="ml-2 h-3 w-3" />
             </Button>

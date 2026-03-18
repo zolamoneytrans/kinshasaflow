@@ -1,3 +1,4 @@
+
 {
   "placeholderImages": [
     {
@@ -50,9 +51,9 @@
     },
     {
       "id": "kinshasa-hero",
-      "description": "Vue aérienne de la ville de Kinshasa",
-      "imageUrl": "https://media.istockphoto.com/id/1305522604/photo/kinshasa-city.jpg?s=612x612&w=0&k=20&c=_lkX_2IBqQBv7qp2v7KxZ_YA1TtfYEbOzMlXcPKatUU=",
-      "imageHint": "kinshasa city"
+      "description": "Trafic urbain dynamique à Kinshasa",
+      "imageUrl": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1200",
+      "imageHint": "city traffic"
     }
   ]
 }

@@ -1,9 +1,10 @@
+
 'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap } from 'lucide-react';
+import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
@@ -183,7 +184,7 @@ export default function WelcomePage() {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                             <div className="absolute bottom-8 left-8 text-left text-white">
                                 <p className="text-xs font-bold uppercase tracking-widest text-accent mb-2">Ville de Kinshasa</p>
-                                <h4 className="text-2xl font-bold flex items-center gap-2 drop-shadow-md"><MapPin className="w-5 h-5 text-accent"/> Une vision aérienne de la capitale</h4>
+                                <h4 className="text-2xl font-bold flex items-center gap-2 drop-shadow-md"><Car className="w-5 h-5 text-accent"/> La mobilité au cœur de la capitale</h4>
                             </div>
                         </div>
                     </motion.div>

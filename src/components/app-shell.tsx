@@ -389,54 +389,72 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/stars" className="font-medium">
-                        <Users className="text-destructive" />
-                        <span>Admin Stars & Users</span>
+                      <Link href="/admin/stars" className="font-medium flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Users className="text-destructive" />
+                          <span>Admin Stars & Users</span>
+                        </div>
+                        <Badge variant="outline" className="h-4 px-1 text-[8px] border-destructive/30 text-destructive font-black">SYS</Badge>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/transport" className="font-medium">
-                        <Shield className="text-destructive" />
-                        <span>Admin Transport</span>
+                      <Link href="/admin/transport" className="font-medium flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Shield className="text-destructive" />
+                          <span>Admin Transport</span>
+                        </div>
+                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">2</Badge>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/logement" className="font-medium">
-                        <BedDouble className="text-destructive" />
-                        <span>Admin Logement</span>
+                      <Link href="/admin/logement" className="font-medium flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <BedDouble className="text-destructive" />
+                          <span>Admin Logement</span>
+                        </div>
+                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">1</Badge>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/car-rental" className="font-medium">
-                        <Car className="text-destructive" />
-                        <span>Admin Location</span>
+                      <Link href="/admin/car-rental" className="font-medium flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Car className="text-destructive" />
+                          <span>Admin Location</span>
+                        </div>
+                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">4</Badge>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/adverts" className="font-medium">
-                        <Megaphone className="text-destructive" />
-                        <span>Admin Publicités</span>
+                      <Link href="/admin/adverts" className="font-medium flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Megaphone className="text-destructive" />
+                          <span>Admin Publicités</span>
+                        </div>
+                        <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black">ADS</Badge>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/messages" className="font-medium">
-                        <Mail className="text-destructive" />
-                        <span>Admin Messages</span>
+                      <Link href="/admin/messages" className="font-medium flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Mail className="text-destructive" />
+                          <span>Admin Messages</span>
+                        </div>
+                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">NEW</Badge>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

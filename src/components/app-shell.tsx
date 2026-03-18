@@ -169,6 +169,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/map') return 'Carte du Trafic';
     if (pathname === '/mes-stars') return 'Mes Stars';
     if (pathname === '/admin/stars') return 'Admin Stars';
+    if (pathname === '/admin/transport') return 'Admin Transport';
+    if (pathname === '/admin/logement') return 'Admin Logement';
+    if (pathname === '/admin/car-rental') return 'Admin Location';
+    if (pathname === '/admin/adverts') return 'Admin Publicités';
+    if (pathname === '/admin/messages') return 'Admin Messages';
     return 'Kinshasa Flow';
   }
 
@@ -189,7 +194,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/assistant') return 'Posez des questions sur les itinéraires à Kinshasa.';
     if (pathname === '/map') return 'Visualisez le trafic en temps réel à Kinshasa.';
     if (pathname === '/mes-stars') return 'Gérez votre solde de stars et monétisez votre usage.';
-    if (pathname === '/admin/stars') return 'Gérer les comptes utilisateurs et les stars.';
+    if (pathname.startsWith('/admin')) return 'Espace réservé à l\'administration système.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -380,11 +385,58 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {isAdmin && (
                 <>
                   <SidebarSeparator className="my-4 bg-sidebar-border/30" />
+                  <div className="px-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Administration</div>
+                  
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} tooltip={{children: "Gestion Users/Stars"}} className="hover:bg-sidebar-accent">
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} className="hover:bg-sidebar-accent">
                       <Link href="/admin/stars" className="font-medium">
                         <Users className="text-destructive" />
-                        <span>Admin Stars</span>
+                        <span>Admin Stars & Users</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/transport" className="font-medium">
+                        <Shield className="text-destructive" />
+                        <span>Admin Transport</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/logement" className="font-medium">
+                        <BedDouble className="text-destructive" />
+                        <span>Admin Logement</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/car-rental" className="font-medium">
+                        <Car className="text-destructive" />
+                        <span>Admin Location</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/adverts" className="font-medium">
+                        <Megaphone className="text-destructive" />
+                        <span>Admin Publicités</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/messages" className="font-medium">
+                        <Mail className="text-destructive" />
+                        <span>Admin Messages</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

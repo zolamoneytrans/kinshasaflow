@@ -32,8 +32,12 @@ const itemVariants = {
 const FeatureCard = ({ icon, title, description, color }: { icon: React.ReactNode, title: string, description: string, color: string }) => (
     <motion.div
         variants={itemVariants}
-        whileHover={{ y: -10, transition: { duration: 0.2 } }}
-        className="group bg-card/60 backdrop-blur-xl p-8 rounded-2xl border border-primary/10 shadow-xl hover:shadow-2xl hover:bg-card/80 transition-all cursor-default"
+        whileHover={{ 
+            y: -12, 
+            scale: 1.02,
+            transition: { duration: 0.3, ease: "backOut" } 
+        }}
+        className="group bg-card/60 backdrop-blur-xl p-8 rounded-3xl border border-primary/10 shadow-xl hover:shadow-2xl hover:bg-card/80 transition-all cursor-default"
     >
         <div className={`inline-flex p-4 rounded-xl mb-6 transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-lg ${color}`}>
             {icon}
@@ -164,35 +168,49 @@ export default function WelcomePage() {
                 </motion.div>
 
                 {/* Hero Image Container */}
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.95, y: 40 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ delay: 0.8, duration: 1, ease: "easeOut" }}
-                    className="w-full max-w-7xl px-4 flex flex-col items-center gap-12 group"
-                >
-                    <div className="relative w-full">
+                <div className="w-full max-w-7xl px-4 flex flex-col items-center gap-12 group">
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 40 }}
+                        whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.3 }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ 
+                            type: "spring", 
+                            stiffness: 260, 
+                            damping: 20,
+                            opacity: { duration: 0.8 },
+                            y: { duration: 0.8 }
+                        }}
+                        className="relative w-full cursor-pointer"
+                    >
                         <div className="absolute -inset-4 bg-gradient-to-r from-primary via-accent to-blue-400 rounded-[2.5rem] blur-2xl opacity-15 group-hover:opacity-30 transition duration-1000"></div>
                         <div className="relative aspect-[4/3] md:aspect-video lg:aspect-[21/9] rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white/50 ring-1 ring-white/20 bg-white">
                             <Image 
                                 src={heroSvg} 
                                 alt={heroImageData?.description || "Kinshasa Flow Hero"} 
                                 fill 
-                                className="object-contain p-4 md:p-8 scale-100 hover:scale-[1.03] transition-transform"
-                                style={{ transitionDuration: '10000ms' }}
+                                className="object-contain p-4 md:p-8 transition-transform duration-700 group-hover:scale-105"
                                 priority
                             />
                         </div>
-                    </div>
+                    </motion.div>
                     
                     {/* Caption strictly under the image with consistent spacing */}
-                    <div className="text-center md:text-left md:self-start bg-white/60 backdrop-blur-xl p-6 md:p-8 rounded-2xl border border-white/50 shadow-sm md:ml-10 z-20 relative">
+                    <motion.div 
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.5, duration: 0.6 }}
+                        className="text-center md:text-left md:self-start bg-white/60 backdrop-blur-xl p-6 md:p-8 rounded-2xl border border-white/50 shadow-sm md:ml-10 z-20 relative"
+                    >
                         <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-primary mb-1">Ville de Kinshasa</p>
                         <h4 className="text-lg md:text-2xl font-bold flex items-center justify-center md:justify-start gap-2">
-                            <Car className="w-4 h-4 md:w-6 md:h-6 text-primary"/> 
+                            <Car className="w-4 h-4 md:w-6 md:h-6 text-primary animate-bounce"/> 
                             La mobilité réinventée
                         </h4>
-                    </div>
-                </motion.div>
+                    </motion.div>
+                </div>
             </main>
 
             <motion.section 
@@ -235,8 +253,9 @@ export default function WelcomePage() {
             
             <motion.footer 
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 1 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
                 className="text-center p-12 border-t border-primary/10 bg-card/40 backdrop-blur-md"
             >
                 <div className="flex flex-col items-center gap-6">

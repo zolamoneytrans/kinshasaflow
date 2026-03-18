@@ -73,18 +73,18 @@ export default function WelcomePage() {
     };
 
     return (
-        <div className="relative min-h-screen w-full text-foreground overflow-x-hidden flex flex-col">
-            {/* Dots Background */}
-            <div className="absolute inset-0 -z-30 h-full w-full bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.15] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
+        <div className="relative min-h-screen w-full bg-background text-foreground overflow-x-hidden flex flex-col">
+            {/* Dots Background - Full cover */}
+            <div className="absolute inset-0 -z-30 h-full w-full bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.12]"></div>
             
-            {/* Mesh Gradients */}
-            <div className="absolute top-[-5%] left-[-5%] -z-20 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[120px] animate-pulse"></div>
-            <div className="absolute top-[20%] right-[-10%] -z-20 h-[500px] w-[500px] rounded-full bg-accent/10 blur-[130px]"></div>
-            <div className="absolute bottom-[-10%] left-[10%] -z-20 h-[600px] w-[600px] rounded-full bg-blue-400/12 blur-[150px]"></div>
+            {/* Mesh Gradients - Fixed to viewport */}
+            <div className="fixed top-[-5%] left-[-5%] -z-20 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[120px] pointer-events-none"></div>
+            <div className="fixed top-[30%] right-[-10%] -z-20 h-[500px] w-[500px] rounded-full bg-accent/10 blur-[130px] pointer-events-none"></div>
+            <div className="fixed bottom-[-10%] left-[10%] -z-20 h-[600px] w-[600px] rounded-full bg-blue-400/10 blur-[150px] pointer-events-none"></div>
 
-            {/* Echangeur background */}
+            {/* Echangeur background - Fixed */}
             <div 
-                className="absolute inset-0 pointer-events-none overflow-hidden"
+                className="fixed inset-0 pointer-events-none overflow-hidden"
                 style={{ zIndex: -15 }}
             >
                 <Image
@@ -92,7 +92,7 @@ export default function WelcomePage() {
                     alt=""
                     fill
                     className="object-cover object-center"
-                    style={{ opacity: 0.25 }}
+                    style={{ opacity: 0.20 }}
                     priority
                 />
             </div>
@@ -221,7 +221,7 @@ export default function WelcomePage() {
                     hidden: { opacity: 1 }, 
                     visible: { transition: { staggerChildren: 0.1 } } 
                 }}
-                className="container mx-auto px-4 py-24"
+                className="container mx-auto px-4 py-24 z-10"
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     <FeatureCard
@@ -256,7 +256,7 @@ export default function WelcomePage() {
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
-                className="text-center p-12 border-t border-primary/10 bg-card/40 backdrop-blur-md"
+                className="text-center p-12 border-t border-primary/10 bg-white/80 backdrop-blur-md z-20 mt-auto"
             >
                 <div className="flex flex-col items-center gap-6">
                     <Logo className="h-8 w-auto text-muted-foreground opacity-60" />

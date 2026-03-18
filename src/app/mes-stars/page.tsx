@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -28,7 +27,8 @@ import {
   Volume2,
   VolumeX,
   UserPlus,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -209,10 +209,12 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
             } else {
                 toast({ title: "En attente", description: "Le paiement n'a pas encore été validé sur votre téléphone." });
             }
+        } else {
+            toast({ title: "Erreur", description: result.error || "Impossible de vérifier le statut.", variant: "destructive" });
         }
     } catch (e) {
         console.error(e);
-        toast({ title: "Erreur", description: "Une erreur est survenue lors de la vérification.", variant: "destructive" });
+        toast({ title: "Erreur technique", description: "Une erreur est survenue lors de la vérification.", variant: "destructive" });
     } finally {
         setIsChecking(false);
     }

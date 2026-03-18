@@ -177,6 +177,7 @@ export async function initiateMbiyoPaymentAction(data: {
 
 /**
  * Vérifie le statut d'une transaction via l'API MbiyoPay.
+ * Structure basée sur l'exemple fourni par l'utilisateur.
  */
 export async function checkMbiyoTransactionStatusAction(transactionId: string): Promise<{ success: boolean; data?: { status: string }; error?: string }> {
     try {
@@ -196,25 +197,32 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
             return { success: false, error: `Erreur API MbiyoPay: ${response.status} - ${errorText}` };
         }
 
-        const data = await response.json();
+        const result = await response.json();
+        console.log("MbiyoPay result:", result);
         
-        // Mappage des statuts MbiyoPay vers les statuts de l'application
-        // Les statuts typiques MbiyoPay sont : SUCCESSFUL, PENDING, FAILED, CANCELLED
-        const remoteStatus = String(data.status || data.state || '').toLowerCase();
+        // Structure MbiyoPay :
+        // result.status: "success" ou "error" (statut de l'appel API)
+        // result.data.status: "successful", "failed", "canceled", "pending" (statut réel de la transaction)
         
-        let mappedStatus = 'pending';
-        if (remoteStatus.includes('success')) {
-            mappedStatus = 'success';
-        } else if (remoteStatus.includes('fail') || remoteStatus.includes('reject') || remoteStatus.includes('cancel')) {
-            mappedStatus = 'failed';
+        if (result.status === "success" && result.data) {
+            const txStatus = String(result.data.status).toLowerCase();
+            
+            let mappedStatus = 'pending';
+            if (txStatus === 'successful') {
+                mappedStatus = 'success';
+            } else if (txStatus === 'failed' || txStatus === 'canceled' || txStatus === 'rejected') {
+                mappedStatus = 'failed';
+            }
+
+            return {
+                success: true,
+                data: {
+                    status: mappedStatus
+                }
+            };
         }
 
-        return {
-            success: true,
-            data: {
-                status: mappedStatus
-            }
-        };
+        return { success: false, error: "La réponse de MbiyoPay ne contient pas de données valides ou l'appel a échoué." };
     } catch (error: any) {
         console.error("MbiyoPay check status error:", error);
         return { success: false, error: error.message };

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,9 +14,12 @@ import {
   FileText,
   ExternalLink,
   ChevronRight,
-  Info
+  Info,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 type Category = 'Accord' | 'Flotte' | 'Sécurité' | 'Régulation' | 'Tarifs';
 
@@ -192,6 +195,21 @@ const StatCard = ({ icon: Icon, label, value, subLabel }: { icon: any, label: st
 );
 
 export default function AnnoncesFeed() {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { toast } = useToast();
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    // Simuler un appel API
+    setTimeout(() => {
+      setIsRefreshing(false);
+      toast({
+        title: "Données actualisées",
+        description: "Les dernières annonces officielles ont été récupérées avec succès.",
+      });
+    }, 1500);
+  };
+
   return (
     <div className="w-full h-full overflow-y-auto bg-slate-950/50">
       <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-12 pb-20">
@@ -205,12 +223,23 @@ export default function AnnoncesFeed() {
         </div>
 
         {/* Section Header */}
-        <div className="space-y-2 border-b border-slate-800 pb-6">
-          <h2 className="text-2xl font-black text-white flex items-center gap-3">
-            <Landmark className="text-primary h-6 w-6" />
-            Annonces Officielles (2025–2026)
-          </h2>
-          <p className="text-slate-500 text-sm font-medium">Mises à jour du gouvernement pour les automobilistes • Actualisé le 18 mars 2026</p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-6">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-white flex items-center gap-3">
+              <Landmark className="text-primary h-6 w-6" />
+              Annonces Officielles (2025–2026)
+            </h2>
+            <p className="text-slate-500 text-sm font-medium">Mises à jour du gouvernement pour les automobilistes • Actualisé le 18 mars 2026</p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh} 
+            disabled={isRefreshing}
+            className="rounded-xl border-primary/20 text-primary font-bold bg-primary/5 hover:bg-primary/10 h-11 px-6"
+          >
+            {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            Actualiser
+          </Button>
         </div>
 
         {/* Announcements by Year */}

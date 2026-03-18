@@ -163,12 +163,12 @@ export default function WelcomePage() {
                     </motion.div>
                 </motion.div>
 
-                {/* Hero Image Container - Amélioré pour Mobile */}
+                {/* Hero Image Container */}
                 <motion.div 
                     initial={{ opacity: 0, scale: 0.95, y: 40 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ delay: 0.8, duration: 1, ease: "easeOut" }}
-                    className="w-full max-w-7xl px-4 flex flex-col items-center gap-6 group"
+                    className="w-full max-w-7xl px-4 flex flex-col items-center gap-12 group"
                 >
                     <div className="relative w-full">
                         <div className="absolute -inset-4 bg-gradient-to-r from-primary via-accent to-blue-400 rounded-[2.5rem] blur-2xl opacity-15 group-hover:opacity-30 transition duration-1000"></div>
@@ -184,8 +184,8 @@ export default function WelcomePage() {
                         </div>
                     </div>
                     
-                    {/* Caption shifted under the image for better mobile display */}
-                    <div className="text-center md:text-left md:self-start bg-white/60 backdrop-blur-xl p-4 md:p-6 rounded-2xl border border-white/50 shadow-sm md:ml-10 md:-mt-24 z-20 relative">
+                    {/* Caption strictly under the image with consistent spacing */}
+                    <div className="text-center md:text-left md:self-start bg-white/60 backdrop-blur-xl p-6 md:p-8 rounded-2xl border border-white/50 shadow-sm md:ml-10 z-20 relative">
                         <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-primary mb-1">Ville de Kinshasa</p>
                         <h4 className="text-lg md:text-2xl font-bold flex items-center justify-center md:justify-start gap-2">
                             <Car className="w-4 h-4 md:w-6 md:h-6 text-primary"/> 

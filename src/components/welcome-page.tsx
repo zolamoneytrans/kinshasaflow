@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -11,8 +10,9 @@ import React, { useState, useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from './ui/badge';
 
-// Import de l'image personnalisée echangeur depuis le dossier src/myimages
+// Import des images personnalisées
 import echangeurBg from '@/myimages/echangeur.png';
+import heroSvg from '@/myimages/kinshasa_flow_hero.svg';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -45,7 +45,7 @@ const FeatureCard = ({ icon, title, description, color }: { icon: React.ReactNod
 
 export default function WelcomePage() {
     const [installPrompt, setInstallPrompt] = useState<any>(null);
-    const heroImage = PlaceHolderImages.find(img => img.id === 'kinshasa-hero');
+    const heroImageData = PlaceHolderImages.find(img => img.id === 'kinshasa-hero');
 
     useEffect(() => {
         const handleBeforeInstallPrompt = (e: Event) => {
@@ -163,32 +163,29 @@ export default function WelcomePage() {
                     </motion.div>
                 </motion.div>
 
-                {heroImage && (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95, y: 40 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ delay: 0.8, duration: 1, ease: "easeOut" }}
-                        className="w-full max-w-5xl px-4 relative group"
-                    >
-                        <div className="absolute -inset-2 bg-gradient-to-r from-primary via-accent to-blue-400 rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                        <div className="relative aspect-video rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/50 ring-1 ring-white/20">
-                            <Image 
-                                src={heroImage.imageUrl} 
-                                alt={heroImage.description} 
-                                fill 
-                                className="object-cover scale-100 hover:scale-110 transition-transform"
-                                style={{ transitionDuration: '10000ms' }}
-                                priority
-                                data-ai-hint={heroImage.imageHint}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                            <div className="absolute bottom-8 left-8 text-left text-white">
-                                <p className="text-xs font-bold uppercase tracking-widest text-accent mb-2">Ville de Kinshasa</p>
-                                <h4 className="text-2xl font-bold flex items-center gap-2 drop-shadow-md"><Car className="w-5 h-5 text-accent"/> La mobilité au cœur de la capitale</h4>
-                            </div>
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95, y: 40 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ delay: 0.8, duration: 1, ease: "easeOut" }}
+                    className="w-full max-w-5xl px-4 relative group"
+                >
+                    <div className="absolute -inset-2 bg-gradient-to-r from-primary via-accent to-blue-400 rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                    <div className="relative aspect-video rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/50 ring-1 ring-white/20 bg-white">
+                        <Image 
+                            src={heroSvg} 
+                            alt={heroImageData?.description || "Kinshasa Flow Hero"} 
+                            fill 
+                            className="object-contain p-8 scale-100 hover:scale-105 transition-transform"
+                            style={{ transitionDuration: '10000ms' }}
+                            priority
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent pointer-events-none" />
+                        <div className="absolute bottom-8 left-8 text-left text-slate-900">
+                            <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Ville de Kinshasa</p>
+                            <h4 className="text-2xl font-bold flex items-center gap-2 drop-shadow-sm"><Car className="w-5 h-5 text-primary"/> La mobilité au cœur de la capitale</h4>
                         </div>
-                    </motion.div>
-                )}
+                    </div>
+                </motion.div>
             </main>
 
             <motion.section 

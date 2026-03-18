@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, limit, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit, serverTimestamp, runTransaction, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile, StarTransaction, WithId, AdvertVideo } from '@/lib/types';
 import { initiateMbiyoPaymentAction, checkMbiyoTransactionStatusAction } from '@/app/actions';
 import { 
@@ -137,33 +138,6 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
 
         if (result.success && result.data) {
             setPendingTransactionId(result.data.id);
-            
-            const userRef = doc(firestore, 'users', user.uid);
-            const transRef = doc(collection(userRef, 'star_transactions'));
-
-            await runTransaction(firestore, async (transaction) => {
-                const userDoc = await transaction.get(userRef);
-                const currentData = userDoc.data() as UserProfile;
-                const newBalance = (currentData.currentStarsBalance || 0) + selectedPack.stars;
-                const newTotalPurchased = (currentData.totalStarsPurchased || 0) + selectedPack.stars;
-
-                transaction.update(userRef, {
-                    currentStarsBalance: newBalance,
-                    totalStarsPurchased: newTotalPurchased
-                });
-
-                transaction.set(transRef, {
-                    userId: user.uid,
-                    type: 'purchase',
-                    starsChange: selectedPack.stars,
-                    balanceAfterTransaction: newBalance,
-                    description: `Achat Pack ${selectedPack.label} via ${operator.toUpperCase()} (${currency})`,
-                    timestamp: serverTimestamp(),
-                    relatedObjectId: result.data?.id || null,
-                    relatedObjectType: 'MbiyoPayTransaction'
-                });
-            });
-
             setStep(3);
             toast({ 
                 title: 'Demande envoyée !', 
@@ -185,13 +159,50 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
   };
 
   const checkStatus = async () => {
-    if (!pendingTransactionId) return;
+    if (!pendingTransactionId || !user || !selectedPack) return;
     setIsChecking(true);
     try {
         const result = await checkMbiyoTransactionStatusAction(pendingTransactionId);
         if (result.success && result.data) {
             const status = result.data.status;
             if (status === 'success') {
+                // Perform the actual credit in Firestore
+                const userRef = doc(firestore, 'users', user.uid);
+                const transRef = doc(firestore, 'users', user.uid, 'star_transactions', pendingTransactionId);
+
+                // Prevent double crediting by checking if the transaction document already exists
+                const transSnap = await getDoc(transRef);
+                if (transSnap.exists()) {
+                    toast({ title: "Déjà crédité", description: "Ces stars ont déjà été ajoutées à votre compte." });
+                    setIsChecking(false);
+                    return;
+                }
+
+                await runTransaction(firestore, async (transaction) => {
+                    const userDoc = await transaction.get(userRef);
+                    if (!userDoc.exists()) return;
+                    
+                    const currentData = userDoc.data() as UserProfile;
+                    const newBalance = (currentData.currentStarsBalance || 0) + selectedPack.stars;
+                    const newTotalPurchased = (currentData.totalStarsPurchased || 0) + selectedPack.stars;
+
+                    transaction.update(userRef, {
+                        currentStarsBalance: newBalance,
+                        totalStarsPurchased: newTotalPurchased
+                    });
+
+                    transaction.set(transRef, {
+                        userId: user.uid,
+                        type: 'purchase',
+                        starsChange: selectedPack.stars,
+                        balanceAfterTransaction: newBalance,
+                        description: `Achat Pack ${selectedPack.label} via ${operator.toUpperCase()} (${currency})`,
+                        timestamp: serverTimestamp(),
+                        relatedObjectId: pendingTransactionId,
+                        relatedObjectType: 'MbiyoPayTransaction'
+                    });
+                });
+
                 toast({ title: "Paiement confirmé !", description: "Vos stars ont été créditées avec succès." });
             } else if (status === 'failed') {
                 toast({ title: "Paiement échoué", description: "La transaction a été rejetée ou annulée.", variant: "destructive" });
@@ -201,6 +212,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         }
     } catch (e) {
         console.error(e);
+        toast({ title: "Erreur", description: "Une erreur est survenue lors de la vérification.", variant: "destructive" });
     } finally {
         setIsChecking(false);
     }
@@ -298,8 +310,17 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 <div className="flex gap-2">
                   <Button variant="ghost" onClick={() => setStep(1)} className="flex-1 font-bold">Retour</Button>
                   <Button disabled={!operator || phone.length < 9 || isLoading} onClick={handlePurchase} className="flex-[2] h-12 rounded-xl font-bold">
-                    {isLoading ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
-                    Confirmer {selectedPack?.labels[currency]}
+                    {isLoading ? (
+                        <>
+                            <Loader2 className="animate-spin mr-2 h-5 w-5" />
+                            Traitement...
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle2 className="mr-2 h-5 w-5" />
+                            Confirmer {selectedPack?.labels[currency]}
+                        </>
+                    )}
                   </Button>
                 </div>
               </motion.div>
@@ -320,7 +341,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 </div>
                 <div className="space-y-2">
                     <Button onClick={checkStatus} disabled={isChecking} variant="outline" className="w-full h-12 rounded-xl font-bold border-amber-500 text-amber-600 hover:bg-amber-50">
-                        {isChecking ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                        {isChecking ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Vérifier mon paiement
                     </Button>
                     <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-xl font-bold bg-slate-900">Terminer</Button>

@@ -73,29 +73,33 @@ export default function WelcomePage() {
     };
 
     return (
-        <div className="relative min-h-screen w-full bg-background text-foreground overflow-x-hidden flex flex-col">
-            {/* Dots Background - Full cover */}
-            <div className="absolute inset-0 -z-30 h-full w-full bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.12]"></div>
+        <div className="relative min-h-screen w-full text-foreground overflow-x-hidden flex flex-col">
+            {/* --- BACKGROUND LAYERS (Fixed to viewport) --- */}
             
-            {/* Mesh Gradients - Fixed to viewport */}
-            <div className="fixed top-[-5%] left-[-5%] -z-20 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[120px] pointer-events-none"></div>
-            <div className="fixed top-[30%] right-[-10%] -z-20 h-[500px] w-[500px] rounded-full bg-accent/10 blur-[130px] pointer-events-none"></div>
-            <div className="fixed bottom-[-10%] left-[10%] -z-20 h-[600px] w-[600px] rounded-full bg-blue-400/10 blur-[150px] pointer-events-none"></div>
+            {/* Layer 1: Base Background Color */}
+            <div className="fixed inset-0 -z-50 bg-background"></div>
 
-            {/* Echangeur background - Fixed */}
-            <div 
-                className="fixed inset-0 pointer-events-none overflow-hidden"
-                style={{ zIndex: -15 }}
-            >
+            {/* Layer 2: Dots Pattern */}
+            <div className="fixed inset-0 -z-40 bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.12]"></div>
+            
+            {/* Layer 3: Mesh Gradients */}
+            <div className="fixed top-[-5%] left-[-5%] -z-30 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[120px] pointer-events-none"></div>
+            <div className="fixed top-[30%] right-[-10%] -z-30 h-[500px] w-[500px] rounded-full bg-accent/10 blur-[130px] pointer-events-none"></div>
+            <div className="fixed bottom-[-10%] left-[10%] -z-30 h-[600px] w-[600px] rounded-full bg-blue-400/10 blur-[150px] pointer-events-none"></div>
+
+            {/* Layer 4: Echangeur Custom Background Image */}
+            <div className="fixed inset-0 -z-20 pointer-events-none overflow-hidden">
                 <Image
                     src={echangeurBg}
                     alt=""
                     fill
                     className="object-cover object-center"
-                    style={{ opacity: 0.20 }}
+                    style={{ opacity: 0.25 }}
                     priority
                 />
             </div>
+
+            {/* --- PAGE CONTENT --- */}
 
             <motion.header
                 initial={{ opacity: 0, y: -20 }}
@@ -196,7 +200,7 @@ export default function WelcomePage() {
                         </div>
                     </motion.div>
                     
-                    {/* Caption strictly under the image with consistent spacing */}
+                    {/* Caption strictly under the image */}
                     <motion.div 
                         initial={{ opacity: 0, x: -20 }}
                         whileInView={{ opacity: 1, x: 0 }}

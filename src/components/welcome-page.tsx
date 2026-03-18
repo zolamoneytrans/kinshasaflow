@@ -114,7 +114,7 @@ export default function WelcomePage() {
                 </div>
             </motion.header>
 
-            <main className="container mx-auto px-4 py-12 md:py-20 text-center flex-grow flex flex-col items-center justify-center gap-16 relative z-10">
+            <main className="container mx-auto px-4 py-8 md:py-16 text-center flex-grow flex flex-col items-center justify-center gap-12 relative z-10">
                  <motion.div
                     variants={containerVariants}
                     initial="hidden"
@@ -163,26 +163,27 @@ export default function WelcomePage() {
                     </motion.div>
                 </motion.div>
 
+                {/* Hero Image Container - Agrandi et Responsif */}
                 <motion.div 
                     initial={{ opacity: 0, scale: 0.95, y: 40 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ delay: 0.8, duration: 1, ease: "easeOut" }}
-                    className="w-full max-w-5xl px-4 relative group"
+                    className="w-full max-w-7xl px-4 relative group"
                 >
-                    <div className="absolute -inset-2 bg-gradient-to-r from-primary via-accent to-blue-400 rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                    <div className="relative aspect-video rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/50 ring-1 ring-white/20 bg-white">
+                    <div className="absolute -inset-4 bg-gradient-to-r from-primary via-accent to-blue-400 rounded-[3rem] blur-2xl opacity-15 group-hover:opacity-30 transition duration-1000"></div>
+                    <div className="relative aspect-video lg:aspect-[21/9] rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white/50 ring-1 ring-white/20 bg-white">
                         <Image 
                             src={heroSvg} 
                             alt={heroImageData?.description || "Kinshasa Flow Hero"} 
                             fill 
-                            className="object-contain p-8 scale-100 hover:scale-105 transition-transform"
+                            className="object-contain p-2 md:p-4 scale-100 hover:scale-[1.03] transition-transform"
                             style={{ transitionDuration: '10000ms' }}
                             priority
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent pointer-events-none" />
-                        <div className="absolute bottom-8 left-8 text-left text-slate-900">
-                            <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Ville de Kinshasa</p>
-                            <h4 className="text-2xl font-bold flex items-center gap-2 drop-shadow-sm"><Car className="w-5 h-5 text-primary"/> La mobilité au cœur de la capitale</h4>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none" />
+                        <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10 text-left text-slate-900 bg-white/40 backdrop-blur-md p-4 rounded-2xl border border-white/50 shadow-sm">
+                            <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-primary mb-1">Ville de Kinshasa</p>
+                            <h4 className="text-lg md:text-2xl font-bold flex items-center gap-2"><Car className="w-4 h-4 md:w-6 md:h-6 text-primary"/> La mobilité réinventée</h4>
                         </div>
                     </div>
                 </motion.div>

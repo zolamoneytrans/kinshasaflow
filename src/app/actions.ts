@@ -55,7 +55,6 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
 
 /**
  * Récupère le statut réel du trafic via Google Routes API v2.
- * Version optimisée pour éviter les statuts "INCONNU".
  */
 export async function getGoogleTrafficStatusAction(axes: { name: string, origin: { lat: number, lng: number }, destination: { lat: number, lng: number } }[]) {
   const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
@@ -154,7 +153,7 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
 }
 
 /**
- * Initialise un paiement via MbiyoPay.
+ * Initialise un paiement via MbiyoPay pour la RDC (CD).
  */
 export async function initiateMbiyoPaymentAction(data: {
     amount: number;
@@ -163,21 +162,48 @@ export async function initiateMbiyoPaymentAction(data: {
     network: string;
     description: string;
 }): Promise<{ success: boolean; data?: { id: string; status: string }; error?: string }> {
-    console.log("Initiating MbiyoPay Payment:", data);
-    // Note: Pour une implémentation réelle, ceci devrait aussi appeler l'API Mbiyo /api/v1/merchant/collect/
-    const mockTransactionId = `mbiyo_${Math.random().toString(36).substr(2, 9)}`;
-    return {
-        success: true,
-        data: {
-            id: mockTransactionId,
-            status: 'pending'
+    try {
+        const response = await fetch(
+            "https://dashboard.mbiyo.africa/api/v1/merchant/collect",
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer COjbIMdkfbeZ8RJUH03oj0kNKJLzCK",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    amount: data.amount,
+                    currency: data.currency,
+                    phone: data.phone,
+                    network: data.network,
+                    description: data.description,
+                    country: "CD" // Pays fixé à la RDC
+                })
+            }
+        );
+
+        const result = await response.json();
+        
+        if (result.status === "success" && result.data) {
+            return {
+                success: true,
+                data: {
+                    id: result.data.id,
+                    status: result.data.status || 'pending'
+                }
+            };
         }
-    };
+
+        return { success: false, error: result.message || "Erreur d'initialisation MbiyoPay" };
+    } catch (error: any) {
+        console.error("MbiyoPay Initiation Error:", error);
+        return { success: false, error: error.message };
+    }
 }
 
 /**
  * Vérifie le statut d'une transaction via l'API MbiyoPay.
- * Structure basée sur l'exemple fourni par l'utilisateur.
+ * Conforme au sample fourni par l'utilisateur.
  */
 export async function checkMbiyoTransactionStatusAction(transactionId: string): Promise<{ success: boolean; data?: { status: string }; error?: string }> {
     try {
@@ -198,33 +224,23 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
         }
 
         const result = await response.json();
-        console.log("MbiyoPay result:", result);
-        
-        // Structure MbiyoPay :
-        // result.status: "success" ou "error" (statut de l'appel API)
-        // result.data.status: "successful", "failed", "canceled", "pending" (statut réel de la transaction)
+        console.log("MbiyoPay API Status Result:", result);
         
         if (result.status === "success" && result.data) {
+            // "successful", "failed", "canceled", "pending"
             const txStatus = String(result.data.status).toLowerCase();
             
-            let mappedStatus = 'pending';
-            if (txStatus === 'successful') {
-                mappedStatus = 'success';
-            } else if (txStatus === 'failed' || txStatus === 'canceled' || txStatus === 'rejected') {
-                mappedStatus = 'failed';
-            }
-
             return {
                 success: true,
                 data: {
-                    status: mappedStatus
+                    status: txStatus
                 }
             };
         }
 
-        return { success: false, error: "La réponse de MbiyoPay ne contient pas de données valides ou l'appel a échoué." };
+        return { success: false, error: result.message || "La réponse de MbiyoPay est invalide." };
     } catch (error: any) {
-        console.error("MbiyoPay check status error:", error);
+        console.error("MbiyoPay Status Check Error:", error);
         return { success: false, error: error.message };
     }
 }

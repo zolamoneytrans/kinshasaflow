@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, limit, serverTimestamp, runTransaction, getDoc, setDoc } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit, serverTimestamp, runTransaction, getDoc } from 'firebase/firestore';
 import { UserProfile, StarTransaction, WithId, AdvertVideo } from '@/lib/types';
 import { initiateMbiyoPaymentAction, checkMbiyoTransactionStatusAction } from '@/app/actions';
 import { 
@@ -27,10 +27,9 @@ import {
   Volume2,
   VolumeX,
   UserPlus,
-  RefreshCw,
-  AlertTriangle
+  RefreshCw
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -125,11 +124,9 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         sanitizedPhone = '243' + sanitizedPhone;
     }
 
-    const amount = selectedPack.prices[currency];
-
     try {
         const result = await initiateMbiyoPaymentAction({
-            amount: amount,
+            amount: selectedPack.prices[currency],
             currency: currency,
             phone: sanitizedPhone,
             network: operator,
@@ -141,18 +138,17 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
             setStep(3);
             toast({ 
                 title: 'Demande envoyée !', 
-                description: `Veuillez valider la demande USSD qui va apparaître sur votre téléphone (${operator.toUpperCase()}).` 
+                description: `Veuillez valider la demande USSD sur votre téléphone (${operator.toUpperCase()}).` 
             });
         } else {
             toast({ 
-                title: 'Échec du paiement', 
-                description: result.error || "Une erreur est survenue avec MbiyoPay.", 
+                title: 'Échec', 
+                description: result.error || "Une erreur est survenue.", 
                 variant: 'destructive' 
             });
         }
     } catch (e: any) {
-        console.error("Mbiyo Purchase Flow Error:", e);
-        toast({ title: 'Erreur technique', description: 'Impossible de traiter la demande pour le moment.', variant: 'destructive' });
+        toast({ title: 'Erreur technique', description: 'Impossible de joindre le serveur de paiement.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
     }
@@ -164,16 +160,16 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     try {
         const result = await checkMbiyoTransactionStatusAction(pendingTransactionId);
         if (result.success && result.data) {
-            const status = result.data.status;
-            if (status === 'success') {
-                // Perform the actual credit in Firestore
+            const status = result.data.status; // successful, failed, canceled, pending
+            
+            if (status === 'successful') {
                 const userRef = doc(firestore, 'users', user.uid);
+                // Utiliser l'ID de transaction Mbiyo comme ID de document pour éviter les doubles crédits
                 const transRef = doc(firestore, 'users', user.uid, 'star_transactions', pendingTransactionId);
 
-                // Prevent double crediting by checking if the transaction document already exists
                 const transSnap = await getDoc(transRef);
                 if (transSnap.exists()) {
-                    toast({ title: "Déjà crédité", description: "Ces stars ont déjà été ajoutées à votre compte." });
+                    toast({ title: "Déjà crédité", description: "Ces stars sont déjà sur votre compte." });
                     setIsChecking(false);
                     return;
                 }
@@ -196,24 +192,24 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                         type: 'purchase',
                         starsChange: selectedPack.stars,
                         balanceAfterTransaction: newBalance,
-                        description: `Achat Pack ${selectedPack.label} via ${operator.toUpperCase()} (${currency})`,
+                        description: `Pack ${selectedPack.label} (${operator.toUpperCase()})`,
                         timestamp: serverTimestamp(),
                         relatedObjectId: pendingTransactionId,
                         relatedObjectType: 'MbiyoPayTransaction'
                     });
                 });
 
-                toast({ title: "Paiement confirmé !", description: "Vos stars ont été créditées avec succès." });
-            } else if (status === 'failed') {
-                toast({ title: "Paiement échoué", description: "La transaction a été rejetée ou annulée.", variant: "destructive" });
+                toast({ title: "Paiement confirmé !", description: `+${selectedPack.stars} Stars ajoutées.` });
+                setTimeout(() => window.location.reload(), 2000);
+            } else if (status === 'failed' || status === 'canceled') {
+                toast({ title: "Paiement annulé", description: "La transaction n'a pas pu être complétée.", variant: "destructive" });
             } else {
-                toast({ title: "En attente", description: "Le paiement n'a pas encore été validé sur votre téléphone." });
+                toast({ title: "En attente", description: "Veuillez valider le message USSD sur votre téléphone." });
             }
         } else {
-            toast({ title: "Erreur", description: result.error || "Impossible de vérifier le statut.", variant: "destructive" });
+            toast({ title: "Erreur", description: result.error || "Vérification impossible.", variant: "destructive" });
         }
     } catch (e) {
-        console.error(e);
         toast({ title: "Erreur technique", description: "Une erreur est survenue lors de la vérification.", variant: "destructive" });
     } finally {
         setIsChecking(false);
@@ -230,7 +226,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md overflow-hidden p-0 rounded-2xl">
         <div className="bg-amber-500 p-6 text-white">
-          <DialogTitle className="text-2xl font-black">Achat de Stars</DialogTitle>
+          <DialogTitle className="text-2xl font-black">Recharger mon compte</DialogTitle>
           <DialogDescription className="text-amber-100 font-medium">Étape {step} sur 3</DialogDescription>
         </div>
 
@@ -239,7 +235,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
             {step === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="font-bold text-slate-800">Choisissez votre devise :</p>
+                  <p className="font-bold text-slate-800">Devise :</p>
                   <Tabs value={currency} onValueChange={(v: any) => setCurrency(v)}>
                     <TabsList className="bg-slate-100">
                       <TabsTrigger value="CDF" className="text-[10px] font-bold">CDF</TabsTrigger>
@@ -248,7 +244,6 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                   </Tabs>
                 </div>
                 
-                <p className="font-bold text-slate-800 text-sm">Forfaits disponibles :</p>
                 <div className="grid grid-cols-1 gap-3">
                   {packs.map(pack => (
                     <div 
@@ -277,7 +272,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
             {step === 2 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                 <div className="space-y-4">
-                  <p className="font-bold text-slate-800">Choisissez votre opérateur :</p>
+                  <p className="font-bold text-slate-800">Réseau :</p>
                   <RadioGroup value={operator} onValueChange={setSelectedOperator} className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'airtel', name: 'Airtel', color: 'bg-red-500' },
@@ -305,24 +300,15 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                   </div>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
                     <AlertCircle className="h-3 w-3 inline mr-1" />
-                    Vous recevrez une demande USSD sur votre téléphone pour valider le paiement via <strong>MbiyoPay</strong>.
+                    Validation via <strong>MbiyoPay</strong> (RDC).
                   </p>
                 </div>
 
                 <div className="flex gap-2">
                   <Button variant="ghost" onClick={() => setStep(1)} className="flex-1 font-bold">Retour</Button>
                   <Button disabled={!operator || phone.length < 9 || isLoading} onClick={handlePurchase} className="flex-[2] h-12 rounded-xl font-bold">
-                    {isLoading ? (
-                        <>
-                            <Loader2 className="animate-spin mr-2 h-5 w-5" />
-                            Traitement...
-                        </>
-                    ) : (
-                        <>
-                            <CheckCircle2 className="mr-2 h-5 w-5" />
-                            Confirmer {selectedPack?.labels[currency]}
-                        </>
-                    )}
+                    {isLoading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
+                    Payer {selectedPack?.labels[currency]}
                   </Button>
                 </div>
               </motion.div>
@@ -334,11 +320,11 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                   <CheckCircle2 className="h-12 w-12" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900">Demande envoyée !</h3>
-                  <p className="text-slate-500 font-medium text-sm">Consultez votre téléphone pour valider le paiement. Vos {selectedPack?.stars} stars seront créditées dès validation.</p>
+                  <h3 className="text-2xl font-black text-slate-900">Demande USSD envoyée !</h3>
+                  <p className="text-slate-500 font-medium text-sm">Entrez votre code secret sur votre téléphone. Une fois fait, cliquez sur le bouton ci-dessous pour créditer vos {selectedPack?.stars} stars.</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-xl border-2 border-dashed border-slate-200">
-                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Nouveau solde (estimé)</p>
+                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Nouveau solde estimé</p>
                   <p className="text-3xl font-black text-amber-500">{currentBalance + selectedPack?.stars} ⭐</p>
                 </div>
                 <div className="space-y-2">
@@ -346,7 +332,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                         {isChecking ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Vérifier mon paiement
                     </Button>
-                    <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-xl font-bold bg-slate-900">Terminer</Button>
+                    <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-xl font-bold bg-slate-900">Fermer</Button>
                 </div>
               </motion.div>
             )}
@@ -377,10 +363,6 @@ const AdPlayer = ({ video, onComplete, onClose }: { video: WithId<AdvertVideo>, 
         }, 1000);
         return () => clearInterval(interval);
     }, []);
-
-    const handleClaim = () => {
-        onComplete();
-    };
 
     return (
         <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center overflow-hidden">
@@ -413,13 +395,13 @@ const AdPlayer = ({ video, onComplete, onClose }: { video: WithId<AdvertVideo>, 
                 <div className="absolute bottom-0 left-0 right-0 p-8 space-y-6 bg-gradient-to-t from-black/80 to-transparent">
                     <div className="space-y-2">
                         <h3 className="text-xl font-bold text-white">{video.title}</h3>
-                        <p className="text-sm text-slate-300 font-medium">Regardez cette publicité pour soutenir l'application.</p>
+                        <p className="text-sm text-slate-300 font-medium">Soutenez Kinshasa Flow en regardant cette publicité.</p>
                     </div>
                     
                     <AnimatePresence>
                         {isFinished && (
                             <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-                                <Button onClick={handleClaim} className="w-full h-16 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xl shadow-2xl shadow-amber-500/40">
+                                <Button onClick={onComplete} className="w-full h-16 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xl shadow-2xl shadow-amber-500/40">
                                     Récupérer +2 ⭐
                                 </Button>
                             </motion.div>
@@ -485,36 +467,34 @@ export default function MesStarsPage() {
           timestamp: serverTimestamp(),
         });
       });
-      toast({ title: 'Félicitations !', description: `Vous avez gagné ${amount} stars pour : ${action}` });
+      toast({ title: 'Félicitations !', description: `Vous avez gagné ${amount} stars.` });
     } catch (e) {
       console.error(e);
       toast({ title: 'Erreur', description: 'Action impossible.', variant: 'destructive' });
     }
   };
 
+  const earningActions = [
+    { title: "Signaler un incident", amount: 5, icon: AlertCircle, color: "bg-red-500", desc: "Aidez la communauté et gagnez des stars" },
+    { title: "Parrainer un ami", amount: 15, icon: UserPlus, color: "bg-blue-500", desc: "Gagnez 15 stars en invitant un proche" },
+    { title: "Regarder une vidéo", amount: 2, icon: PlayCircle, color: "bg-slate-700", desc: "Récompense immédiate après visionnage" },
+  ];
+
   const handleActionClick = async (action: any) => {
     if (action.title === "Parrainer un ami") {
-      const message = encodeURIComponent("Salut ! J'utilise Kinshasa Flow pour éviter les embouteillages à Kinshasa. Inscris-toi ici : https://kinshasaflow.online");
-      const whatsappUrl = `https://wa.me/?text=${message}`;
-      window.open(whatsappUrl, '_blank');
+      const message = encodeURIComponent("Salut ! J'utilise Kinshasa Flow pour éviter les bouchons. Rejoins-moi : https://kinshasaflow.online");
+      window.open(`https://wa.me/?text=${message}`, '_blank');
       await handleEarn(action.title, action.amount);
     } else if (action.title === "Signaler un incident") {
       router.push('/signaler-embouteillage');
     } else if (action.title === "Regarder une vidéo") {
-      if (!adverts || adverts.length === 0) {
-          toast({ title: "Oups", description: "Aucune vidéo disponible pour le moment.", variant: "destructive" });
+      if (!adverts?.length) {
+          toast({ title: "Oups", description: "Aucune vidéo disponible.", variant: "destructive" });
           return;
       }
-      const randomAd = adverts[Math.floor(Math.random() * adverts.length)];
-      setActiveAd(randomAd);
+      setActiveAd(adverts[Math.floor(Math.random() * adverts.length)]);
     }
   };
-
-  const earningActions = [
-    { title: "Signaler un incident", amount: 5, icon: AlertCircle, color: "bg-red-500", desc: "Améliore la précision des données" },
-    { title: "Parrainer un ami", amount: 15, icon: UserPlus, color: "bg-blue-500", desc: "WhatsApp: Gagner 15 stars en invitant un ami" },
-    { title: "Regarder une vidéo", amount: 2, icon: PlayCircle, color: "bg-slate-700", desc: "Soutenez le service" },
-  ];
 
   if (isProfileLoading) return <AppShell><div className="h-full w-full flex items-center justify-center"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div></AppShell>;
 
@@ -542,11 +522,9 @@ export default function MesStarsPage() {
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8">
-            
             <div className="lg:col-span-2 space-y-8">
-              
               <Card className="bg-slate-900 text-white border-none overflow-hidden relative group">
-                <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-amber-500/20 rounded-full blur-3xl group-hover:bg-amber-500/30 transition-all"></div>
+                <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-amber-500/20 rounded-full blur-3xl transition-all"></div>
                 <CardHeader className="relative z-10">
                   <div className="flex justify-between items-start">
                     <div>
@@ -554,7 +532,7 @@ export default function MesStarsPage() {
                         {profile?.currentStarsBalance || 0}
                         <span className="text-amber-500">Stars</span>
                       </CardTitle>
-                      <CardDescription className="text-slate-400 font-bold">Votre niveau de carburant digital</CardDescription>
+                      <CardDescription className="text-slate-400 font-bold">Votre solde de carburant digital</CardDescription>
                     </div>
                     <Badge variant="outline" className="text-amber-500 border-amber-500/30 bg-amber-500/10">Premium</Badge>
                   </div>
@@ -562,28 +540,22 @@ export default function MesStarsPage() {
                 <CardContent className="space-y-6 relative z-10">
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-black uppercase tracking-widest">
-                      <span>Niveau de solde</span>
+                      <span>Progression</span>
                       <span className="text-amber-500">{Math.min(100, ((profile?.currentStarsBalance || 0) / 500) * 100).toFixed(0)}%</span>
                     </div>
                     <Progress value={Math.min(100, ((profile?.currentStarsBalance || 0) / 500) * 100)} className="h-3 bg-white/10" />
                   </div>
                   <div className="flex flex-wrap gap-4">
                     <BuyStarsDialog currentBalance={profile?.currentStarsBalance || 0} />
-                    <Button variant="outline" className="bg-transparent border-white/20 hover:bg-white/10 font-bold text-white h-12 px-8 rounded-xl">
-                      Historique complet
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
 
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    <Gift className="text-emerald-500" />
-                    Gagner gratuitement
-                  </h2>
-                  <Badge variant="secondary" className="font-bold">3 façons</Badge>
-                </div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <Gift className="text-emerald-500" />
+                  Gagner des Stars gratuitement
+                </h2>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {earningActions.map((action, i) => (
                     <motion.div key={i} whileHover={{ y: -5 }}>
@@ -594,17 +566,12 @@ export default function MesStarsPage() {
                         <CardContent className="p-5 space-y-3">
                           <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-white relative", action.color)}>
                             <action.icon className="h-5 w-5" />
-                            {action.title === "Parrainer un ami" && (
-                              <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
-                                <Share2 className="h-3 w-3 text-blue-500" />
-                              </div>
-                            )}
                           </div>
                           <div>
                             <p className="font-bold text-sm">{action.title}</p>
                             <p className="text-[10px] text-muted-foreground font-medium">{action.desc}</p>
                           </div>
-                          <div className="flex items-center gap-1.5 text-emerald-600 font-black text-xs bg-emerald-50 w-fit px-2 py-1 rounded-full group-hover:bg-emerald-100 transition-colors">
+                          <div className="flex items-center gap-1.5 text-emerald-600 font-black text-xs bg-emerald-50 w-fit px-2 py-1 rounded-full">
                             +{action.amount} ⭐
                           </div>
                         </CardContent>
@@ -620,35 +587,32 @@ export default function MesStarsPage() {
                 <CardHeader className="pb-2 border-b">
                   <CardTitle className="text-lg font-black flex items-center gap-2">
                     <Clock className="text-blue-500 h-5 w-5" />
-                    Transactions
+                    Journal récent
                   </CardTitle>
-                  <CardDescription className="text-[10px] font-bold uppercase tracking-tighter">Journal récent</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0 flex-1 overflow-y-auto max-h-[600px]">
                   {isTransLoading ? (
                     <div className="p-10 flex flex-col items-center gap-2 text-muted-foreground">
                       <Loader2 className="animate-spin h-6 w-6" />
-                      <p className="text-xs font-bold">Chargement...</p>
                     </div>
-                  ) : transactions && transactions.length > 0 ? (
+                  ) : transactions?.length ? (
                     transactions.map(t => <TransactionRow key={t.id} transaction={t} />)
                   ) : (
                     <div className="p-10 text-center space-y-4">
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-300">
                         <Smartphone className="h-8 w-8" />
                       </div>
-                      <p className="text-xs text-muted-foreground font-medium italic">Aucune transaction trouvée.</p>
+                      <p className="text-xs text-muted-foreground font-medium italic">Aucune transaction.</p>
                     </div>
                   )}
                 </CardContent>
                 <CardFooter className="p-4 border-t bg-slate-50/50">
                   <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                    Les transactions Mobile Money peuvent prendre jusqu'à 2 minutes pour apparaître dans ce journal.
+                    Les recharges Mobile Money (RDC) sont créditées après confirmation de l'opérateur.
                   </p>
                 </CardFooter>
               </Card>
             </div>
-
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle, AlertCircle } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -25,6 +25,7 @@ import { ToastAction } from '@/components/ui/toast';
 import { doc } from 'firebase/firestore';
 import { UserProfile } from '@/lib/types';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import { sendEmailVerification } from 'firebase/auth';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
@@ -213,9 +214,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SidebarMenu className="p-3 gap-1">
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/reports'} tooltip={{children: "Rapports"}} className="hover:bg-sidebar-accent transition-all duration-200">
-                  <Link href="/reports" className="font-medium">
-                    <Home className={pathname === '/reports' ? "text-accent" : "text-primary"} />
-                    <span>Rapports</span>
+                  <Link href="/reports" className="font-medium flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Home className={pathname === '/reports' ? "text-accent" : "text-primary"} />
+                      <span>Rapports</span>
+                    </div>
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -237,17 +244,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/assistant'} tooltip={{children: "Assistant IA"}} className="hover:bg-sidebar-accent">
-                  <Link href="/assistant" className="font-medium">
-                    <Bot className={pathname === '/assistant' ? "text-accent" : "text-primary"} />
-                    <span>Assistant</span>
+                  <Link href="/assistant" className="font-medium flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Bot className={pathname === '/assistant' ? "text-accent" : "text-primary"} />
+                      <span>Assistant</span>
+                    </div>
+                    <Badge variant="success" className="h-4 px-1.5 text-[8px] font-black uppercase tracking-tighter">NEW</Badge>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/mes-stars'} tooltip={{children: "Mes Stars"}} className="hover:bg-sidebar-accent">
-                  <Link href="/mes-stars" className="font-medium">
-                    <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />
-                    <span>Mes Stars</span>
+                  <Link href="/mes-stars" className="font-medium flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />
+                      <span>Mes Stars</span>
+                    </div>
+                    {profile && (
+                      <Badge variant="outline" className="h-5 bg-amber-500/10 border-amber-500/30 text-amber-600 font-bold px-1.5 text-[10px]">
+                        {profile.currentStarsBalance}
+                      </Badge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -261,9 +278,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}} className="hover:bg-sidebar-accent">
-                  <Link href="/police-routiere" className="font-medium">
-                    <Siren className={pathname === '/police-routiere' ? "text-accent" : "text-primary"} />
-                    <span>Police</span>
+                  <Link href="/police-routiere" className="font-medium flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Siren className={pathname === '/police-routiere' ? "text-accent" : "text-primary"} />
+                      <span>Police</span>
+                    </div>
+                    <div className="bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-black shadow-sm">!</div>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -277,9 +297,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === '/annonces'} tooltip={{children: "Annonces"}} className="hover:bg-sidebar-accent">
-                  <Link href="/annonces" className="font-medium">
-                    <Landmark className={pathname === '/annonces' ? "text-accent" : "text-primary"} />
-                    <span>Annonces</span>
+                  <Link href="/annonces" className="font-medium flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Landmark className={pathname === '/annonces' ? "text-accent" : "text-primary"} />
+                      <span>Annonces</span>
+                    </div>
+                    <Badge variant="secondary" className="h-4 px-1 text-[9px] font-bold">2</Badge>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -154,17 +154,19 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
 
 /**
  * Initialise un paiement via MbiyoPay pour la RDC (CD).
+ * Utilise l'endpoint /payin et inclut l'order_id.
  */
 export async function initiateMbiyoPaymentAction(data: {
     amount: number;
     currency: string;
     phone: string;
     network: string;
+    order_id: string;
     description: string;
 }): Promise<{ success: boolean; data?: { id: string; status: string }; error?: string }> {
     try {
         const response = await fetch(
-            "https://dashboard.mbiyo.africa/api/v1/merchant/collect",
+            "https://dashboard.mbiyo.africa/api/v1/merchant/payin",
             {
                 method: "POST",
                 headers: {
@@ -177,15 +179,16 @@ export async function initiateMbiyoPaymentAction(data: {
                     currency: data.currency,
                     phone: data.phone,
                     network: data.network,
-                    description: data.description,
-                    country: "CD"
+                    country: "CD",
+                    order_id: data.order_id,
+                    description: data.description
                 })
             }
         );
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("MbiyoPay Collection HTTP Error:", response.status, errorText);
+            console.error("MbiyoPay Payin HTTP Error:", response.status, errorText);
             return { success: false, error: `Erreur serveur (${response.status})` };
         }
 
@@ -203,7 +206,7 @@ export async function initiateMbiyoPaymentAction(data: {
 
         return { success: false, error: result.message || "Erreur d'initialisation MbiyoPay" };
     } catch (error: any) {
-        console.error("MbiyoPay Initiation Catch Error:", error);
+        console.error("MbiyoPay Payin Catch Error:", error);
         return { success: false, error: "Impossible de contacter le service de paiement." };
     }
 }

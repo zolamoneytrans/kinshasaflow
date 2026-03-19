@@ -124,12 +124,16 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         sanitizedPhone = '243' + sanitizedPhone;
     }
 
+    // Génération d'un order_id unique
+    const orderId = `stars_${user.uid.substring(0, 5)}_${Date.now()}`;
+
     try {
         const result = await initiateMbiyoPaymentAction({
             amount: selectedPack.prices[currency],
             currency: currency,
             phone: sanitizedPhone,
             network: operator,
+            order_id: orderId,
             description: `Achat de ${selectedPack.stars} Stars - Kinshasa Flow`,
         });
 
@@ -143,7 +147,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         } else {
             toast({ 
                 title: 'Échec', 
-                description: result.error || "Une erreur est survenue.", 
+                description: result.error || "Une erreur est survenue lors de l'initialisation.", 
                 variant: 'destructive' 
             });
         }

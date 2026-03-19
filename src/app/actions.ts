@@ -162,7 +162,6 @@ export async function initiateMbiyoPaymentAction(data: {
     phone: string;
     network: string;
     order_id: string;
-    description: string;
 }): Promise<{ success: boolean; data?: { id: string; status: string }; error?: string }> {
     try {
         const response = await fetch(
@@ -180,8 +179,7 @@ export async function initiateMbiyoPaymentAction(data: {
                     phone: data.phone,
                     network: data.network,
                     country: "CD",
-                    order_id: data.order_id,
-                    description: data.description
+                    order_id: data.order_id
                 })
             }
         );

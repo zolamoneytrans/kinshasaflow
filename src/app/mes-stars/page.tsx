@@ -124,7 +124,6 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         sanitizedPhone = '243' + sanitizedPhone;
     }
 
-    // Génération d'un order_id unique
     const orderId = `stars_${user.uid.substring(0, 5)}_${Date.now()}`;
 
     try {
@@ -134,7 +133,6 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
             phone: sanitizedPhone,
             network: operator,
             order_id: orderId,
-            description: `Achat de ${selectedPack.stars} Stars - Kinshasa Flow`,
         });
 
         if (result.success && result.data) {
@@ -164,11 +162,10 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     try {
         const result = await checkMbiyoTransactionStatusAction(pendingTransactionId);
         if (result.success && result.data) {
-            const status = result.data.status; // successful, failed, canceled, pending
+            const status = result.data.status; 
             
             if (status === 'successful') {
                 const userRef = doc(firestore, 'users', user.uid);
-                // Utiliser l'ID de transaction Mbiyo comme ID de document pour éviter les doubles crédits
                 const transRef = doc(firestore, 'users', user.uid, 'star_transactions', pendingTransactionId);
 
                 const transSnap = await getDoc(transRef);

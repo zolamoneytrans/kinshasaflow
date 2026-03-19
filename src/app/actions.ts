@@ -154,7 +154,7 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
 
 /**
  * Initialise un paiement via MbiyoPay pour la RDC (CD).
- * Utilise l'endpoint /payin et inclut l'order_id.
+ * Structure mise à jour selon la documentation (objet metadata).
  */
 export async function initiateMbiyoPaymentAction(data: {
     amount: number;
@@ -164,6 +164,21 @@ export async function initiateMbiyoPaymentAction(data: {
     order_id: string;
 }): Promise<{ success: boolean; data?: { id: string; status: string }; error?: string }> {
     try {
+        const phoneWithPlus = data.phone.startsWith('+') ? data.phone : `+${data.phone}`;
+        
+        const payload = {
+            amount: data.amount,
+            currency: data.currency,
+            payment_method: "mobile_money",
+            order_id: data.order_id,
+            callback_url: "https://kinshasaflow.online/api/payment-callback",
+            metadata: {
+                network: data.network.toLowerCase(),
+                phone_number: phoneWithPlus,
+                country_code: "CD"
+            }
+        };
+
         const response = await fetch(
             "https://dashboard.mbiyo.africa/api/v1/merchant/payin",
             {
@@ -173,14 +188,7 @@ export async function initiateMbiyoPaymentAction(data: {
                     "Content-Type": "application/json",
                     "Accept": "application/json"
                 },
-                body: JSON.stringify({
-                    amount: data.amount,
-                    currency: data.currency,
-                    phone: data.phone,
-                    network: data.network,
-                    country: "CD",
-                    order_id: data.order_id
-                })
+                body: JSON.stringify(payload)
             }
         );
 

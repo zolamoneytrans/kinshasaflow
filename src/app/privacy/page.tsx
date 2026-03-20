@@ -2,7 +2,6 @@
 
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Shield, FileText, Scale, Info } from "lucide-react";
 
 export default function PrivacyPage() {
@@ -67,27 +66,22 @@ export default function PrivacyPage() {
 
                     <h3 className="text-xl font-bold text-slate-800">Article 2. Objet de la politique de confidentialité</h3>
                     <p>
-                      La présente Politique de confidentialité a pour objet d'informer les utilisateurs de la plateforme KinshasaFlow des conditions dans lesquelles leurs données à caractère personnel sont collectées, traitées, conservées et protégées, conformément aux dispositions du Code du Numérique de la République Démocratique du Congo, notamment son Titre III relatif aux Données Personnelles (Articles 183 à 235).
+                      La présente Politique de confidentialité a pour objet d'informer les utilisateurs de la plateforme KinshasaFlow des conditions dans lesquelles leurs données à caractère personnel sont collectées, traitées, conservées et protégées, conformément aux dispositions du Code du Numérique de la RDC.
                     </p>
 
                     <h3 className="text-xl font-bold text-slate-800">Article 3. Données collectées</h3>
                     <div className="space-y-4">
                       <p><strong>3.1 Données collectées de manière automatique</strong></p>
                       <ul className="list-disc list-inside space-y-1 pl-4">
-                        <li>Adresse IP de l'appareil utilisé</li>
-                        <li>Type et version du navigateur ou de l'application</li>
-                        <li>Système d'exploitation</li>
-                        <li>Pages consultées et durée de visite</li>
-                        <li>Date et heure de connexion</li>
+                        <li>Adresse IP, navigateur et système d'exploitation.</li>
+                        <li>Pages consultées et durée de visite.</li>
+                        <li>Date et heure de connexion.</li>
                       </ul>
                       <p><strong>3.2 Données fournies volontairement</strong></p>
-                      <p>Si vous nous contactez ou vous inscrivez à un service, nous pouvons collecter : votre nom, prénom, adresse e-mail, numéro de téléphone et toute information communiquée volontairement.</p>
+                      <p>Nom, prénom, adresse e-mail, numéro de téléphone et toute information communiquée volontairement.</p>
                       <p><strong>3.3 Données de localisation</strong></p>
-                      <p>KinshasaFlow peut, avec votre consentement explicite, accéder à vos données de localisation géographique pour fournir des informations de trafic pertinentes. Cette collecte n'intervient que si vous avez autorisé l'accès via vos paramètres.</p>
+                      <p>KinshasaFlow peut, avec votre consentement explicite, accéder à vos données de localisation géographique pour fournir des informations de trafic pertinentes.</p>
                     </div>
-
-                    <h3 className="text-xl font-bold text-slate-800">Article 4. Finalités du traitement</h3>
-                    <p>Les données sont traitées pour la fourniture du service de trafic en temps réel (Art. 192), l'amélioration de la plateforme, la sécurité, et l'analyse statistique anonymisée.</p>
 
                     <h3 className="text-xl font-bold text-slate-800">Article 10. Droits de l'utilisateur</h3>
                     <p>Conformément aux Articles 209 à 216 du Code du Numérique, vous disposez d'un droit d'accès, de rectification, d'effacement ("droit à l'oubli"), d'opposition et à la portabilité de vos données.</p>
@@ -103,16 +97,11 @@ export default function PrivacyPage() {
                   <div className="space-y-6">
                     <h3 className="text-xl font-bold text-slate-800">Article 14. Présentation de KinshasaFlow</h3>
                     <p>
-                      KinshasaFlow est une plateforme numérique de surveillance et de diffusion d'informations sur le trafic routier en temps réel dans la ville de Kinshasa. Elle est éditée conformément aux dispositions du Code du Numérique de la RDC.
+                      KinshasaFlow est une plateforme numérique de surveillance et de diffusion d'informations sur le trafic routier en temps réel dans la ville de Kinshasa.
                     </p>
 
                     <h3 className="text-xl font-bold text-slate-800">Article 16. Obligations de l'utilisateur</h3>
-                    <p>L'utilisateur s'engage à utiliser le service à des fins licites, à ne pas tenter d'intrusion (Art. 332-333) et à ne pas usurper d'identité.</p>
-
-                    <h3 className="text-xl font-bold text-slate-800">Article 18. Responsabilité</h3>
-                    <p>
-                      KinshasaFlow s'engage à fournir un service de qualité mais ne peut garantir l'exactitude absolue des informations dépendant de sources externes. L'utilisateur est seul responsable de ses décisions de conduite.
-                    </p>
+                    <p>L'utilisateur s'engage à utiliser le service à des fins licites, à ne pas tenter d'intrusion et à ne pas usurper d'identité.</p>
 
                     <h3 className="text-xl font-bold text-slate-800">Article 21. Droit applicable</h3>
                     <p>Les présentes CGU sont soumises au droit congolais. Tout litige sera soumis à la juridiction compétente en République Démocratique du Congo.</p>
@@ -132,5 +121,6 @@ export default function PrivacyPage() {
           </Card>
         </div>
       </div>
-    </日常生活);
+    </AppShell>
+  );
 }

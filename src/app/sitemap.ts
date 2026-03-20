@@ -20,6 +20,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/videos',
     '/kinshasa',
     '/contact',
+    '/privacy',
   ]
 
   return routes.map((route) => ({

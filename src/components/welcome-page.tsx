@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car } from 'lucide-react';
+import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car, Shield } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
@@ -264,10 +264,17 @@ export default function WelcomePage() {
             >
                 <div className="flex flex-col items-center gap-6">
                     <Logo className="h-8 w-auto text-muted-foreground opacity-60" />
-                    <p className="text-sm text-muted-foreground max-w-sm font-medium">
+                    <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground">
+                        <Link href="/privacy" className="hover:text-primary transition-colors flex items-center gap-2">
+                            <Shield className="h-4 w-4" />
+                            Confidentialité & CGU
+                        </Link>
+                        <Link href="/contact" className="hover:text-primary transition-colors">Contact</Link>
+                    </div>
+                    <p className="text-xs text-muted-foreground max-w-sm font-medium">
                         Simplifier la vie des Kinois, un kilomètre à la fois.
                     </p>
-                    <a href="http://www.swaziapplilab.co.za" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold hover:text-primary transition-colors">
+                    <a href="http://www.swaziapplilab.co.za" target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold hover:text-primary transition-colors uppercase tracking-widest opacity-50">
                         &copy; {new Date().getFullYear()} Swazi Appli Lab sarl. Tous droits réservés.
                     </a>
                 </div>

@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: profile } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (profile && profile.currentStarsBalance < 5 && pathname !== '/mes-stars') {
+    if (profile && profile.currentStarsBalance < 5 && pathname !== '/mes-stars' && !['/', '/privacy'].includes(pathname)) {
       toast({
         title: 'Solde faible — ' + profile.currentStarsBalance + ' stars restantes',
         description: 'Certaines fonctionnalités premium seront bientôt bloquées.',
@@ -168,6 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/assistant') return 'Assistant IA';
     if (pathname === '/map') return 'Carte du Trafic';
     if (pathname === '/mes-stars') return 'Mes Stars';
+    if (pathname === '/privacy') return 'Confidentialité & CGU';
     if (pathname === '/admin/stars') return 'Admin Stars';
     if (pathname === '/admin/transport') return 'Admin Transport';
     if (pathname === '/admin/logement') return 'Admin Logement';
@@ -194,6 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/assistant') return 'Posez des questions sur les itinéraires à Kinshasa.';
     if (pathname === '/map') return 'Visualisez le trafic en temps réel à Kinshasa.';
     if (pathname === '/mes-stars') return 'Gérez votre solde de stars et monétisez votre usage.';
+    if (pathname === '/privacy') return 'Conditions Générales d\'Utilisation et Politique de données.';
     if (pathname.startsWith('/admin')) return 'Espace réservé à l\'administration système.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
@@ -202,6 +204,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     '/',
     '/login',
     '/signup',
+    '/privacy',
   ].includes(pathname);
 
   const shareMessage = "Salut ! J'utilise Kinshasa Flow pour éviter les embouteillages à Kinshasa. Inscris-toi ici : https://kinshasaflow.online";

@@ -53,6 +53,17 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    /** Tourism */
+    match /tourism_events/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /tourism_bookings/{id} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
+      allow create: if isSignedIn();
+    }
+
     /** Road Statuses (shared state for alerts) */
     match /road_statuses/{roadId} {
       allow read: if isSignedIn();

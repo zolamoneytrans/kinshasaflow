@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle, AlertCircle } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle, AlertCircle, Palmtree } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -160,6 +161,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/logement') return 'Logement (Courte durée)';
     if (pathname === '/transport') return 'Solutions de Transport';
     if (pathname === '/location-voiture') return 'Location de Véhicules';
+    if (pathname === '/tourisme') return 'Tourisme & Découverte';
     if (pathname === '/contact') return 'Contactez-nous';
     if (pathname === '/signaler-embouteillage') return 'Signaler un Embouteillage';
     if (pathname === '/evenements') return 'Événements';
@@ -187,6 +189,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/logement') return 'Trouvez un appartement de type RBNB à Kinshasa.';
     if (pathname === '/transport') return 'Abonnements, covoiturage, et plus.';
     if (pathname === '/location-voiture') return 'Louez un véhicule pour vos déplacements à Kinshasa.';
+    if (pathname === '/tourisme') return 'Réservez des excursions et découvrez Kinshasa.';
     if (pathname === '/contact') return 'Envoyez-nous vos questions, suggestions ou plaintes.';
     if (pathname === '/signaler-embouteillage') return 'Signalez un incident pour aider les autres conducteurs';
     if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
@@ -335,6 +338,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/location-voiture" className="font-medium">
                     <Car className={pathname === '/location-voiture' ? "text-accent" : "text-primary"} />
                     <span>Location Voiture</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/tourisme'} tooltip={{children: "Tourisme"}} className="hover:bg-sidebar-accent">
+                  <Link href="/tourisme" className="font-medium flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Palmtree className={pathname === '/tourisme' ? "text-accent" : "text-primary"} />
+                      <span>Tourisme</span>
+                    </div>
+                    <Badge className="bg-emerald-500 text-[8px] h-4">OFFRES</Badge>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 import { Timestamp } from "firebase/firestore";
 
@@ -322,3 +323,35 @@ export const policeStationSchema = z.object({
   address: z.string(),
 });
 export type PoliceStation = z.infer<typeof policeStationSchema>;
+
+// Tourism
+export const tourismEventSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  location: z.string(),
+  price: z.number(),
+  imageUrls: z.array(z.string()),
+  category: z.string(),
+  createdAt: z.instanceof(Timestamp).or(z.any()),
+});
+export type TourismEvent = z.infer<typeof tourismEventSchema>;
+
+export const tourismBookingSchema = z.object({
+  userId: z.string(),
+  eventId: z.string(),
+  eventTitle: z.string(),
+  userName: z.string(),
+  userPhone: z.string(),
+  bookingDate: z.instanceof(Timestamp).or(z.any()),
+  numberOfPeople: z.number(),
+  status: z.enum(['pending', 'confirmed', 'cancelled']),
+  createdAt: z.instanceof(Timestamp).or(z.any()),
+});
+export type TourismBooking = z.infer<typeof tourismBookingSchema>;
+
+export const tourismBookingFormSchema = z.object({
+  userName: z.string().min(3, "Le nom est requis."),
+  userPhone: z.string().min(9, "Le téléphone est requis."),
+  numberOfPeople: z.coerce.number().int().min(1, "Minimum 1 personne."),
+});
+export type TourismBookingFormValues = z.infer<typeof tourismBookingFormSchema>;

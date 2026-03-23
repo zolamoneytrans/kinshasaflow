@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -16,6 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/logement',
     '/transport',
     '/location-voiture',
+    '/tourisme',
     '/evenements',
     '/videos',
     '/kinshasa',

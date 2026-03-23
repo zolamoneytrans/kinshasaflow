@@ -136,6 +136,38 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "videoUrl", "createdAt"]
+    },
+    "TourismEvent": {
+      "title": "TourismEvent",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "location": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrls": { "type": "array", "items": { "type": "string" } },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "description", "location", "price", "imageUrls", "category"]
+    },
+    "TourismBooking": {
+      "title": "TourismBooking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "eventId": { "type": "string" },
+        "eventTitle": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "bookingDate": { "type": "string", "format": "date-time" },
+        "numberOfPeople": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "eventId", "eventTitle", "userName", "userPhone", "bookingDate", "numberOfPeople", "status", "createdAt"]
     }
   },
   "auth": {
@@ -194,6 +226,38 @@
             {
               "name": "advertId",
               "description": "The unique identifier of the advert."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tourism_events/{eventId}",
+        "definition": {
+          "entityName": "TourismEvent",
+          "schema": {
+            "$ref": "#/backend/entities/TourismEvent"
+          },
+          "description": "Catalog of available tourism spots and activities.",
+          "params": [
+            {
+              "name": "eventId",
+              "description": "ID of the tourism event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tourism_bookings/{bookingId}",
+        "definition": {
+          "entityName": "TourismBooking",
+          "schema": {
+            "$ref": "#/backend/entities/TourismBooking"
+          },
+          "description": "User bookings for tourism events.",
+          "params": [
+            {
+              "name": "bookingId",
+              "description": "ID of the booking."
             }
           ]
         }

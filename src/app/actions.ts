@@ -1,3 +1,4 @@
+
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -178,6 +179,8 @@ export async function initiateMbiyoPaymentAction(data: {
             }
         };
 
+        console.log("MbiyoPay Payin Payload:", JSON.stringify(payload, null, 2));
+
         const response = await fetch(
             "https://dashboard.mbiyo.africa/api/v1/merchant/payin",
             {
@@ -190,13 +193,22 @@ export async function initiateMbiyoPaymentAction(data: {
             }
         );
 
+        // Protection contre les réponses non-JSON (ex: erreur 500 avec page HTML)
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const errorHtml = await response.text();
+            console.error("MbiyoPay Payin non-JSON response:", errorHtml);
+            return { success: false, error: `Erreur serveur (${response.status}): Réponse invalide.` };
+        }
+
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error("MbiyoPay Payin HTTP Error:", response.status, errorText);
-            return { success: false, error: `Erreur serveur (${response.status})` };
+            const errorJson = await response.json();
+            console.error("MbiyoPay Payin API Error:", errorJson);
+            return { success: false, error: errorJson.message || `Erreur API (${response.status})` };
         }
 
         const result = await response.json();
+        console.log("MbiyoPay Payin Result:", JSON.stringify(result, null, 2));
         
         if (result.status === "success" && result.data) {
             return {
@@ -208,10 +220,10 @@ export async function initiateMbiyoPaymentAction(data: {
             };
         }
 
-        return { success: false, error: result.message || "Erreur d'initialisation MbiyoPay" };
+        return { success: false, error: result.message || "L'API MbiyoPay a renvoyé un succès sans données." };
     } catch (error: any) {
         console.error("MbiyoPay Payin Catch Error:", error);
-        return { success: false, error: "Impossible de contacter le service de paiement." };
+        return { success: false, error: "Impossible de joindre le service de paiement. Vérifiez votre connexion." };
     }
 }
 
@@ -234,17 +246,19 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
         // Protection contre les réponses HTML en cas d'erreur serveur
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-            console.error("MbiyoPay returned non-JSON response:", await response.text());
-            return { success: false, error: "Réponse invalide du serveur de paiement (HTML au lieu de JSON)." };
+            const text = await response.text();
+            console.error("MbiyoPay Status non-JSON response:", text);
+            return { success: false, error: "Réponse invalide du serveur de paiement." };
         }
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error("MbiyoPay Status HTTP Error:", response.status, errorText);
-            return { success: false, error: `Erreur serveur (${response.status})` };
+            const errorJson = await response.json();
+            console.error("MbiyoPay Status API Error:", errorJson);
+            return { success: false, error: errorJson.message || `Erreur serveur (${response.status})` };
         }
 
         const result = await response.json();
+        console.log("MbiyoPay Status Result:", JSON.stringify(result, null, 2));
         
         if (result.status === "success" && result.data) {
             const txStatus = String(result.data.status).toLowerCase();
@@ -256,9 +270,9 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
             };
         }
 
-        return { success: false, error: result.message || "La réponse de MbiyoPay est invalide." };
+        return { success: false, error: result.message || "La réponse de MbiyoPay est incomplète." };
     } catch (error: any) {
         console.error("MbiyoPay Status Check Catch Error:", error);
-        return { success: false, error: "Erreur lors de la vérification réseau." };
+        return { success: false, error: "Erreur réseau lors de la vérification." };
     }
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -148,6 +149,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
 
         if (result.success && result.data) {
             const txId = result.data.id;
+            console.log("Payment initiated, ID:", txId);
             setPendingTransactionId(txId);
             
             // Sauvegarder pour récupération après rafraîchissement
@@ -161,6 +163,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 description: `Veuillez valider la demande USSD sur votre téléphone (${operator.toUpperCase()}).` 
             });
         } else {
+            console.error("Payment initiation failed:", result.error);
             toast({ 
                 title: 'Échec', 
                 description: result.error || "Une erreur est survenue lors de l'initialisation.", 
@@ -168,6 +171,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
             });
         }
     } catch (e: any) {
+        console.error("Purchase Catch Error:", e);
         toast({ title: 'Erreur technique', description: 'Impossible de joindre le serveur de paiement.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
@@ -181,6 +185,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         const result = await checkMbiyoTransactionStatusAction(pendingTransactionId);
         if (result.success && result.data) {
             const status = result.data.status; 
+            console.log("Current transaction status:", status);
             
             if (status === 'successful') {
                 const userRef = doc(firestore, 'users', user.uid);
@@ -192,6 +197,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                     localStorage.removeItem('pending_tx_id');
                     localStorage.removeItem('pending_pack');
                     setIsChecking(false);
+                    setStep(1);
                     return;
                 }
 
@@ -228,17 +234,18 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 toast({ title: "Paiement confirmé !", description: `+${selectedPack.stars} Stars ajoutées.` });
                 setTimeout(() => window.location.reload(), 2000);
             } else if (status === 'failed' || status === 'canceled') {
-                toast({ title: "Paiement annulé", description: "La transaction n'a pas pu être complétée.", variant: "destructive" });
+                toast({ title: "Paiement annulé", description: "La transaction n'a pas pu être complétée (échec ou annulation).", variant: "destructive" });
                 localStorage.removeItem('pending_tx_id');
                 localStorage.removeItem('pending_pack');
                 setStep(1);
             } else {
-                toast({ title: "En attente", description: "Veuillez valider le message USSD sur votre téléphone." });
+                toast({ title: "En attente", description: "Veuillez valider le message USSD sur votre téléphone pour continuer." });
             }
         } else {
-            toast({ title: "Erreur", description: result.error || "Vérification impossible.", variant: "destructive" });
+            toast({ title: "Erreur", description: result.error || "Vérification impossible pour le moment.", variant: "destructive" });
         }
     } catch (e) {
+        console.error("Status check error:", e);
         toast({ title: "Erreur technique", description: "Une erreur est survenue lors de la vérification.", variant: "destructive" });
     } finally {
         setIsChecking(false);
@@ -315,7 +322,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                     {[
                       { id: 'airtel', name: 'Airtel', color: 'bg-red-500' },
                       { id: 'orange', name: 'Orange', color: 'bg-orange-500' },
-                      { id: 'mpesa', name: 'M-Pesa', color: 'bg-emerald-500' },
+                      { id: 'vodacom', name: 'M-Pesa', color: 'bg-emerald-500' },
                     ].map(op => (
                       <div key={op.id}>
                         <RadioGroupItem value={op.id} id={op.id} className="peer sr-only" />

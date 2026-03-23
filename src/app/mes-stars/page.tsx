@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { AppShell } from '@/components/app-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -149,10 +149,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
 
         if (result.success && result.data) {
             const txId = result.data.id;
-            console.log("Payment initiated, ID:", txId);
             setPendingTransactionId(txId);
             
-            // Sauvegarder pour récupération après rafraîchissement
             localStorage.setItem('pending_tx_id', txId);
             localStorage.setItem('pending_pack', JSON.stringify(selectedPack));
             localStorage.setItem('pending_operator', operator);
@@ -160,32 +158,30 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
             setStep(3);
             toast({ 
                 title: 'Demande envoyée !', 
-                description: `Veuillez valider la demande USSD sur votre téléphone (${operator.toUpperCase()}).` 
+                description: `Veuillez valider la demande USSD sur votre téléphone.` 
             });
         } else {
-            console.error("Payment initiation failed:", result.error);
             toast({ 
                 title: 'Échec', 
-                description: result.error || "Une erreur est survenue lors de l'initialisation.", 
+                description: result.error || "Une erreur est survenue.", 
                 variant: 'destructive' 
             });
         }
     } catch (e: any) {
-        console.error("Purchase Catch Error:", e);
-        toast({ title: 'Erreur technique', description: 'Impossible de joindre le serveur de paiement.', variant: 'destructive' });
+        toast({ title: 'Erreur technique', description: 'Impossible de joindre le serveur.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
     }
   };
 
-  const checkStatus = async () => {
-    if (!pendingTransactionId || !user || !selectedPack) return;
+  const checkStatus = useCallback(async () => {
+    if (!pendingTransactionId || !user || !selectedPack || isChecking) return;
+    
     setIsChecking(true);
     try {
         const result = await checkMbiyoTransactionStatusAction(pendingTransactionId);
         if (result.success && result.data) {
             const status = result.data.status; 
-            console.log("Current transaction status:", status);
             
             if (status === 'successful') {
                 const userRef = doc(firestore, 'users', user.uid);
@@ -193,10 +189,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
 
                 const transSnap = await getDoc(transRef);
                 if (transSnap.exists()) {
-                    toast({ title: "Déjà crédité", description: "Ces stars sont déjà sur votre compte." });
                     localStorage.removeItem('pending_tx_id');
                     localStorage.removeItem('pending_pack');
-                    setIsChecking(false);
                     setStep(1);
                     return;
                 }
@@ -226,35 +220,44 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                     });
                 });
 
-                // Nettoyage après succès
                 localStorage.removeItem('pending_tx_id');
                 localStorage.removeItem('pending_pack');
                 localStorage.removeItem('pending_operator');
 
                 toast({ title: "Paiement confirmé !", description: `+${selectedPack.stars} Stars ajoutées.` });
-                setTimeout(() => window.location.reload(), 2000);
+                setTimeout(() => window.location.reload(), 1500);
             } else if (status === 'failed' || status === 'canceled') {
-                toast({ title: "Paiement annulé", description: "La transaction n'a pas pu être complétée (échec ou annulation).", variant: "destructive" });
+                toast({ title: "Paiement annulé", description: "La transaction a échoué ou a été annulée.", variant: "destructive" });
                 localStorage.removeItem('pending_tx_id');
                 localStorage.removeItem('pending_pack');
+                setPendingTransactionId(null);
                 setStep(1);
-            } else {
-                toast({ title: "En attente", description: "Veuillez valider le message USSD sur votre téléphone pour continuer." });
             }
-        } else {
-            toast({ title: "Erreur", description: result.error || "Vérification impossible pour le moment.", variant: "destructive" });
         }
     } catch (e) {
-        console.error("Status check error:", e);
-        toast({ title: "Erreur technique", description: "Une erreur est survenue lors de la vérification.", variant: "destructive" });
+        console.error("Check status error:", e);
     } finally {
         setIsChecking(false);
     }
-  };
+  }, [pendingTransactionId, user, selectedPack, firestore, toast, isChecking]);
+
+  // Auto-polling when in step 3
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (step === 3 && pendingTransactionId) {
+        interval = setInterval(() => {
+            checkStatus();
+        }, 5000); // Check every 5 seconds
+    }
+    return () => {
+        if (interval) clearInterval(interval);
+    }
+  }, [step, pendingTransactionId, checkStatus]);
 
   const cancelPending = () => {
     localStorage.removeItem('pending_tx_id');
     localStorage.removeItem('pending_pack');
+    localStorage.removeItem('pending_operator');
     setPendingTransactionId(null);
     setStep(1);
   };
@@ -271,7 +274,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         <div className="bg-amber-500 p-6 text-white">
           <DialogTitle className="text-2xl font-black">Recharger mon compte</DialogTitle>
           <DialogDescription className="text-amber-100 font-medium">
-            {pendingTransactionId ? "Vérification de paiement" : `Étape ${step} sur 3`}
+            {pendingTransactionId ? "Vérification en cours..." : `Étape ${step} sur 3`}
           </DialogDescription>
         </div>
 
@@ -345,7 +348,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                   </div>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
                     <AlertCircle className="h-3 w-3 inline mr-1" />
-                    Validation via <strong>MbiyoPay</strong> (RDC).
+                    Paiement sécurisé via <strong>MbiyoPay</strong>.
                   </p>
                 </div>
 
@@ -366,12 +369,12 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-slate-900">
-                    {isChecking ? "Vérification en cours..." : "Paiement en attente"}
+                    {isChecking ? "Vérification en cours..." : "En attente de validation"}
                   </h3>
                   <p className="text-slate-500 font-medium text-sm">
                     {isChecking 
                       ? "Nous interrogeons MbiyoPay pour confirmer votre transaction." 
-                      : "Si vous avez validé le message USSD sur votre téléphone, cliquez sur le bouton ci-dessous."}
+                      : "Veuillez valider le message USSD sur votre téléphone. Cette page s'actualisera automatiquement dès confirmation."}
                   </p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-xl border-2 border-dashed border-slate-200">
@@ -381,10 +384,10 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 <div className="space-y-2">
                     <Button onClick={checkStatus} disabled={isChecking} className="w-full h-12 rounded-xl font-bold bg-amber-500 hover:bg-amber-600">
                         {isChecking ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                        Vérifier mon paiement
+                        Vérifier manuellement
                     </Button>
                     <Button variant="ghost" onClick={cancelPending} className="w-full text-slate-400 text-xs font-bold">
-                        Annuler la vérification en cours
+                        Annuler et retourner
                     </Button>
                 </div>
               </motion.div>

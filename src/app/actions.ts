@@ -193,7 +193,6 @@ export async function initiateMbiyoPaymentAction(data: {
             }
         );
 
-        // Protection contre les réponses non-JSON (ex: erreur 500 avec page HTML)
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
             const errorHtml = await response.text();
@@ -203,7 +202,7 @@ export async function initiateMbiyoPaymentAction(data: {
 
         if (!response.ok) {
             const errorJson = await response.json();
-            console.error("MbiyoPay Payin API Error:", errorJson);
+            console.error("MbiyoPay Payin API Error:", JSON.stringify(errorJson, null, 2));
             return { success: false, error: errorJson.message || `Erreur API (${response.status})` };
         }
 
@@ -232,6 +231,7 @@ export async function initiateMbiyoPaymentAction(data: {
  */
 export async function checkMbiyoTransactionStatusAction(transactionId: string): Promise<{ success: boolean; data?: { status: string }; error?: string }> {
     try {
+        console.log(`Checking MbiyoPay status for transaction: ${transactionId}`);
         const response = await fetch(
             `https://dashboard.mbiyo.africa/api/v1/merchant/transactions/${transactionId}`,
             {
@@ -243,7 +243,6 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
             }
         );
 
-        // Protection contre les réponses HTML en cas d'erreur serveur
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
             const text = await response.text();
@@ -253,7 +252,7 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
 
         if (!response.ok) {
             const errorJson = await response.json();
-            console.error("MbiyoPay Status API Error:", errorJson);
+            console.error("MbiyoPay Status API Error:", JSON.stringify(errorJson, null, 2));
             return { success: false, error: errorJson.message || `Erreur serveur (${response.status})` };
         }
 

@@ -109,6 +109,17 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     { id: 'business', stars: 1200, prices: { CDF: 60000, USD: 25 }, labels: { CDF: '60 000 CDF', USD: '25 USD' }, label: 'Business' },
   ];
 
+  // Récupérer une transaction en attente au chargement
+  useEffect(() => {
+    const savedId = localStorage.getItem('pending_tx_id');
+    const savedPack = localStorage.getItem('pending_pack');
+    if (savedId && savedPack) {
+      setPendingTransactionId(savedId);
+      setSelectedPack(JSON.parse(savedPack));
+      setStep(3);
+    }
+  }, []);
+
   const handlePurchase = async () => {
     if (!user || !selectedPack || !operator || !phone) {
         toast({ title: "Incomplet", description: "Veuillez remplir toutes les informations.", variant: "destructive" });
@@ -136,7 +147,14 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         });
 
         if (result.success && result.data) {
-            setPendingTransactionId(result.data.id);
+            const txId = result.data.id;
+            setPendingTransactionId(txId);
+            
+            // Sauvegarder pour récupération après rafraîchissement
+            localStorage.setItem('pending_tx_id', txId);
+            localStorage.setItem('pending_pack', JSON.stringify(selectedPack));
+            localStorage.setItem('pending_operator', operator);
+
             setStep(3);
             toast({ 
                 title: 'Demande envoyée !', 
@@ -171,6 +189,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 const transSnap = await getDoc(transRef);
                 if (transSnap.exists()) {
                     toast({ title: "Déjà crédité", description: "Ces stars sont déjà sur votre compte." });
+                    localStorage.removeItem('pending_tx_id');
+                    localStorage.removeItem('pending_pack');
                     setIsChecking(false);
                     return;
                 }
@@ -193,17 +213,25 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                         type: 'purchase',
                         starsChange: selectedPack.stars,
                         balanceAfterTransaction: newBalance,
-                        description: `Pack ${selectedPack.label} (${operator.toUpperCase()})`,
+                        description: `Pack ${selectedPack.label} (${(localStorage.getItem('pending_operator') || 'Mobile Money').toUpperCase()})`,
                         timestamp: serverTimestamp(),
                         relatedObjectId: pendingTransactionId,
                         relatedObjectType: 'MbiyoPayTransaction'
                     });
                 });
 
+                // Nettoyage après succès
+                localStorage.removeItem('pending_tx_id');
+                localStorage.removeItem('pending_pack');
+                localStorage.removeItem('pending_operator');
+
                 toast({ title: "Paiement confirmé !", description: `+${selectedPack.stars} Stars ajoutées.` });
                 setTimeout(() => window.location.reload(), 2000);
             } else if (status === 'failed' || status === 'canceled') {
                 toast({ title: "Paiement annulé", description: "La transaction n'a pas pu être complétée.", variant: "destructive" });
+                localStorage.removeItem('pending_tx_id');
+                localStorage.removeItem('pending_pack');
+                setStep(1);
             } else {
                 toast({ title: "En attente", description: "Veuillez valider le message USSD sur votre téléphone." });
             }
@@ -217,8 +245,15 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     }
   };
 
+  const cancelPending = () => {
+    localStorage.removeItem('pending_tx_id');
+    localStorage.removeItem('pending_pack');
+    setPendingTransactionId(null);
+    setStep(1);
+  };
+
   return (
-    <Dialog onOpenChange={(open) => !open && setStep(1)}>
+    <Dialog onOpenChange={(open) => !open && !pendingTransactionId && setStep(1)}>
       <DialogTrigger asChild>
         <Button className="bg-amber-500 hover:bg-amber-600 text-white font-bold h-12 px-8 rounded-xl shadow-lg shadow-amber-200">
           <ShoppingCart className="mr-2 h-5 w-5" />
@@ -228,7 +263,9 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
       <DialogContent className="sm:max-w-md overflow-hidden p-0 rounded-2xl">
         <div className="bg-amber-500 p-6 text-white">
           <DialogTitle className="text-2xl font-black">Recharger mon compte</DialogTitle>
-          <DialogDescription className="text-amber-100 font-medium">Étape {step} sur 3</DialogDescription>
+          <DialogDescription className="text-amber-100 font-medium">
+            {pendingTransactionId ? "Vérification de paiement" : `Étape ${step} sur 3`}
+          </DialogDescription>
         </div>
 
         <div className="p-6">
@@ -318,22 +355,30 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
             {step === 3 && (
               <motion.div key="step3" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="py-10 text-center space-y-6">
                 <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="h-12 w-12" />
+                  {isChecking ? <Loader2 className="h-12 w-12 animate-spin" /> : <CheckCircle2 className="h-12 w-12" />}
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900">Demande USSD envoyée !</h3>
-                  <p className="text-slate-500 font-medium text-sm">Entrez votre code secret sur votre téléphone. Une fois fait, cliquez sur le bouton ci-dessous pour créditer vos {selectedPack?.stars} stars.</p>
+                  <h3 className="text-2xl font-black text-slate-900">
+                    {isChecking ? "Vérification en cours..." : "Paiement en attente"}
+                  </h3>
+                  <p className="text-slate-500 font-medium text-sm">
+                    {isChecking 
+                      ? "Nous interrogeons MbiyoPay pour confirmer votre transaction." 
+                      : "Si vous avez validé le message USSD sur votre téléphone, cliquez sur le bouton ci-dessous."}
+                  </p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-xl border-2 border-dashed border-slate-200">
-                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Nouveau solde estimé</p>
-                  <p className="text-3xl font-black text-amber-500">{currentBalance + selectedPack?.stars} ⭐</p>
+                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Stars à créditer</p>
+                  <p className="text-3xl font-black text-amber-500">{selectedPack?.stars} ⭐</p>
                 </div>
                 <div className="space-y-2">
-                    <Button onClick={checkStatus} disabled={isChecking} variant="outline" className="w-full h-12 rounded-xl font-bold border-amber-500 text-amber-600 hover:bg-amber-50">
+                    <Button onClick={checkStatus} disabled={isChecking} className="w-full h-12 rounded-xl font-bold bg-amber-500 hover:bg-amber-600">
                         {isChecking ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Vérifier mon paiement
                     </Button>
-                    <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-xl font-bold bg-slate-900">Fermer</Button>
+                    <Button variant="ghost" onClick={cancelPending} className="w-full text-slate-400 text-xs font-bold">
+                        Annuler la vérification en cours
+                    </Button>
                 </div>
               </motion.div>
             )}

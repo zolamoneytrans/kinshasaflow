@@ -154,7 +154,6 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
 
 /**
  * Initialise un paiement via MbiyoPay pour la RDC (CD).
- * Structure mise à jour selon la documentation (objet metadata).
  */
 export async function initiateMbiyoPaymentAction(data: {
     amount: number;
@@ -186,7 +185,6 @@ export async function initiateMbiyoPaymentAction(data: {
                 headers: {
                     "Authorization": "Bearer COjbIMdkfbeZ8RJUH03oj0kNKJLzCK",
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
                 },
                 body: JSON.stringify(payload)
             }
@@ -229,10 +227,16 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
                 headers: {
                     "Authorization": "Bearer COjbIMdkfbeZ8RJUH03oj0kNKJLzCK",
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
                 }
             }
         );
+
+        // Protection contre les réponses HTML en cas d'erreur serveur
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            console.error("MbiyoPay returned non-JSON response:", await response.text());
+            return { success: false, error: "Réponse invalide du serveur de paiement (HTML au lieu de JSON)." };
+        }
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -241,7 +245,6 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
         }
 
         const result = await response.json();
-        console.log("MbiyoPay API Status Result:", result);
         
         if (result.status === "success" && result.data) {
             const txStatus = String(result.data.status).toLowerCase();

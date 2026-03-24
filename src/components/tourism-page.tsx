@@ -43,7 +43,12 @@ const AddEventDialog = () => {
     });
 
     const onSubmit = async (data: TourismEventFormValues) => {
-        if (!user || user.email !== 'drnduwa@gmail.com') {
+        const adminEmail = 'drnduwa@gmail.com';
+        
+        console.log("Tentative de publication par:", user?.email);
+
+        if (!user || user.email?.toLowerCase() !== adminEmail.toLowerCase()) {
+            console.error("Accès Admin refusé. Utilisateur actuel:", user?.email);
             toast({ title: "Accès refusé", description: "Seul l'administrateur peut effectuer cette action.", variant: 'destructive' });
             return;
         }
@@ -57,38 +62,45 @@ const AddEventDialog = () => {
 
             // ÉTAPE 1 : Gérer les images si présentes
             if (data.images && data.images.length > 0) {
+                console.log("Démarrage du téléversement vers Storage...");
                 const storage = getStorage(firebaseApp);
                 const files = Array.from(data.images as FileList);
                 
                 try {
                     const uploadPromises = files.map(file => {
-                        // Nettoyage du nom de fichier pour éviter les caractères spéciaux
-                        const extension = file.name.split('.').pop();
+                        // Nettoyage du nom de fichier
+                        const extension = file.name.split('.').pop() || 'jpg';
                         const safeFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
                         const fileRef = storageRef(storage, `tourism/${eventId}/${safeFileName}`);
-                        return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
+                        
+                        console.log(`Téléversement de: ${safeFileName}`);
+                        return uploadBytes(fileRef, file).then(snap => {
+                            console.log(`Succès upload: ${safeFileName}`);
+                            return getDownloadURL(snap.ref);
+                        });
                     });
                     imageUrls = await Promise.all(uploadPromises);
                 } catch (storageErr: any) {
-                    console.error("Erreur technique Storage:", storageErr);
+                    console.error("Erreur technique Storage détaillée:", storageErr);
                     setIsSubmitting(false);
                     
-                    let description = "Impossible d'uploader les images. Vérifiez votre connexion.";
+                    let description = "Vérifiez votre connexion internet.";
                     if (storageErr.code === 'storage/unauthorized') {
-                        description = "Permissions insuffisantes au niveau du serveur de stockage. Les nouvelles règles sont en cours de déploiement.";
+                        description = "Le serveur de stockage n'a pas encore validé vos droits. Patientez 30s ou déconnectez/reconnectez-vous.";
                     }
 
                     toast({ 
                         title: "Erreur de stockage", 
                         description: `${description} (Code: ${storageErr.code})`,
                         variant: "destructive",
-                        duration: 10000
+                        duration: 15000
                     });
                     return;
                 }
             }
 
             // ÉTAPE 2 : Enregistrer dans Firestore
+            console.log("Enregistrement des données dans Firestore...");
             const eventData = {
                 title: data.title,
                 description: data.description,
@@ -104,11 +116,12 @@ const AddEventDialog = () => {
 
             try {
                 await setDoc(eventRef, eventData);
+                console.log("Publication réussie !");
                 toast({ title: "Offre publiée !", description: "L'offre touristique est maintenant en ligne." });
                 setOpen(false);
                 form.reset();
             } catch (firestoreErr: any) {
-                console.error("Firestore Error:", firestoreErr);
+                console.error("Erreur Firestore détaillée:", firestoreErr);
                 const permissionError = new FirestorePermissionError({
                     path: eventRef.path,
                     operation: 'create',
@@ -118,8 +131,8 @@ const AddEventDialog = () => {
             }
 
         } catch (e: any) {
-            console.error("General Error:", e);
-            toast({ title: "Erreur", description: e.message || "Une erreur inattendue est survenue.", variant: "destructive" });
+            console.error("Erreur générale attrapée:", e);
+            toast({ title: "Erreur critique", description: e.message || "Une erreur inattendue est survenue.", variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -164,7 +177,7 @@ const AddEventDialog = () => {
                             )} />
                         </div>
                         <FormField control={form.control} name="images" render={({ field: { onChange, ...fieldProps} }) => (
-                            <FormItem><FormLabel>Images</FormLabel><FormControl><Input type="file" multiple accept="image/*" onChange={e => onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Images (Multiples autorisées)</FormLabel><FormControl><Input type="file" multiple accept="image/*" onChange={e => onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <DialogFooter>
                             <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl">
@@ -186,7 +199,7 @@ const AddEventDialog = () => {
 export default function TourismPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
-  const isAdmin = user?.email === 'drnduwa@gmail.com';
+  const isAdmin = user?.email?.toLowerCase() === 'drnduwa@gmail.com';
 
   const tourismRef = useMemoFirebase(() => collection(firestore, 'tourism_events'), [firestore]);
   const tourismQuery = useMemoFirebase(() => query(tourismRef, orderBy('createdAt', 'desc')), [tourismRef]);

@@ -12,8 +12,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, Users, Phone, User, CheckCircle2 } from 'lucide-react';
+import { Loader2, Calendar, Users, Phone, User, CheckCircle2, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const TourismBookingDialog = ({ event }: { event: WithId<TourismEvent> }) => {
   const [open, setOpen] = useState(false);
@@ -47,7 +48,7 @@ export const TourismBookingDialog = ({ event }: { event: WithId<TourismEvent> })
         userName: data.userName,
         userPhone: data.userPhone,
         numberOfPeople: data.numberOfPeople,
-        bookingDate: serverTimestamp(), // Dates confirmed via phone usually
+        bookingDate: serverTimestamp(),
         status: 'pending',
         createdAt: serverTimestamp(),
       };
@@ -71,56 +72,87 @@ export const TourismBookingDialog = ({ event }: { event: WithId<TourismEvent> })
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-emerald-200">
-          Réserver
+        <Button className="bg-primary hover:bg-primary/90 text-white font-black rounded-2xl h-12 px-8 shadow-xl shadow-primary/20 uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95">
+          Réserver l'expérience
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
-        <div className="bg-emerald-600 p-8 text-white relative">
-          <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-          <DialogTitle className="text-2xl font-black mb-2">Excursion : {event.title}</DialogTitle>
-          <DialogDescription className="text-emerald-100 font-medium">
-            Tarif estimé : <span className="font-black text-white">{event.price}$ / personne</span>
-          </DialogDescription>
+      <DialogContent className="sm:max-w-md rounded-[3rem] p-0 overflow-hidden border-none shadow-3xl">
+        <div className="bg-primary p-10 text-white relative">
+          <div className="absolute top-[-30%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-[-10%] left-[-5%] w-24 h-24 bg-accent/20 rounded-full blur-2xl"></div>
+          
+          <div className="relative z-10 space-y-4">
+            <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">DEMANDE DE RÉSERVATION</Badge>
+            <DialogTitle className="text-3xl font-black tracking-tighter leading-tight">{event.title}</DialogTitle>
+            <div className="flex items-center gap-4 text-primary-foreground/80 font-bold text-sm">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-4 w-4" />
+                {event.location}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-white font-black">{event.price}$</span>
+                <span className="text-[10px] uppercase">/ pers.</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="p-8">
+        <div className="p-10">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField control={form.control} name="userName" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-slate-600 font-bold"><User className="h-4 w-4" />Nom complet</FormLabel>
-                  <FormControl><Input placeholder="John Doe" className="h-12 rounded-xl border-2 border-slate-100 focus-visible:ring-emerald-500" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="space-y-6">
+                <FormField control={form.control} name="userName" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-3 text-slate-500 font-black uppercase tracking-[0.15em] text-[10px] mb-2">
+                      <User className="h-3.5 w-3.5 text-primary" />
+                      Nom complet
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Votre nom" className="h-14 rounded-2xl border-2 border-slate-100 focus-visible:ring-primary font-bold shadow-inner bg-slate-50/50" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
-              <FormField control={form.control} name="userPhone" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-slate-600 font-bold"><Phone className="h-4 w-4" />Numéro de téléphone</FormLabel>
-                  <FormControl><Input placeholder="08..." className="h-12 rounded-xl border-2 border-slate-100 focus-visible:ring-emerald-500" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+                <FormField control={form.control} name="userPhone" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-3 text-slate-500 font-black uppercase tracking-[0.15em] text-[10px] mb-2">
+                      <Phone className="h-3.5 w-3.5 text-primary" />
+                      Téléphone mobile
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: 08..." className="h-14 rounded-2xl border-2 border-slate-100 focus-visible:ring-primary font-bold shadow-inner bg-slate-50/50" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
-              <FormField control={form.control} name="numberOfPeople" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-slate-600 font-bold"><Users className="h-4 w-4" />Nombre de personnes</FormLabel>
-                  <FormControl><Input type="number" min={1} className="h-12 rounded-xl border-2 border-slate-100 focus-visible:ring-emerald-500" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+                <FormField control={form.control} name="numberOfPeople" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-3 text-slate-500 font-black uppercase tracking-[0.15em] text-[10px] mb-2">
+                      <Users className="h-3.5 w-3.5 text-primary" />
+                      Nombre de participants
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" min={1} className="h-14 rounded-2xl border-2 border-slate-100 focus-visible:ring-primary font-bold shadow-inner bg-slate-50/50" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
 
-              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-emerald-800 font-medium leading-relaxed">
-                  Après votre demande, notre équipe vous appellera pour fixer la date exacte et les modalités de paiement (Mobile Money accepté).
+              <div className="p-5 bg-emerald-50 rounded-[1.5rem] border border-emerald-100 flex items-start gap-4">
+                <div className="bg-emerald-500 p-1.5 rounded-full text-white shrink-0 mt-0.5">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                </div>
+                <p className="text-[11px] text-emerald-800 font-bold leading-relaxed">
+                  Cette demande n'est pas un paiement final. Notre équipe vous appellera sous 24h pour confirmer les dates et vous envoyer le lien de paiement MbiyoPay.
                 </p>
               </div>
 
-              <Button type="submit" disabled={isSubmitting} className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-lg font-black shadow-xl shadow-emerald-200">
-                {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
-                Confirmer ma demande
+              <Button type="submit" disabled={isSubmitting} className="w-full h-16 rounded-[1.5rem] bg-primary hover:bg-primary/90 text-lg font-black shadow-2xl shadow-primary/30 uppercase tracking-widest transition-all hover:scale-[1.02]">
+                {isSubmitting ? <Loader2 className="animate-spin mr-3 h-6 w-6" /> : null}
+                Envoyer ma demande
               </Button>
             </form>
           </Form>

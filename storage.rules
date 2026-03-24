@@ -2,48 +2,42 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Fonction utilitaire pour vérifier si l'utilisateur est l'administrateur principal
+    // Fonction simplifiée pour vérifier l'accès administrateur
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'drnduwa@gmail.com';
     }
 
     // --- TOURISME ---
-    // Dossier pour les offres touristiques
-    match /tourism/{eventId}/{allPaths=**} {
-      allow write: if isAdmin();
+    // Autorisation explicite pour le dossier tourism
+    match /tourism/{eventId}/{fileName} {
       allow read: if true;
+      allow write: if isAdmin();
     }
 
     // --- LOGEMENTS ---
-    // Seul l'admin peut ajouter des photos de logements
-    match /logements/{logementId}/{allPaths=**} {
-      allow write: if isAdmin();
+    match /logements/{logementId}/{fileName} {
       allow read: if true;
+      allow write: if isAdmin();
     }
 
     // --- AVATARS ---
-    // Chaque utilisateur gère sa photo, tout le monde peut la voir
-    match /avatars/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+    match /avatars/{userId}/{fileName} {
       allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // --- VIDÉOS & PUBLICITÉS ---
-    // L'admin peut tout faire dans le dossier vidéos
-    // Les utilisateurs peuvent uploader leurs propres vidéos
-    match /videos/{userId}/{allPaths=**} {
-      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+    match /videos/{userId}/{fileName} {
       allow read: if true;
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
     }
     
-    // Dossier spécifique pour les publicités (si utilisé)
     match /adverts/{allPaths=**} {
-      allow write: if isAdmin();
       allow read: if true;
+      allow write: if isAdmin();
     }
 
-    // --- RÈGLE DE SÉCURITÉ PAR DÉFAUT ---
-    // Par défaut, lecture autorisée pour le contenu public, écriture restreinte
+    // --- RÈGLE PAR DÉFAUT ---
     match /{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin();

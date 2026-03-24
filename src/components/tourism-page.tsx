@@ -63,8 +63,9 @@ const AddEventDialog = () => {
                 
                 try {
                     const uploadPromises = files.map(file => {
-                        // Utilisation du chemin exact autorisé par les règles (tourism/{eventId}/...)
-                        const fileRef = storageRef(storage, `tourism/${eventId}/${file.name}`);
+                        // Nettoyage du nom de fichier pour éviter les caractères spéciaux
+                        const safeFileName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+                        const fileRef = storageRef(storage, `tourism/${eventId}/${safeFileName}`);
                         return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
                     });
                     imageUrls = await Promise.all(uploadPromises);
@@ -72,16 +73,14 @@ const AddEventDialog = () => {
                     console.error("Erreur technique Storage:", storageErr);
                     setIsSubmitting(false);
                     
-                    let description = "Impossible d'uploader les images.";
+                    let description = "Impossible d'uploader les images. Vérifiez votre connexion.";
                     if (storageErr.code === 'storage/unauthorized') {
-                        description = "Permissions insuffisantes (storage/unauthorized). Vérifiez les règles de sécurité Firebase Storage.";
-                    } else if (storageErr.code === 'storage/quota-exceeded') {
-                        description = "Quota de stockage dépassé.";
+                        description = "Permissions insuffisantes. Vérifiez que vous êtes bien connecté avec drnduwa@gmail.com.";
                     }
 
                     toast({ 
                         title: "Erreur de stockage", 
-                        description: `${description} Détail: ${storageErr.message}`,
+                        description: `${description} (Code: ${storageErr.code})`,
                         variant: "destructive",
                         duration: 10000
                     });

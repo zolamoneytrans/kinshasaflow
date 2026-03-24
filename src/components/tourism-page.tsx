@@ -57,23 +57,34 @@ const AddEventDialog = () => {
 
             // ÉTAPE 1 : Gérer les images si présentes
             if (data.images && data.images.length > 0) {
+                console.log("Tentative d'upload pour l'utilisateur:", user.email, "UID:", user.uid);
                 const storage = getStorage(firebaseApp);
                 const files = Array.from(data.images as FileList);
                 
                 try {
                     const uploadPromises = files.map(file => {
+                        // Utilisation du chemin exact autorisé par les règles (tourism/{eventId}/...)
                         const fileRef = storageRef(storage, `tourism/${eventId}/${file.name}`);
                         return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
                     });
                     imageUrls = await Promise.all(uploadPromises);
                 } catch (storageErr: any) {
-                    console.error("Storage Error:", storageErr);
+                    console.error("Erreur technique Storage:", storageErr);
+                    setIsSubmitting(false);
+                    
+                    let description = "Impossible d'uploader les images.";
+                    if (storageErr.code === 'storage/unauthorized') {
+                        description = "Permissions insuffisantes (storage/unauthorized). Vérifiez les règles de sécurité Firebase Storage.";
+                    } else if (storageErr.code === 'storage/quota-exceeded') {
+                        description = "Quota de stockage dépassé.";
+                    }
+
                     toast({ 
                         title: "Erreur de stockage", 
-                        description: "Impossible d'uploader les images. Vérifiez les règles de sécurité Storage.",
-                        variant: "destructive" 
+                        description: `${description} Détail: ${storageErr.message}`,
+                        variant: "destructive",
+                        duration: 10000
                     });
-                    setIsSubmitting(false);
                     return;
                 }
             }
@@ -99,7 +110,6 @@ const AddEventDialog = () => {
                 form.reset();
             } catch (firestoreErr: any) {
                 console.error("Firestore Error:", firestoreErr);
-                // Utilisation de l'errorEmitter pour diagnostiquer les problèmes de règles de sécurité
                 const permissionError = new FirestorePermissionError({
                     path: eventRef.path,
                     operation: 'create',

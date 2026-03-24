@@ -7,6 +7,13 @@ service firebase.storage {
       return request.auth != null && request.auth.token.email == 'drnduwa@gmail.com';
     }
 
+    // --- TOURISME ---
+    // Dossier pour les offres touristiques
+    match /tourism/{eventId}/{allPaths=**} {
+      allow write: if isAdmin();
+      allow read: if true;
+    }
+
     // --- LOGEMENTS ---
     // Seul l'admin peut ajouter des photos de logements
     match /logements/{logementId}/{allPaths=**} {

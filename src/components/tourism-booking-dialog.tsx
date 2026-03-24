@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Loader2, Calendar, Users, Phone, User, CheckCircle2, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -76,7 +76,7 @@ export const TourismBookingDialog = ({ event }: { event: WithId<TourismEvent> })
           Réserver l'expérience
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md rounded-[3rem] p-0 overflow-hidden border-none shadow-3xl">
+      <DialogContent className="sm:max-w-md rounded-[3rem] p-0 overflow-hidden border-none shadow-2xl">
         <div className="bg-primary p-10 text-white relative">
           <div className="absolute top-[-30%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-[-10%] left-[-5%] w-24 h-24 bg-accent/20 rounded-full blur-2xl"></div>

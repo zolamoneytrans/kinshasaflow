@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Calendar, Users, Star, Palmtree, ArrowRight, Loader2, Plane, Hotel, ShieldCheck, CheckCircle2, Map, Compass, PlusCircle, Trash2, Pencil, Mail, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TourismBookingDialog } from './tourism-booking-dialog';
-import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, useUser, errorEmitter } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { TourismEvent, TourismEventFormValues, tourismEventFormSchema, WithId } from '@/lib/types';
+import { TourismEvent, TourismEventFormValues, tourismEventFormSchema, WithId, FirestorePermissionError } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -43,21 +43,42 @@ const AddEventDialog = () => {
     });
 
     const onSubmit = async (data: TourismEventFormValues) => {
+        if (!user || user.email !== 'drnduwa@gmail.com') {
+            toast({ title: "Accès refusé", description: "Seul l'administrateur peut effectuer cette action.", variant: 'destructive' });
+            return;
+        }
+
         setIsSubmitting(true);
+        const eventRef = doc(collection(firestore, 'tourism_events'));
+        const eventId = eventRef.id;
+
         try {
-            const eventRef = doc(collection(firestore, 'tourism_events'));
             let imageUrls: string[] = [];
 
+            // ÉTAPE 1 : Gérer les images si présentes
             if (data.images && data.images.length > 0) {
                 const storage = getStorage(firebaseApp);
                 const files = Array.from(data.images as FileList);
-                const uploadPromises = files.map(file => {
-                    const fileRef = storageRef(storage, `tourism/${eventRef.id}/${file.name}`);
-                    return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
-                });
-                imageUrls = await Promise.all(uploadPromises);
+                
+                try {
+                    const uploadPromises = files.map(file => {
+                        const fileRef = storageRef(storage, `tourism/${eventId}/${file.name}`);
+                        return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
+                    });
+                    imageUrls = await Promise.all(uploadPromises);
+                } catch (storageErr: any) {
+                    console.error("Storage Error:", storageErr);
+                    toast({ 
+                        title: "Erreur de stockage", 
+                        description: "Impossible d'uploader les images. Vérifiez les règles de sécurité Storage.",
+                        variant: "destructive" 
+                    });
+                    setIsSubmitting(false);
+                    return;
+                }
             }
 
+            // ÉTAPE 2 : Enregistrer dans Firestore
             const eventData = {
                 title: data.title,
                 description: data.description,
@@ -71,13 +92,25 @@ const AddEventDialog = () => {
                 createdAt: serverTimestamp(),
             };
 
-            await setDoc(eventRef, eventData);
-            toast({ title: "Offre publiée !", description: "L'offre touristique est maintenant en ligne." });
-            setOpen(false);
-            form.reset();
-        } catch (e) {
-            console.error(e);
-            toast({ title: "Erreur", description: "Impossible de publier l'offre.", variant: "destructive" });
+            try {
+                await setDoc(eventRef, eventData);
+                toast({ title: "Offre publiée !", description: "L'offre touristique est maintenant en ligne." });
+                setOpen(false);
+                form.reset();
+            } catch (firestoreErr: any) {
+                console.error("Firestore Error:", firestoreErr);
+                // Utilisation de l'errorEmitter pour diagnostiquer les problèmes de règles de sécurité
+                const permissionError = new FirestorePermissionError({
+                    path: eventRef.path,
+                    operation: 'create',
+                    requestResourceData: eventData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            }
+
+        } catch (e: any) {
+            console.error("General Error:", e);
+            toast({ title: "Erreur", description: e.message || "Une erreur inattendue est survenue.", variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -126,7 +159,12 @@ const AddEventDialog = () => {
                         )} />
                         <DialogFooter>
                             <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl">
-                                {isSubmitting ? <Loader2 className="animate-spin" /> : "Publier l'excursion"}
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="animate-spin mr-2 h-5 w-5" />
+                                        Publication en cours...
+                                    </>
+                                ) : "Publier l'excursion"}
                             </Button>
                         </DialogFooter>
                     </form>

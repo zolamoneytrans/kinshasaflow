@@ -44,26 +44,15 @@ const AddEventDialog = () => {
     });
 
     const onSubmit = async (data: TourismEventFormValues) => {
-        const adminEmail = 'drnduwa@gmail.com';
-        
-        if (!user || user.email?.toLowerCase() !== adminEmail.toLowerCase()) {
+        if (!user || user.email !== 'drnduwa@gmail.com') {
             toast({ title: "Accès refusé", description: "Seul l'administrateur peut effectuer cette action.", variant: 'destructive' });
             return;
         }
 
         setIsSubmitting(true);
         
-        // Diagnostic Console
-        console.log("--- DIAGNOSTIC UPLOAD TOURISME ---");
-        console.log("Utilisateur connecté:", user.email);
+        console.log("Tentative d'upload par:", user.email);
         console.log("Email vérifié:", user.emailVerified);
-        
-        try {
-            const tokenResult = await user.getIdTokenResult();
-            console.log("Email dans le Token:", tokenResult.claims.email);
-        } catch (e) {
-            console.error("Impossible de récupérer le token:", e);
-        }
 
         const eventRef = doc(collection(firestore, 'tourism_events'));
         const eventId = eventRef.id;
@@ -71,40 +60,31 @@ const AddEventDialog = () => {
         try {
             let imageUrls: string[] = [];
 
-            // ÉTAPE 1 : Téléversement vers Firebase Storage
             if (data.images && data.images.length > 0) {
                 const storage = getStorage(firebaseApp);
                 const files = Array.from(data.images as FileList);
                 
+                const uploadPromises = files.map((file, index) => {
+                    const fileName = `img_${Date.now()}_${index}.jpg`;
+                    const fileRef = storageRef(storage, `tourism/${eventId}/${fileName}`);
+                    return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
+                });
+                
                 try {
-                    const uploadPromises = files.map((file, index) => {
-                        const timestamp = Date.now();
-                        const extension = file.name.split('.').pop() || 'jpg';
-                        const fileName = `img_${timestamp}_${index}.${extension}`;
-                        const fileRef = storageRef(storage, `tourism/${eventId}/${fileName}`);
-                        
-                        console.log(`Tentative d'upload: tourism/${eventId}/${fileName}`);
-                        return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
-                    });
-                    
                     imageUrls = await Promise.all(uploadPromises);
-                    console.log("Succès: Images téléversées.");
                 } catch (storageErr: any) {
-                    console.error("ERREUR STORAGE DÉTAILLÉE:", storageErr);
+                    console.error("Erreur Storage détaillée:", storageErr);
                     setIsSubmitting(false);
-                    
                     toast({ 
                         title: "Erreur de stockage (Étape 1/2)", 
-                        description: `Le serveur a refusé l'accès aux images. Code: ${storageErr.code}. Assurez-vous d'être bien connecté avec drnduwa@gmail.com.`,
+                        description: `Le serveur a refusé l'accès aux images. Code: ${storageErr.code}.`,
                         variant: "destructive",
-                        duration: 15000,
                         action: <ToastAction altText="Réessayer" onClick={() => onSubmit(data)}>Réessayer</ToastAction>
                     });
                     return;
                 }
             }
 
-            // ÉTAPE 2 : Enregistrement dans Firestore
             const eventData = {
                 title: data.title,
                 description: data.description,
@@ -118,25 +98,14 @@ const AddEventDialog = () => {
                 createdAt: serverTimestamp(),
             };
 
-            try {
-                await setDoc(eventRef, eventData);
-                console.log("Succès: Document Firestore créé.");
-                toast({ title: "Offre publiée !", description: "L'offre touristique est maintenant en ligne." });
-                setOpen(false);
-                form.reset();
-            } catch (firestoreErr: any) {
-                console.error("Erreur Firestore fatale:", firestoreErr);
-                const permissionError = new FirestorePermissionError({
-                    path: eventRef.path,
-                    operation: 'create',
-                    requestResourceData: eventData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            }
+            await setDoc(eventRef, eventData);
+            toast({ title: "Offre publiée !", description: "L'offre touristique est maintenant en ligne." });
+            setOpen(false);
+            form.reset();
 
         } catch (e: any) {
             console.error("Erreur inattendue:", e);
-            toast({ title: "Erreur technique", description: e.message || "Une erreur inattendue est survenue.", variant: "destructive" });
+            toast({ title: "Erreur technique", description: e.message || "Une erreur est survenue.", variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -209,7 +178,7 @@ const AddEventDialog = () => {
 export default function TourismPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
-  const isAdmin = user?.email?.toLowerCase() === 'drnduwa@gmail.com';
+  const isAdmin = user?.email === 'drnduwa@gmail.com';
 
   const tourismRef = useMemoFirebase(() => collection(firestore, 'tourism_events'), [firestore]);
   const tourismQuery = useMemoFirebase(() => query(tourismRef, orderBy('createdAt', 'desc')), [tourismRef]);
@@ -230,7 +199,6 @@ export default function TourismPage() {
     <div className="w-full h-full overflow-y-auto bg-slate-50/30">
       <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-16 pb-24">
         
-        {/* --- Hero Section --- */}
         <section className="relative h-[400px] rounded-[3rem] overflow-hidden shadow-2xl flex items-center justify-center text-center">
           <Image 
             src={heroImage || "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&q=80&w=1200"} 
@@ -251,7 +219,6 @@ export default function TourismPage() {
           </div>
         </section>
 
-        {/* --- Admin Toolbar --- */}
         {isAdmin && (
             <div className="bg-primary/5 border-2 border-primary/10 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="space-y-1 text-center md:text-left">
@@ -270,7 +237,6 @@ export default function TourismPage() {
             </div>
         )}
 
-        {/* --- Events Grid --- */}
         <div className="space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200/60 pb-10">
             <div className="space-y-2">

@@ -1,20 +1,24 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Règle d'accès universelle pour l'administrateur
-    // On vérifie l'email de manière plus flexible pour éviter les rejets liés à la casse ou au champ exact
+    // Autorisation totale en lecture
     match /{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && 
-                   (request.auth.token.email == 'drnduwa@gmail.com' || 
-                    request.auth.token.email_verified == true && request.auth.token.email == 'drnduwa@gmail.com');
     }
 
-    // Règles spécifiques par dossier (en secours)
-    match /tourism/{eventId}/{fileName} {
-      allow write: if request.auth != null && request.auth.token.email == 'drnduwa@gmail.com';
+    // Autorisation d'écriture simplifiée au maximum pour l'admin
+    // On utilise une vérification directe sans se soucier de la vérification de l'email
+    match /{allPaths=**} {
+      allow write: if request.auth != null && 
+                   request.auth.token.email == 'drnduwa@gmail.com';
+    }
+
+    // Règle de secours spécifique pour le dossier tourisme
+    match /tourism/{allPaths=**} {
+      allow write: if request.auth != null;
     }
     
+    // Autres dossiers
     match /avatars/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }

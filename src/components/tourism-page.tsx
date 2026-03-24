@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 const AddEventDialog = () => {
     const [open, setOpen] = useState(false);
@@ -51,7 +52,18 @@ const AddEventDialog = () => {
         }
 
         setIsSubmitting(true);
-        console.log("Démarrage de la publication par:", user.email);
+        
+        // Diagnostic Console
+        console.log("--- DIAGNOSTIC UPLOAD TOURISME ---");
+        console.log("Utilisateur connecté:", user.email);
+        console.log("Email vérifié:", user.emailVerified);
+        
+        try {
+            const tokenResult = await user.getIdTokenResult();
+            console.log("Email dans le Token:", tokenResult.claims.email);
+        } catch (e) {
+            console.error("Impossible de récupérer le token:", e);
+        }
 
         const eventRef = doc(collection(firestore, 'tourism_events'));
         const eventId = eventRef.id;
@@ -66,25 +78,27 @@ const AddEventDialog = () => {
                 
                 try {
                     const uploadPromises = files.map((file, index) => {
-                        // Utilisation d'un nom de fichier ultra-simple et propre
                         const timestamp = Date.now();
                         const extension = file.name.split('.').pop() || 'jpg';
                         const fileName = `img_${timestamp}_${index}.${extension}`;
                         const fileRef = storageRef(storage, `tourism/${eventId}/${fileName}`);
                         
+                        console.log(`Tentative d'upload: tourism/${eventId}/${fileName}`);
                         return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
                     });
                     
                     imageUrls = await Promise.all(uploadPromises);
-                    console.log("Images téléversées avec succès:", imageUrls.length);
+                    console.log("Succès: Images téléversées.");
                 } catch (storageErr: any) {
-                    console.error("Erreur Storage fatale:", storageErr);
+                    console.error("ERREUR STORAGE DÉTAILLÉE:", storageErr);
                     setIsSubmitting(false);
+                    
                     toast({ 
                         title: "Erreur de stockage (Étape 1/2)", 
-                        description: `Le serveur a refusé l'accès aux images. Code: ${storageErr.code}`,
+                        description: `Le serveur a refusé l'accès aux images. Code: ${storageErr.code}. Assurez-vous d'être bien connecté avec drnduwa@gmail.com.`,
                         variant: "destructive",
-                        duration: 10000
+                        duration: 15000,
+                        action: <ToastAction altText="Réessayer" onClick={() => onSubmit(data)}>Réessayer</ToastAction>
                     });
                     return;
                 }
@@ -106,6 +120,7 @@ const AddEventDialog = () => {
 
             try {
                 await setDoc(eventRef, eventData);
+                console.log("Succès: Document Firestore créé.");
                 toast({ title: "Offre publiée !", description: "L'offre touristique est maintenant en ligne." });
                 setOpen(false);
                 form.reset();
@@ -179,7 +194,7 @@ const AddEventDialog = () => {
                                 {isSubmitting ? (
                                     <>
                                         <Loader2 className="animate-spin mr-3 h-6 w-6" />
-                                        Envoi en cours...
+                                        Publication en cours...
                                     </>
                                 ) : "Publier l'excursion"}
                             </Button>

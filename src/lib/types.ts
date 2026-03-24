@@ -326,15 +326,31 @@ export type PoliceStation = z.infer<typeof policeStationSchema>;
 
 // Tourism
 export const tourismEventSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  location: z.string(),
-  price: z.number(),
-  imageUrls: z.array(z.string()),
-  category: z.string(),
+  title: z.string().min(5, "Le titre est requis."),
+  description: z.string().min(20, "La description est requise."),
+  location: z.string().min(5, "Le lieu est requis."),
+  price: z.coerce.number().positive(),
+  imageUrls: z.array(z.string().url()),
+  category: z.string().min(3),
+  whatsapp: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal('')),
   createdAt: z.instanceof(Timestamp).or(z.any()),
 });
 export type TourismEvent = z.infer<typeof tourismEventSchema>;
+
+export const tourismEventFormSchema = z.object({
+  title: z.string().min(5),
+  description: z.string().min(20),
+  location: z.string().min(5),
+  price: z.coerce.number().positive(),
+  category: z.string().min(3),
+  whatsapp: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  images: z.any().optional(),
+});
+export type TourismEventFormValues = z.infer<typeof tourismEventFormSchema>;
 
 export const tourismBookingSchema = z.object({
   userId: z.string(),

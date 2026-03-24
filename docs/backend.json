@@ -148,6 +148,9 @@
         "price": { "type": "number" },
         "imageUrls": { "type": "array", "items": { "type": "string" } },
         "category": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "description", "location", "price", "imageUrls", "category"]

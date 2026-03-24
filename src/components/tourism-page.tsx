@@ -1,87 +1,167 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, Users, Star, Palmtree, ArrowRight, Loader2, Plane, Hotel, ShieldCheck, CheckCircle2, Map, Compass } from 'lucide-react';
+import { MapPin, Calendar, Users, Star, Palmtree, ArrowRight, Loader2, Plane, Hotel, ShieldCheck, CheckCircle2, Map, Compass, PlusCircle, Trash2, Pencil, Mail, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TourismBookingDialog } from './tourism-booking-dialog';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
-import { TourismEvent } from '@/lib/types';
+import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, orderBy, serverTimestamp, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { TourismEvent, TourismEventFormValues, tourismEventFormSchema, WithId } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useToast } from '@/hooks/use-toast';
 
-const featuredPackage = {
-  id: "10-jours-kinshasa",
-  title: "Séjour Immersion : 10 Jours à Kinshasa",
-  category: "Séjour Complet",
-  provider: "Congo na Motema",
-  description: "Vivez une immersion totale et sans stress dans la capitale. Nous gérons toute la logistique pour vous permettre de savourer chaque instant, de la Gombe à la N'sele.",
-  location: "Kinshasa & Environs",
-  price: 990,
-  imageUrls: ["https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1000"],
-  inclusions: [
-    { text: "Hébergement adapté (Gombe/Lingwala)", icon: Hotel },
-    { text: "Transferts Aéroport A/R inclus", icon: Plane },
-    { text: "Taxes GOPASS pré-payées", icon: ShieldCheck },
-    { text: "Excursion Safari Parc de la Nsele", icon: Compass },
-    { text: "Guide local dédié 24/7", icon: Users }
-  ],
-  pricing: [
-    { label: "Formule Solo", price: "990€", desc: "Voyageur indépendant" },
-    { label: "Formule Duo", price: "1980€", desc: "Parfait pour les couples" },
-    { label: "Formule Trio", price: "2970€", desc: "Famille ou Amis" }
-  ]
+const AddEventDialog = () => {
+    const [open, setOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { firestore, firebaseApp, user } = useFirebase();
+    const { toast } = useToast();
+
+    const form = useForm<TourismEventFormValues>({
+        resolver: zodResolver(tourismEventFormSchema),
+        defaultValues: {
+            title: '',
+            description: '',
+            location: '',
+            price: 0,
+            category: 'Excursion',
+            whatsapp: '',
+            phone: '',
+            email: '',
+        }
+    });
+
+    const onSubmit = async (data: TourismEventFormValues) => {
+        setIsSubmitting(true);
+        try {
+            const eventRef = doc(collection(firestore, 'tourism_events'));
+            let imageUrls: string[] = [];
+
+            if (data.images && data.images.length > 0) {
+                const storage = getStorage(firebaseApp);
+                const files = Array.from(data.images as FileList);
+                const uploadPromises = files.map(file => {
+                    const fileRef = storageRef(storage, `tourism/${eventRef.id}/${file.name}`);
+                    return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
+                });
+                imageUrls = await Promise.all(uploadPromises);
+            }
+
+            const eventData = {
+                title: data.title,
+                description: data.description,
+                location: data.location,
+                price: data.price,
+                category: data.category,
+                whatsapp: data.whatsapp || '',
+                phone: data.phone || '',
+                email: data.email || '',
+                imageUrls: imageUrls.length > 0 ? imageUrls : ["https://picsum.photos/seed/tourism/1000/600"],
+                createdAt: serverTimestamp(),
+            };
+
+            await setDoc(eventRef, eventData);
+            toast({ title: "Offre publiée !", description: "L'offre touristique est maintenant en ligne." });
+            setOpen(false);
+            form.reset();
+        } catch (e) {
+            console.error(e);
+            toast({ title: "Erreur", description: "Impossible de publier l'offre.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button className="rounded-full h-12 px-6 font-black shadow-xl shadow-primary/20">
+                    <PlusCircle className="mr-2 h-5 w-5" />
+                    Nouvelle Offre
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>Ajouter une offre touristique</DialogTitle></DialogHeader>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                        <FormField control={form.control} name="title" render={({ field }) => (
+                            <FormItem><FormLabel>Titre de l'offre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="category" render={({ field }) => (
+                            <FormItem><FormLabel>Catégorie</FormLabel><FormControl><Input placeholder="Ex: Safari, Nature, Séjour" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="location" render={({ field }) => (
+                            <FormItem><FormLabel>Lieu</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="price" render={({ field }) => (
+                            <FormItem><FormLabel>Prix ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="description" render={({ field }) => (
+                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <div className="grid grid-cols-3 gap-4">
+                            <FormField control={form.control} name="whatsapp" render={({ field }) => (
+                                <FormItem><FormLabel>WhatsApp</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="phone" render={({ field }) => (
+                                <FormItem><FormLabel>Téléphone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="email" render={({ field }) => (
+                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
+                        <FormField control={form.control} name="images" render={({ field: { onChange, ...fieldProps} }) => (
+                            <FormItem><FormLabel>Images</FormLabel><FormControl><Input type="file" multiple accept="image/*" onChange={e => onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <DialogFooter>
+                            <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl">
+                                {isSubmitting ? <Loader2 className="animate-spin" /> : "Publier l'excursion"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
 };
 
-const defaultEvents = [
-  {
-    id: "lola-ya-bonobo",
-    title: "Lola ya Bonobo",
-    category: "Sanctuaire",
-    description: "Le seul sanctuaire au monde pour les bonobos orphelins. Une rencontre émouvante avec nos cousins les plus proches dans un cadre naturel préservé.",
-    location: "Kimwenza, Kinshasa",
-    price: 25,
-    imageUrls: ["https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?auto=format&fit=crop&q=80&w=1000"],
-  },
-  {
-    id: "chutes-zongo",
-    title: "Chutes de la Zongo",
-    category: "Nature & Aventure",
-    description: "Un spectacle naturel époustouflant à quelques heures de la capitale. Idéal pour une randonnée ressourçante et une évasion loin du tumulte urbain.",
-    location: "Kongo Central",
-    price: 45,
-    imageUrls: ["https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&q=80&w=1000"],
-  },
-  {
-    id: "ma-vallee",
-    title: "Lac de Ma Vallée",
-    category: "Détente",
-    description: "Havre de paix niché dans les collines. Profitez d'une balade en pédalo, d'une partie de pêche ou d'un déjeuner paisible au bord de l'eau.",
-    location: "Mont-Ngafula",
-    price: 15,
-    imageUrls: ["https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80&w=1000"],
-  }
-];
-
 export default function TourismPage() {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
+  const { toast } = useToast();
+  const isAdmin = user?.email === 'drnduwa@gmail.com';
+
   const tourismRef = useMemoFirebase(() => collection(firestore, 'tourism_events'), [firestore]);
   const tourismQuery = useMemoFirebase(() => query(tourismRef, orderBy('createdAt', 'desc')), [tourismRef]);
-  const { data: dbEvents, isLoading } = useCollection<TourismEvent>(tourismQuery);
+  const { data: events, isLoading } = useCollection<TourismEvent>(tourismQuery);
 
-  const events = dbEvents && dbEvents.length > 0 ? dbEvents : defaultEvents;
   const heroImage = PlaceHolderImages.find(img => img.id === 'tourism-hero')?.imageUrl;
+
+  const handleDelete = async (id: string) => {
+      try {
+          await deleteDoc(doc(firestore, 'tourism_events', id));
+          toast({ title: "Supprimé", description: "L'offre a été retirée." });
+      } catch (e) {
+          toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
+      }
+  };
 
   return (
     <div className="w-full h-full overflow-y-auto bg-slate-50/30">
       <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-16 pb-24">
         
-        {/* --- High-End Hero Section --- */}
-        <section className="relative h-[500px] rounded-[3rem] overflow-hidden shadow-2xl flex items-center justify-center text-center">
+        {/* --- Hero Section --- */}
+        <section className="relative h-[400px] rounded-[3rem] overflow-hidden shadow-2xl flex items-center justify-center text-center">
           <Image 
             src={heroImage || "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&q=80&w=1200"} 
             alt="Tourism Hero" 
@@ -89,176 +169,95 @@ export default function TourismPage() {
             className="object-cover brightness-[0.4]"
             priority
           />
-          <div className="relative z-10 space-y-8 px-6 max-w-4xl">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-            >
-              <div className="flex justify-center mb-6">
-                <Badge className="bg-accent text-accent-foreground px-6 py-2 rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-accent/20">
-                  Explorer la RD Congo
-                </Badge>
-              </div>
-              <h1 className="text-5xl md:text-8xl font-black text-white tracking-tighter mb-6 leading-none">
-                Kinshasa, <br /><span className="text-primary italic">autrement.</span>
+          <div className="relative z-10 space-y-6 px-6 max-w-4xl">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-none mb-4">
+                Explorez <span className="text-primary italic">Kinshasa</span>
               </h1>
-              <p className="text-slate-200 text-xl md:text-2xl font-medium max-w-2xl mx-auto leading-relaxed opacity-90">
-                Découvrez l'authenticité de la capitale avec des séjours clés en main et des expériences locales uniques.
+              <p className="text-slate-200 text-lg md:text-xl font-medium max-w-2xl mx-auto opacity-90">
+                Découvrez des trésors cachés et vivez des expériences locales inoubliables.
               </p>
             </motion.div>
           </div>
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
-            <div className="w-1 h-12 bg-gradient-to-b from-white/60 to-transparent rounded-full"></div>
-          </div>
         </section>
 
-        {/* --- Featured 10-Day Pack --- */}
-        <section className="space-y-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div className="space-y-2">
-              <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
-                <div className="h-12 w-12 bg-primary/10 rounded-2xl flex items-center justify-center">
-                  <Star className="text-primary fill-primary h-6 w-6" />
+        {/* --- Admin Toolbar --- */}
+        {isAdmin && (
+            <div className="bg-primary/5 border-2 border-primary/10 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <h2 className="text-xl font-black text-primary flex items-center gap-2">
+                        <Star className="fill-primary h-5 w-5" />
+                        Outils Administrateur
+                    </h2>
+                    <p className="text-sm text-muted-foreground font-medium">Gérez vos offres et consultez les réservations.</p>
                 </div>
-                L'Offre Signature
-              </h2>
-              <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">Partenariat Exclusif avec Congo na Motema</p>
+                <div className="flex gap-3">
+                    <Button variant="outline" asChild className="rounded-full h-12 border-2 px-6 font-bold">
+                        <Link href="/admin/tourism">Consulter les réservations</Link>
+                    </Button>
+                    <AddEventDialog />
+                </div>
             </div>
-          </div>
+        )}
 
-          <Card className="border-none shadow-3xl rounded-[3rem] overflow-hidden bg-white group border border-slate-100/50">
-            <div className="grid lg:grid-cols-2">
-              <div className="relative h-[400px] lg:h-auto overflow-hidden">
-                <Image 
-                  src={featuredPackage.imageUrls[0]} 
-                  alt={featuredPackage.title} 
-                  fill 
-                  className="object-cover transition-transform duration-[2s] group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end">
-                  <div className="space-y-1">
-                    <p className="text-white/70 text-xs font-black uppercase tracking-widest">À partir de</p>
-                    <p className="text-white text-5xl font-black tracking-tighter">990€</p>
-                  </div>
-                  <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-4 py-2 font-bold">10 Jours / 9 Nuits</Badge>
-                </div>
-              </div>
-              
-              <div className="p-10 lg:p-16 space-y-10 flex flex-col justify-center">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="success" className="font-black px-3 py-1">TOUT INCLUS</Badge>
-                    <span className="text-xs font-black text-slate-400 uppercase tracking-tighter">Logistique & Sérénité</span>
-                  </div>
-                  <h3 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 tracking-tighter leading-[0.95]">
-                    {featuredPackage.title}
-                  </h3>
-                  <p className="text-slate-500 text-lg leading-relaxed font-medium">
-                    {featuredPackage.description}
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div className="space-y-5">
-                    <h4 className="font-black text-slate-900 uppercase tracking-[0.15em] text-[10px]">Prestations incluses</h4>
-                    <ul className="space-y-4">
-                      {featuredPackage.inclusions.map((inc, i) => (
-                        <li key={i} className="flex items-center gap-4 text-sm font-bold text-slate-600 group/item">
-                          <div className="p-2 bg-slate-50 rounded-xl group-hover/item:bg-primary/10 transition-colors">
-                            <inc.icon className="h-4 w-4 text-primary" />
-                          </div>
-                          {inc.text}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="space-y-5">
-                    <h4 className="font-black text-slate-900 uppercase tracking-[0.15em] text-[10px]">Grille tarifaire</h4>
-                    <div className="space-y-3">
-                      {featuredPackage.pricing.map((p, i) => (
-                        <div key={i} className="flex justify-between items-center p-4 rounded-2xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-lg transition-all cursor-default">
-                          <div>
-                            <p className="text-sm font-black text-slate-900">{p.label}</p>
-                            <p className="text-[10px] text-slate-400 font-bold">{p.desc}</p>
-                          </div>
-                          <span className="text-xl font-black text-primary">{p.price}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-6 flex flex-col sm:flex-row gap-4">
-                  <TourismBookingDialog event={featuredPackage as any} />
-                  <Button variant="outline" className="h-14 rounded-2xl font-black border-2 px-10 hover:bg-slate-50 transition-all text-sm uppercase tracking-widest">
-                    Voir le programme
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </section>
-
-        {/* --- À la Carte Grid --- */}
+        {/* --- Events Grid --- */}
         <div className="space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200/60 pb-10">
             <div className="space-y-2">
               <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
                 <Palmtree className="text-emerald-500 h-10 w-10" />
-                Évasions & Loisirs
+                Nos Expériences
               </h2>
-              <p className="text-muted-foreground text-lg font-medium">Des expériences locales à vivre sur une journée.</p>
+              <p className="text-muted-foreground text-lg font-medium">Les meilleures destinations sélectionnées pour vous.</p>
             </div>
-            <Button variant="ghost" className="font-black text-primary hover:bg-primary/5 uppercase tracking-widest text-xs">
-              Tout afficher <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {isLoading ? (
               <div className="col-span-full py-24 flex flex-col items-center gap-6">
-                <div className="relative">
-                  <Loader2 className="h-16 w-16 animate-spin text-primary opacity-20" />
-                  <Compass className="h-8 w-8 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-                </div>
-                <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Mise à jour des disponibilités...</p>
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Chargement des offres...</p>
               </div>
-            ) : (
+            ) : events && events.length > 0 ? (
               events.map((event, idx) => (
                 <motion.div
                   key={event.id}
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: idx * 0.1, duration: 0.6 }}
+                  transition={{ delay: idx * 0.1 }}
                 >
-                  <Card className="group overflow-hidden border-none shadow-xl rounded-[2.5rem] bg-white h-full flex flex-col hover:shadow-3xl transition-all duration-500 hover:-translate-y-2">
+                  <Card className="group overflow-hidden border-none shadow-xl rounded-[2.5rem] bg-white h-full flex flex-col hover:-translate-y-2 transition-all duration-500">
                     <div className="relative aspect-[4/3] overflow-hidden">
                       <Image 
                         src={event.imageUrls[0]} 
                         alt={event.title} 
                         fill 
-                        className="object-cover transition-transform duration-[1.5s] group-hover:scale-110"
+                        className="object-cover transition-transform duration-700 group-hover:scale-110"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       <div className="absolute top-6 left-6">
-                        <Badge className="bg-white/95 backdrop-blur-md text-slate-900 font-black px-4 py-1.5 shadow-lg rounded-full text-[10px] uppercase tracking-widest">
+                        <Badge className="bg-white/95 text-slate-900 font-black px-4 py-1.5 shadow-lg rounded-full text-[10px] uppercase tracking-widest">
                           {event.category}
                         </Badge>
                       </div>
                       <div className="absolute bottom-6 right-6">
-                        <div className="bg-primary text-white px-5 py-2.5 rounded-2xl font-black shadow-2xl scale-90 group-hover:scale-100 transition-transform">
+                        <div className="bg-primary text-white px-5 py-2.5 rounded-2xl font-black shadow-2xl">
                           {event.price}$ <span className="text-[10px] opacity-70">/ pers.</span>
                         </div>
                       </div>
                     </div>
                     
                     <CardHeader className="p-8 pb-4">
-                      <CardTitle className="text-2xl font-black text-slate-900 group-hover:text-primary transition-colors leading-tight">
-                        {event.title}
-                      </CardTitle>
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-2xl font-black text-slate-900 leading-tight">
+                            {event.title}
+                        </CardTitle>
+                        {isAdmin && (
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(event.id)} className="text-destructive hover:bg-destructive/10">
+                                <Trash2 className="h-5 w-5" />
+                            </Button>
+                        )}
+                      </div>
                       <CardDescription className="flex items-center gap-2 font-bold text-slate-400 uppercase text-[10px] tracking-widest pt-2">
                         <MapPin className="h-3 w-3 text-emerald-500" />
                         {event.location}
@@ -266,71 +265,36 @@ export default function TourismPage() {
                     </CardHeader>
 
                     <CardContent className="px-8 pb-8 pt-0 flex-1">
-                      <p className="text-slate-500 text-sm leading-relaxed line-clamp-3 font-medium opacity-80 group-hover:opacity-100 transition-opacity">
+                      <p className="text-slate-500 text-sm leading-relaxed line-clamp-3 font-medium">
                         {event.description}
                       </p>
+                      
+                      {(event.phone || event.whatsapp || event.email) && (
+                          <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
+                              <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">Contacts direct</p>
+                              <div className="flex flex-wrap gap-4">
+                                {event.phone && <a href={`tel:${event.phone}`} className="text-xs font-bold text-slate-600 flex items-center gap-1.5 hover:text-primary"><Phone className="h-3 w-3" /> Appeler</a>}
+                                {event.whatsapp && <a href={`https://wa.me/${event.whatsapp.replace(/\D/g, '')}`} target="_blank" className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 hover:underline"><Palmtree className="h-3 w-3" /> WhatsApp</a>}
+                                {event.email && <a href={`mailto:${event.email}`} className="text-xs font-bold text-slate-600 flex items-center gap-1.5 hover:text-primary"><Mail className="h-3 w-3" /> Email</a>}
+                              </div>
+                          </div>
+                      )}
                     </CardContent>
 
                     <CardFooter className="px-8 py-6 border-t border-slate-50 bg-slate-50/30">
-                      <div className="w-full flex items-center justify-between">
-                        <div className="flex -space-x-2">
-                          {[1,2,3].map(i => (
-                            <div key={i} className="w-7 h-7 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center overflow-hidden">
-                              <Image src={`https://picsum.photos/seed/user${i + idx}/100`} alt="user" fill className="object-cover" />
-                            </div>
-                          ))}
-                          <div className="w-7 h-7 rounded-full border-2 border-white bg-primary flex items-center justify-center text-[8px] font-black text-white">
-                            +12
-                          </div>
-                        </div>
-                        <TourismBookingDialog event={event as any} />
-                      </div>
+                      <TourismBookingDialog event={event as any} />
                     </CardFooter>
                   </Card>
                 </motion.div>
               ))
+            ) : (
+                <div className="col-span-full py-24 text-center bg-white rounded-[3rem] border-2 border-dashed">
+                    <Palmtree className="h-16 w-16 text-slate-200 mx-auto mb-4" />
+                    <p className="text-slate-400 font-bold">Aucune offre disponible pour le moment.</p>
+                </div>
             )}
           </div>
         </div>
-
-        {/* --- Professional Footer Banner --- */}
-        <section className="bg-slate-900 rounded-[3rem] p-12 text-white relative overflow-hidden shadow-3xl">
-          <div className="absolute top-[-50%] right-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-[-20%] left-[-5%] w-[300px] h-[300px] bg-accent/10 rounded-full blur-[80px]"></div>
-          
-          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
-            <div className="space-y-6 max-w-2xl text-center lg:text-left">
-              <Badge className="bg-white/10 text-white border-white/20 px-4 py-1.5 font-bold uppercase tracking-[0.2em] text-[10px]">Besoin d'un séjour sur mesure ?</Badge>
-              <h3 className="text-4xl md:text-5xl font-black tracking-tighter leading-none">
-                Votre projet de voyage <br /><span className="text-primary italic">commence ici.</span>
-              </h3>
-              <p className="text-slate-400 text-lg font-medium leading-relaxed">
-                Groupes, entreprises ou séjours privés : nos experts conçoivent votre itinéraire idéal à Kinshasa et dans tout le pays.
-              </p>
-              <div className="flex flex-wrap justify-center lg:justify-start gap-6 pt-4">
-                <a href="mailto:congonamotema@gmail.com" className="flex items-center gap-3 text-sm font-black group transition-colors hover:text-primary">
-                  <div className="p-2 bg-white/5 rounded-xl border border-white/10 group-hover:bg-primary/20 transition-colors">
-                    <Palmtree className="h-5 w-5 text-primary" />
-                  </div>
-                  congonamotema@gmail.com
-                </a>
-                <a href="https://wa.me/33665626422" target="_blank" className="flex items-center gap-3 text-sm font-black group transition-colors hover:text-emerald-400">
-                  <div className="p-2 bg-white/5 rounded-xl border border-white/10 group-hover:bg-emerald-500/20 transition-colors">
-                    <Users className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  +33 665 626 422 (WhatsApp)
-                </a>
-              </div>
-            </div>
-            <div className="flex flex-col gap-4 shrink-0 w-full sm:w-auto">
-              <Button size="lg" className="bg-primary text-white hover:bg-primary/90 font-black h-20 px-12 rounded-[2rem] shadow-3xl shadow-primary/30 text-xl group">
-                Demander un Devis
-                <ArrowRight className="ml-3 h-6 w-6 transition-transform group-hover:translate-x-2" />
-              </Button>
-              <p className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Réponse sous 24 heures</p>
-            </div>
-          </div>
-        </section>
 
       </div>
     </div>

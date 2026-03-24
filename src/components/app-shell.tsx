@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle, AlertCircle, Palmtree } from 'lucide-react';
+import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle, AlertCircle, Palmtree, Compass } from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -177,6 +177,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/admin/car-rental') return 'Admin Location';
     if (pathname === '/admin/adverts') return 'Admin Publicités';
     if (pathname === '/admin/messages') return 'Admin Messages';
+    if (pathname === '/admin/tourism') return 'Admin Tourisme';
     return 'Kinshasa Flow';
   }
 
@@ -448,6 +449,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           <span>Admin Location</span>
                         </div>
                         <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">4</Badge>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/tourism'} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/tourism" className="font-medium flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Compass className="text-destructive" />
+                          <span>Admin Tourisme</span>
+                        </div>
+                        <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black">BOOK</Badge>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

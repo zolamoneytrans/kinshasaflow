@@ -6,15 +6,15 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, Users, Star, Palmtree, ArrowRight, Loader2, Plane, Hotel, ShieldCheck, CheckCircle2, Map, Compass, PlusCircle, Trash2, Pencil, Mail, Phone } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Palmtree, Loader2, Star, PlusCircle, Trash2, Mail, Phone } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { TourismBookingDialog } from './tourism-booking-dialog';
 import { useFirebase, useCollection, useMemoFirebase, useUser, errorEmitter } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { TourismEvent, TourismEventFormValues, tourismEventFormSchema, WithId, FirestorePermissionError } from '@/lib/types';
+import { TourismEvent, TourismEventFormValues, tourismEventFormSchema, FirestorePermissionError } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,62 +45,52 @@ const AddEventDialog = () => {
     const onSubmit = async (data: TourismEventFormValues) => {
         const adminEmail = 'drnduwa@gmail.com';
         
-        console.log("Tentative de publication par:", user?.email);
-
         if (!user || user.email?.toLowerCase() !== adminEmail.toLowerCase()) {
-            console.error("Accès Admin refusé. Utilisateur actuel:", user?.email);
             toast({ title: "Accès refusé", description: "Seul l'administrateur peut effectuer cette action.", variant: 'destructive' });
             return;
         }
 
         setIsSubmitting(true);
+        console.log("Démarrage de la publication par:", user.email);
+
         const eventRef = doc(collection(firestore, 'tourism_events'));
         const eventId = eventRef.id;
 
         try {
             let imageUrls: string[] = [];
 
-            // ÉTAPE 1 : Gérer les images si présentes
+            // ÉTAPE 1 : Téléversement vers Firebase Storage
             if (data.images && data.images.length > 0) {
-                console.log("Démarrage du téléversement vers Storage...");
                 const storage = getStorage(firebaseApp);
                 const files = Array.from(data.images as FileList);
                 
                 try {
-                    const uploadPromises = files.map(file => {
-                        // Nettoyage du nom de fichier
+                    const uploadPromises = files.map((file, index) => {
+                        // Utilisation d'un nom de fichier ultra-simple et propre
+                        const timestamp = Date.now();
                         const extension = file.name.split('.').pop() || 'jpg';
-                        const safeFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
-                        const fileRef = storageRef(storage, `tourism/${eventId}/${safeFileName}`);
+                        const fileName = `img_${timestamp}_${index}.${extension}`;
+                        const fileRef = storageRef(storage, `tourism/${eventId}/${fileName}`);
                         
-                        console.log(`Téléversement de: ${safeFileName}`);
-                        return uploadBytes(fileRef, file).then(snap => {
-                            console.log(`Succès upload: ${safeFileName}`);
-                            return getDownloadURL(snap.ref);
-                        });
+                        return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
                     });
-                    imageUrls = await Promise.all(uploadPromises);
-                } catch (storageErr: any) {
-                    console.error("Erreur technique Storage détaillée:", storageErr);
-                    setIsSubmitting(false);
                     
-                    let description = "Vérifiez votre connexion internet.";
-                    if (storageErr.code === 'storage/unauthorized') {
-                        description = "Le serveur de stockage n'a pas encore validé vos droits. Patientez 30s ou déconnectez/reconnectez-vous.";
-                    }
-
+                    imageUrls = await Promise.all(uploadPromises);
+                    console.log("Images téléversées avec succès:", imageUrls.length);
+                } catch (storageErr: any) {
+                    console.error("Erreur Storage fatale:", storageErr);
+                    setIsSubmitting(false);
                     toast({ 
-                        title: "Erreur de stockage", 
-                        description: `${description} (Code: ${storageErr.code})`,
+                        title: "Erreur de stockage (Étape 1/2)", 
+                        description: `Le serveur a refusé l'accès aux images. Code: ${storageErr.code}`,
                         variant: "destructive",
-                        duration: 15000
+                        duration: 10000
                     });
                     return;
                 }
             }
 
-            // ÉTAPE 2 : Enregistrer dans Firestore
-            console.log("Enregistrement des données dans Firestore...");
+            // ÉTAPE 2 : Enregistrement dans Firestore
             const eventData = {
                 title: data.title,
                 description: data.description,
@@ -116,12 +106,11 @@ const AddEventDialog = () => {
 
             try {
                 await setDoc(eventRef, eventData);
-                console.log("Publication réussie !");
                 toast({ title: "Offre publiée !", description: "L'offre touristique est maintenant en ligne." });
                 setOpen(false);
                 form.reset();
             } catch (firestoreErr: any) {
-                console.error("Erreur Firestore détaillée:", firestoreErr);
+                console.error("Erreur Firestore fatale:", firestoreErr);
                 const permissionError = new FirestorePermissionError({
                     path: eventRef.path,
                     operation: 'create',
@@ -131,8 +120,8 @@ const AddEventDialog = () => {
             }
 
         } catch (e: any) {
-            console.error("Erreur générale attrapée:", e);
-            toast({ title: "Erreur critique", description: e.message || "Une erreur inattendue est survenue.", variant: "destructive" });
+            console.error("Erreur inattendue:", e);
+            toast({ title: "Erreur technique", description: e.message || "Une erreur inattendue est survenue.", variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -146,45 +135,51 @@ const AddEventDialog = () => {
                     Nouvelle Offre
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl">
                 <DialogHeader><DialogTitle>Ajouter une offre touristique</DialogTitle></DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                         <FormField control={form.control} name="title" render={({ field }) => (
-                            <FormItem><FormLabel>Titre de l'offre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Titre de l'offre</FormLabel><FormControl><Input placeholder="Ex: Safari à la N'sele" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        <FormField control={form.control} name="category" render={({ field }) => (
-                            <FormItem><FormLabel>Catégorie</FormLabel><FormControl><Input placeholder="Ex: Safari, Nature, Séjour" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField control={form.control} name="category" render={({ field }) => (
+                                <FormItem><FormLabel>Catégorie</FormLabel><FormControl><Input placeholder="Ex: Nature" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="price" render={({ field }) => (
+                                <FormItem><FormLabel>Prix ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
                         <FormField control={form.control} name="location" render={({ field }) => (
-                            <FormItem><FormLabel>Lieu</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="price" render={({ field }) => (
-                            <FormItem><FormLabel>Prix ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Lieu</FormLabel><FormControl><Input placeholder="Ex: Kinshasa Est" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="description" render={({ field }) => (
-                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Description détaillée</FormLabel><FormControl><Textarea className="min-h-[100px]" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <div className="grid grid-cols-3 gap-4">
                             <FormField control={form.control} name="whatsapp" render={({ field }) => (
-                                <FormItem><FormLabel>WhatsApp</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>WhatsApp</FormLabel><FormControl><Input placeholder="243..." {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="phone" render={({ field }) => (
-                                <FormItem><FormLabel>Téléphone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Téléphone</FormLabel><FormControl><Input placeholder="08..." {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="email" render={({ field }) => (
-                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="contact@..." {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                         </div>
-                        <FormField control={form.control} name="images" render={({ field: { onChange, ...fieldProps} }) => (
-                            <FormItem><FormLabel>Images (Multiples autorisées)</FormLabel><FormControl><Input type="file" multiple accept="image/*" onChange={e => onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>
+                        <FormField control={form.control} name="images" render={({ field: { onChange, value, ...fieldProps} }) => (
+                            <FormItem>
+                                <FormLabel>Photos de l'excursion</FormLabel>
+                                <FormControl><Input type="file" multiple accept="image/*" onChange={e => onChange(e.target.files)} className="cursor-pointer" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
                         )} />
-                        <DialogFooter>
-                            <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl">
+                        <DialogFooter className="pt-4">
+                            <Button type="submit" disabled={isSubmitting} className="w-full h-14 rounded-2xl text-lg font-black shadow-lg">
                                 {isSubmitting ? (
                                     <>
-                                        <Loader2 className="animate-spin mr-2 h-5 w-5" />
-                                        Publication en cours...
+                                        <Loader2 className="animate-spin mr-3 h-6 w-6" />
+                                        Envoi en cours...
                                     </>
                                 ) : "Publier l'excursion"}
                             </Button>
@@ -244,14 +239,14 @@ export default function TourismPage() {
         {/* --- Admin Toolbar --- */}
         {isAdmin && (
             <div className="bg-primary/5 border-2 border-primary/10 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <h2 className="text-xl font-black text-primary flex items-center gap-2">
+                <div className="space-y-1 text-center md:text-left">
+                    <h2 className="text-xl font-black text-primary flex items-center justify-center md:justify-start gap-2">
                         <Star className="fill-primary h-5 w-5" />
                         Outils Administrateur
                     </h2>
                     <p className="text-sm text-muted-foreground font-medium">Gérez vos offres et consultez les réservations.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap justify-center gap-3">
                     <Button variant="outline" asChild className="rounded-full h-12 border-2 px-6 font-bold">
                         <Link href="/admin/tourism">Consulter les réservations</Link>
                     </Button>
@@ -288,7 +283,7 @@ export default function TourismPage() {
                   transition={{ delay: idx * 0.1 }}
                 >
                   <Card className="group overflow-hidden border-none shadow-xl rounded-[2.5rem] bg-white h-full flex flex-col hover:-translate-y-2 transition-all duration-500">
-                    <div className="relative aspect-[4/3] overflow-hidden">
+                    <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
                       <Image 
                         src={event.imageUrls[0]} 
                         alt={event.title} 
@@ -331,7 +326,7 @@ export default function TourismPage() {
                       
                       {(event.phone || event.whatsapp || event.email) && (
                           <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
-                              <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">Contacts direct</p>
+                              <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">Contacts directs</p>
                               <div className="flex flex-wrap gap-4">
                                 {event.phone && <a href={`tel:${event.phone}`} className="text-xs font-bold text-slate-600 flex items-center gap-1.5 hover:text-primary"><Phone className="h-3 w-3" /> Appeler</a>}
                                 {event.whatsapp && <a href={`https://wa.me/${event.whatsapp.replace(/\D/g, '')}`} target="_blank" className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 hover:underline"><Palmtree className="h-3 w-3" /> WhatsApp</a>}

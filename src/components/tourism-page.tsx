@@ -57,14 +57,14 @@ const AddEventDialog = () => {
 
             // ÉTAPE 1 : Gérer les images si présentes
             if (data.images && data.images.length > 0) {
-                console.log("Tentative d'upload pour l'utilisateur:", user.email, "UID:", user.uid);
                 const storage = getStorage(firebaseApp);
                 const files = Array.from(data.images as FileList);
                 
                 try {
                     const uploadPromises = files.map(file => {
                         // Nettoyage du nom de fichier pour éviter les caractères spéciaux
-                        const safeFileName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+                        const extension = file.name.split('.').pop();
+                        const safeFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
                         const fileRef = storageRef(storage, `tourism/${eventId}/${safeFileName}`);
                         return uploadBytes(fileRef, file).then(snap => getDownloadURL(snap.ref));
                     });
@@ -75,7 +75,7 @@ const AddEventDialog = () => {
                     
                     let description = "Impossible d'uploader les images. Vérifiez votre connexion.";
                     if (storageErr.code === 'storage/unauthorized') {
-                        description = "Permissions insuffisantes. Vérifiez que vous êtes bien connecté avec drnduwa@gmail.com.";
+                        description = "Permissions insuffisantes au niveau du serveur de stockage. Les nouvelles règles sont en cours de déploiement.";
                     }
 
                     toast({ 

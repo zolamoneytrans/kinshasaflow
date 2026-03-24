@@ -2,45 +2,32 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Fonction simplifiée pour vérifier l'accès administrateur
+    // Fonction universelle pour identifier l'administrateur
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'drnduwa@gmail.com';
     }
 
-    // --- TOURISME ---
-    // Autorisation explicite pour le dossier tourism
-    match /tourism/{eventId}/{fileName} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // --- LOGEMENTS ---
-    match /logements/{logementId}/{fileName} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // --- AVATARS ---
-    match /avatars/{userId}/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // --- VIDÉOS & PUBLICITÉS ---
-    match /videos/{userId}/{fileName} {
-      allow read: if true;
-      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
-    }
-    
-    match /adverts/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // --- RÈGLE PAR DÉFAUT ---
+    // Autoriser la lecture publique partout pour le contenu du site
     match /{allPaths=**} {
       allow read: if true;
+      // Seul l'admin peut modifier ou supprimer des fichiers
       allow write: if isAdmin();
+    }
+
+    // Autorisations spécifiques pour les dossiers (sécurité renforcée)
+    match /tourism/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /logements/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /avatars/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

@@ -14,6 +14,36 @@ export const STAR_COSTS = {
   NAVIGATION_SESSION: 3,
 } as const;
 
+// App Navigation Features
+export const navFeatures = [
+  'reports', 'liveTraffic', 'map', 'assistant', 'myStars', 'report', 'police', 
+  'routes', 'announcements', 'logement', 'transport', 'carRental', 'tourism', 
+  'events', 'videos', 'kinshasa', 'contact', 'share'
+] as const;
+export type NavFeature = typeof navFeatures[number];
+
+export const appNavigationSettingsSchema = z.object({
+  reports: z.boolean().default(true),
+  liveTraffic: z.boolean().default(true),
+  map: z.boolean().default(true),
+  assistant: z.boolean().default(true),
+  myStars: z.boolean().default(true),
+  report: z.boolean().default(true),
+  police: z.boolean().default(true),
+  routes: z.boolean().default(true),
+  announcements: z.boolean().default(true),
+  logement: z.boolean().default(true),
+  transport: z.boolean().default(true),
+  carRental: z.boolean().default(true),
+  tourism: z.boolean().default(true),
+  events: z.boolean().default(true),
+  videos: z.boolean().default(true),
+  kinshasa: z.boolean().default(true),
+  contact: z.boolean().default(true),
+  share: z.boolean().default(true),
+});
+export type AppNavigationSettings = z.infer<typeof appNavigationSettingsSchema>;
+
 // User profile extension for Stars System
 export const userProfileSchema = z.object({
   id: z.string(),

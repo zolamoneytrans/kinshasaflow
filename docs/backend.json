@@ -171,6 +171,31 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userId", "eventId", "eventTitle", "userName", "userPhone", "bookingDate", "numberOfPeople", "status", "createdAt"]
+    },
+    "AppNavigationSettings": {
+      "title": "AppNavigationSettings",
+      "type": "object",
+      "description": "Controls the visibility of navigation items in the app.",
+      "properties": {
+        "reports": { "type": "boolean" },
+        "liveTraffic": { "type": "boolean" },
+        "map": { "type": "boolean" },
+        "assistant": { "type": "boolean" },
+        "myStars": { "type": "boolean" },
+        "report": { "type": "boolean" },
+        "police": { "type": "boolean" },
+        "routes": { "type": "boolean" },
+        "announcements": { "type": "boolean" },
+        "logement": { "type": "boolean" },
+        "transport": { "type": "boolean" },
+        "carRental": { "type": "boolean" },
+        "tourism": { "type": "boolean" },
+        "events": { "type": "boolean" },
+        "videos": { "type": "boolean" },
+        "kinshasa": { "type": "boolean" },
+        "contact": { "type": "boolean" },
+        "share": { "type": "boolean" }
+      }
     }
   },
   "auth": {
@@ -198,71 +223,13 @@
         }
       },
       {
-        "path": "/users/{userId}/star_transactions/{transactionId}",
+        "path": "/app_settings/navigation",
         "definition": {
-          "entityName": "StarTransaction",
+          "entityName": "AppNavigationSettings",
           "schema": {
-            "$ref": "#/backend/entities/StarTransaction"
+            "$ref": "#/backend/entities/AppNavigationSettings"
           },
-          "description": "Logs all Star activities for a user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "transactionId",
-              "description": "The unique identifier of the transaction."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/adverts/{advertId}",
-        "definition": {
-          "entityName": "AdvertVideo",
-          "schema": {
-            "$ref": "#/backend/entities/AdvertVideo"
-          },
-          "description": "Collection of advertisement videos.",
-          "params": [
-            {
-              "name": "advertId",
-              "description": "The unique identifier of the advert."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/tourism_events/{eventId}",
-        "definition": {
-          "entityName": "TourismEvent",
-          "schema": {
-            "$ref": "#/backend/entities/TourismEvent"
-          },
-          "description": "Catalog of available tourism spots and activities.",
-          "params": [
-            {
-              "name": "eventId",
-              "description": "ID of the tourism event."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/tourism_bookings/{bookingId}",
-        "definition": {
-          "entityName": "TourismBooking",
-          "schema": {
-            "$ref": "#/backend/entities/TourismBooking"
-          },
-          "description": "User bookings for tourism events.",
-          "params": [
-            {
-              "name": "bookingId",
-              "description": "ID of the booking."
-            }
-          ]
+          "description": "Global application navigation configuration."
         }
       }
     ]

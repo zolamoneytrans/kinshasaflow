@@ -3,7 +3,12 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle, AlertCircle, Palmtree, Compass } from 'lucide-react';
+import { 
+  Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, 
+  Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, 
+  Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle, AlertCircle, 
+  Palmtree, Compass, LayoutGrid
+} from 'lucide-react';
 import {
   Sidebar,
   SidebarProvider,
@@ -24,7 +29,7 @@ import { NotificationPermission } from './notification-permission';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { doc } from 'firebase/firestore';
-import { UserProfile } from '@/lib/types';
+import { UserProfile, AppNavigationSettings } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { sendEmailVerification } from 'firebase/auth';
@@ -82,7 +87,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
         try {
             if (auth.currentUser) {
                 await sendEmailVerification(auth.currentUser);
-                toast({ title: "Email envoyé !", description: "Vérifiez votre boîte de réception (et vos spams)." });
+                toast({ title: "Email envoyé !", description: "Véfifiez votre boîte de réception (et vos spams)." });
             }
         } catch (e) {
             toast({ title: "Erreur", description: "Veuillez patienter avant de réessayer.", variant: "destructive" });
@@ -135,6 +140,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc<UserProfile>(userProfileRef);
 
+  // Global App Settings for Navigation
+  const navSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'navigation'), [firestore]);
+  const { data: navSettings } = useDoc<AppNavigationSettings>(navSettingsRef);
+
   useEffect(() => {
     if (profile && profile.currentStarsBalance < 5 && pathname !== '/mes-stars' && !['/', '/privacy'].includes(pathname)) {
       toast({
@@ -178,6 +187,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/admin/adverts') return 'Admin Publicités';
     if (pathname === '/admin/messages') return 'Admin Messages';
     if (pathname === '/admin/tourism') return 'Admin Tourisme';
+    if (pathname === '/admin/navigation') return 'Pilotage Navigation';
     return 'Kinshasa Flow';
   }
 
@@ -213,6 +223,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const shareMessage = "Salut ! J'utilise Kinshasa Flow pour éviter les embouteillages à Kinshasa. Inscris-toi ici : https://kinshasaflow.online";
 
+  // Helper to check if a feature is enabled
+  const isEnabled = (feature: keyof AppNavigationSettings) => {
+    if (!navSettings) return true; // Default to visible if settings not loaded
+    return navSettings[feature] !== false;
+  };
+
   return (
     <div className="flex h-screen bg-background">
       <SidebarProvider>
@@ -224,180 +240,233 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                </div>
             </SidebarHeader>
             <SidebarMenu className="p-3 gap-1">
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/reports'} tooltip={{children: "Rapports"}} className="hover:bg-sidebar-accent transition-all duration-200">
-                  <Link href="/reports" className="font-medium flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <Home className={pathname === '/reports' ? "text-accent" : "text-primary"} />
-                      <span>Rapports</span>
-                    </div>
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} tooltip={{children: "Embouteillage en Temps Réel"}} className="hover:bg-sidebar-accent">
-                  <Link href="/live-traffic" className="font-medium">
-                    <Activity className={pathname === '/live-traffic' ? "text-accent" : "text-primary"} />
-                    <span>Temps Réel</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/map'} tooltip={{children: "Carte"}} className="hover:bg-sidebar-accent">
-                  <Link href="/map" className="font-medium">
-                    <Map className={pathname === '/map' ? "text-accent" : "text-primary"} />
-                    <span>Carte</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/assistant'} tooltip={{children: "Assistant IA"}} className="hover:bg-sidebar-accent">
-                  <Link href="/assistant" className="font-medium flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <Bot className={pathname === '/assistant' ? "text-accent" : "text-primary"} />
-                      <span>Assistant</span>
-                    </div>
-                    <Badge variant="success" className="h-4 px-1.5 text-[8px] font-black uppercase tracking-tighter">NEW</Badge>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/mes-stars'} tooltip={{children: "Mes Stars"}} className="hover:bg-sidebar-accent">
-                  <Link href="/mes-stars" className="font-medium flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />
-                      <span>Mes Stars</span>
-                    </div>
-                    {profile && (
-                      <Badge variant="outline" className="h-5 bg-amber-500/10 border-amber-500/30 text-amber-600 font-bold px-1.5 text-[10px]">
-                        {profile.currentStarsBalance}
-                      </Badge>
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}} className="bg-primary/10 hover:bg-primary/20 mt-2 border border-primary/20">
-                  <Link href="/signaler-embouteillage" className="font-bold text-primary-foreground">
-                    <PlusCircle className={pathname === '/signaler-embouteillage' ? "text-accent" : "text-primary"} />
-                    <span>Signaler</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}} className="hover:bg-sidebar-accent">
-                  <Link href="/police-routiere" className="font-medium flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <Siren className={pathname === '/police-routiere' ? "text-accent" : "text-primary"} />
-                      <span>Police</span>
-                    </div>
-                    <div className="bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-black shadow-sm">!</div>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/routes'} tooltip={{children: "État des Routes"}} className="hover:bg-sidebar-accent">
-                  <Link href="/routes" className="font-medium">
-                    <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
-                    <span>Routes</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/annonces'} tooltip={{children: "Annonces"}} className="hover:bg-sidebar-accent">
-                  <Link href="/annonces" className="font-medium flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <Landmark className={pathname === '/annonces' ? "text-accent" : "text-primary"} />
-                      <span>Annonces</span>
-                    </div>
-                    <Badge variant="secondary" className="h-4 px-1 text-[9px] font-bold">2</Badge>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/logement'} tooltip={{children: "Logement"}} className="hover:bg-sidebar-accent">
-                  <Link href="/logement" className="font-medium">
-                    <Hotel className={pathname === '/logement' ? "text-accent" : "text-primary"} />
-                    <span>Logement</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/transport'} tooltip={{children: "Transport"}} className="hover:bg-sidebar-accent">
-                  <Link href="/transport" className="font-medium">
-                    <Bus className={pathname === '/transport' ? "text-accent" : "text-primary"} />
-                    <span>Transport</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/location-voiture'} tooltip={{children: "Location de Véhicules"}} className="hover:bg-sidebar-accent">
-                  <Link href="/location-voiture" className="font-medium">
-                    <Car className={pathname === '/location-voiture' ? "text-accent" : "text-primary"} />
-                    <span>Location Voiture</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/tourisme'} tooltip={{children: "Tourisme"}} className="hover:bg-sidebar-accent">
-                  <Link href="/tourisme" className="font-medium flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <Palmtree className={pathname === '/tourisme' ? "text-accent" : "text-primary"} />
-                      <span>Tourisme</span>
-                    </div>
-                    <Badge className="bg-emerald-500 text-[8px] h-4">OFFRES</Badge>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}} className="hover:bg-sidebar-accent">
-                  <Link href="/evenements" className="font-medium">
-                    <Megaphone className={pathname === '/evenements' ? "text-accent" : "text-primary"} />
-                    <span>Événements</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/videos'} tooltip={{children: "Vidéos"}} className="hover:bg-sidebar-accent">
-                  <Link href="/videos" className="font-medium">
-                    <Video className={pathname === '/videos' ? "text-accent" : "text-primary"} />
-                    <span>Vidéos</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/kinshasa'} tooltip={{children: "Statistiques"}} className="hover:bg-sidebar-accent">
-                  <Link href="/kinshasa" className="font-medium">
-                    <AreaChart className={pathname === '/kinshasa' ? "text-accent" : "text-primary"} />
-                    <span>Kinshasa</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/contact'} tooltip={{children: "Contact"}} className="hover:bg-sidebar-accent">
-                  <Link href="/contact" className="font-medium">
-                    <Mail className={pathname === '/contact' ? "text-accent" : "text-primary"} />
-                    <span>Contact</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip={{children: "Partager"}} className="hover:bg-sidebar-accent">
-                  <a 
-                    href={`https://wa.me/?text=${encodeURIComponent(shareMessage)}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="font-medium"
-                  >
-                    <Share2 className="text-primary" />
-                    <span>Partager</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {isEnabled('reports') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/reports'} tooltip={{children: "Rapports"}} className="hover:bg-sidebar-accent transition-all duration-200">
+                    <Link href="/reports" className="font-medium flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Home className={pathname === '/reports' ? "text-accent" : "text-primary"} />
+                        <span>Rapports</span>
+                      </div>
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('liveTraffic') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} tooltip={{children: "Embouteillage en Temps Réel"}} className="hover:bg-sidebar-accent">
+                    <Link href="/live-traffic" className="font-medium">
+                      <Activity className={pathname === '/live-traffic' ? "text-accent" : "text-primary"} />
+                      <span>Temps Réel</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('map') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/map'} tooltip={{children: "Carte"}} className="hover:bg-sidebar-accent">
+                    <Link href="/map" className="font-medium">
+                      <Map className={pathname === '/map' ? "text-accent" : "text-primary"} />
+                      <span>Carte</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('assistant') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/assistant'} tooltip={{children: "Assistant IA"}} className="hover:bg-sidebar-accent">
+                    <Link href="/assistant" className="font-medium flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Bot className={pathname === '/assistant' ? "text-accent" : "text-primary"} />
+                        <span>Assistant</span>
+                      </div>
+                      <Badge variant="success" className="h-4 px-1.5 text-[8px] font-black uppercase tracking-tighter">NEW</Badge>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('myStars') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/mes-stars'} tooltip={{children: "Mes Stars"}} className="hover:bg-sidebar-accent">
+                    <Link href="/mes-stars" className="font-medium flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />
+                        <span>Mes Stars</span>
+                      </div>
+                      {profile && (
+                        <Badge variant="outline" className="h-5 bg-amber-500/10 border-amber-500/30 text-amber-600 font-bold px-1.5 text-[10px]">
+                          {profile.currentStarsBalance}
+                        </Badge>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('report') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}} className="bg-primary/10 hover:bg-primary/20 mt-2 border border-primary/20">
+                    <Link href="/signaler-embouteillage" className="font-bold text-primary-foreground">
+                      <PlusCircle className={pathname === '/signaler-embouteillage' ? "text-accent" : "text-primary"} />
+                      <span>Signaler</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('police') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}} className="hover:bg-sidebar-accent">
+                    <Link href="/police-routiere" className="font-medium flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Siren className={pathname === '/police-routiere' ? "text-accent" : "text-primary"} />
+                        <span>Police</span>
+                      </div>
+                      <div className="bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-black shadow-sm">!</div>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('routes') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/routes'} tooltip={{children: "État des Routes"}} className="hover:bg-sidebar-accent">
+                    <Link href="/routes" className="font-medium">
+                      <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
+                      <span>Routes</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('announcements') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/annonces'} tooltip={{children: "Annonces"}} className="hover:bg-sidebar-accent">
+                    <Link href="/annonces" className="font-medium flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Landmark className={pathname === '/annonces' ? "text-accent" : "text-primary"} />
+                        <span>Annonces</span>
+                      </div>
+                      <Badge variant="secondary" className="h-4 px-1 text-[9px] font-bold">2</Badge>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('logement') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/logement'} tooltip={{children: "Logement"}} className="hover:bg-sidebar-accent">
+                    <Link href="/logement" className="font-medium">
+                      <Hotel className={pathname === '/logement' ? "text-accent" : "text-primary"} />
+                      <span>Logement</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('transport') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/transport'} tooltip={{children: "Transport"}} className="hover:bg-sidebar-accent">
+                    <Link href="/transport" className="font-medium">
+                      <Bus className={pathname === '/transport' ? "text-accent" : "text-primary"} />
+                      <span>Transport</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('carRental') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/location-voiture'} tooltip={{children: "Location de Véhicules"}} className="hover:bg-sidebar-accent">
+                    <Link href="/location-voiture" className="font-medium">
+                      <Car className={pathname === '/location-voiture' ? "text-accent" : "text-primary"} />
+                      <span>Location Voiture</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('tourism') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/tourisme'} tooltip={{children: "Tourisme"}} className="hover:bg-sidebar-accent">
+                    <Link href="/tourisme" className="font-medium flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Palmtree className={pathname === '/tourisme' ? "text-accent" : "text-primary"} />
+                        <span>Tourisme</span>
+                      </div>
+                      <Badge className="bg-emerald-500 text-[8px] h-4">OFFRES</Badge>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('events') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}} className="hover:bg-sidebar-accent">
+                    <Link href="/evenements" className="font-medium">
+                      <Megaphone className={pathname === '/evenements' ? "text-accent" : "text-primary"} />
+                      <span>Événements</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('videos') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/videos'} tooltip={{children: "Vidéos"}} className="hover:bg-sidebar-accent">
+                    <Link href="/videos" className="font-medium">
+                      <Video className={pathname === '/videos' ? "text-accent" : "text-primary"} />
+                      <span>Vidéos</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('kinshasa') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/kinshasa'} tooltip={{children: "Statistiques"}} className="hover:bg-sidebar-accent">
+                    <Link href="/kinshasa" className="font-medium">
+                      <AreaChart className={pathname === '/kinshasa' ? "text-accent" : "text-primary"} />
+                      <span>Kinshasa</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('contact') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/contact'} tooltip={{children: "Contact"}} className="hover:bg-sidebar-accent">
+                    <Link href="/contact" className="font-medium">
+                      <Mail className={pathname === '/contact' ? "text-accent" : "text-primary"} />
+                      <span>Contact</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('share') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip={{children: "Partager"}} className="hover:bg-sidebar-accent">
+                    <a 
+                      href={`https://wa.me/?text=${encodeURIComponent(shareMessage)}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-medium"
+                    >
+                      <Share2 className="text-primary" />
+                      <span>Partager</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               
 
               {isAdmin && (
@@ -405,6 +474,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <SidebarSeparator className="my-4 bg-sidebar-border/30" />
                   <div className="px-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Administration</div>
                   
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/navigation'} className="hover:bg-sidebar-accent">
+                      <Link href="/admin/navigation" className="font-medium flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <LayoutGrid className="text-destructive" />
+                          <span>Admin Navigation</span>
+                        </div>
+                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">CONFIG</Badge>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} className="hover:bg-sidebar-accent">
                       <Link href="/admin/stars" className="font-medium flex items-center justify-between w-full">

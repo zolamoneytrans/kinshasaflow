@@ -9,7 +9,7 @@ import { AppNavigationSettings, NavFeature, navFeatures } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, LayoutGrid, CloudCheck, CloudUpload, Shield, Info, AlertCircle, Plus } from "lucide-react";
+import { Loader2, LayoutGrid, Cloud, CloudUpload, Shield, Info, AlertCircle, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from '@/components/ui/button';
@@ -125,7 +125,7 @@ export default function AdminNavigationPage() {
                 )}
                 {saveStatus === 'saved' && (
                   <motion.div key="saved" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-widest">
-                    <CloudCheck className="h-4 w-4" />
+                    <Cloud className="h-4 w-4" />
                     Synchronisé
                   </motion.div>
                 )}

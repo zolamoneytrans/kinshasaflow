@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/sidebar';
 import { UserNav } from './auth/user-nav';
 import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Logo } from './logo';
 import { NotificationPermission } from './notification-permission';
 import { useToast } from '@/hooks/use-toast';
@@ -140,7 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc<UserProfile>(userProfileRef);
 
-  // Global App Settings for Navigation
+  // Configuration de navigation globale (Pilotage par l'admin)
   const navSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'navigation'), [firestore]);
   const { data: navSettings } = useDoc<AppNavigationSettings>(navSettingsRef);
 
@@ -223,11 +223,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const shareMessage = "Salut ! J'utilise Kinshasa Flow pour éviter les embouteillages à Kinshasa. Inscris-toi ici : https://kinshasaflow.online";
 
-  // Helper to check if a feature is enabled
-  const isEnabled = (feature: keyof AppNavigationSettings) => {
-    if (!navSettings) return true; // Default to visible if settings not loaded
-    return navSettings[feature] !== false;
-  };
+  // Helper pour vérifier si une fonctionnalité est autorisée par l'admin
+  const isEnabled = useCallback((feature: keyof AppNavigationSettings) => {
+    if (!navSettings) return true; // Visible par défaut si non chargé
+    return navSettings[feature] !== false; // Uniquement masqué si explicitement false
+  }, [navSettings]);
 
   return (
     <div className="flex h-screen bg-background">

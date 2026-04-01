@@ -7,11 +7,11 @@ import { useUser, useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { AppNavigationSettings, NavFeature, navFeatures } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, Shield, LayoutGrid, Save, RefreshCw } from "lucide-react";
+import { Loader2, LayoutGrid, CloudCheck, CloudUpload, Shield, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 const FEATURE_LABELS: Record<NavFeature, string> = {
   reports: "Rapports de trafic",
@@ -38,42 +38,35 @@ export default function AdminNavigationPage() {
   const { user } = useUser();
   const { firestore } = useFirebase();
   const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
-  const [localSettings, setLocalSettings] = useState<AppNavigationSettings | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const isAdmin = user?.email === 'drnduwa@gmail.com';
 
   const settingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'navigation'), [firestore]);
   const { data: serverSettings, isLoading } = useDoc<AppNavigationSettings>(settingsRef);
 
-  useEffect(() => {
-    if (serverSettings) {
-      setLocalSettings(serverSettings);
-    } else if (!isLoading) {
-      // Initialize default settings if doc doesn't exist
-      const defaults = navFeatures.reduce((acc, feat) => ({ ...acc, [feat]: true }), {} as AppNavigationSettings);
-      setLocalSettings(defaults);
-    }
-  }, [serverSettings, isLoading]);
+  // Sauvegarde automatique lors d'un changement
+  const handleToggle = async (feature: NavFeature) => {
+    if (!isAdmin || !serverSettings) return;
 
-  const handleToggle = (feature: NavFeature) => {
-    if (!localSettings) return;
-    setLocalSettings({
-      ...localSettings,
-      [feature]: !localSettings[feature]
-    });
-  };
+    const updatedSettings = {
+      ...serverSettings,
+      [feature]: !serverSettings[feature]
+    };
 
-  const handleSave = async () => {
-    if (!isAdmin || !localSettings) return;
-    setIsSaving(true);
+    setSaveStatus('saving');
     try {
-      await setDoc(settingsRef, localSettings);
-      toast({ title: "Configuration enregistrée", description: "Le dashboard utilisateur a été mis à jour." });
+      await setDoc(settingsRef, updatedSettings);
+      setSaveStatus('saved');
+      // On revient à l'état idle après 2 secondes
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
-    } finally {
-      setIsSaving(false);
+      setSaveStatus('error');
+      toast({ 
+        title: "Erreur de synchronisation", 
+        description: "Impossible de mettre à jour le dashboard.", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -91,49 +84,69 @@ export default function AdminNavigationPage() {
     <AppShell>
       <div className="w-full h-full overflow-y-auto p-4 md:p-8 space-y-8 bg-slate-50/50">
         <div className="max-w-4xl mx-auto space-y-8">
+          
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
                 <LayoutGrid className="text-primary h-8 w-8" />
                 Pilotage du Dashboard
               </h1>
-              <p className="text-muted-foreground font-medium">Contrôlez la visibilité des boutons pour tous les utilisateurs.</p>
+              <p className="text-muted-foreground font-medium italic">Activez ou désactivez les boutons en temps réel pour tous les utilisateurs.</p>
             </div>
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving || isLoading} 
-              className="h-12 px-8 rounded-xl font-bold shadow-lg shadow-primary/20"
-            >
-              {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-              Enregistrer les changements
-            </Button>
+
+            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100 min-w-[180px] justify-center">
+              <AnimatePresence mode="wait">
+                {saveStatus === 'saving' && (
+                  <motion.div key="saving" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Envoi...
+                  </motion.div>
+                )}
+                {saveStatus === 'saved' && (
+                  <motion.div key="saved" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-widest">
+                    <CloudCheck className="h-4 w-4" />
+                    Synchronisé
+                  </motion.div>
+                )}
+                {(saveStatus === 'idle' || saveStatus === 'error') && (
+                  <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest">
+                    <CloudUpload className="h-4 w-4" />
+                    Auto-save actif
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           <Card className="border-none shadow-sm overflow-hidden rounded-[2rem]">
             <CardHeader className="bg-white border-b border-slate-100 p-8">
-              <CardTitle className="text-xl">Liste des fonctionnalités</CardTitle>
-              <CardDescription>Désactivez les modules en cours de maintenance ou obsolètes.</CardDescription>
+              <CardTitle className="text-xl">État des fonctionnalités</CardTitle>
+              <CardDescription>Les changements sont appliqués instantanément sur le dashboard des utilisateurs.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              {isLoading || !localSettings ? (
-                <div className="p-20 flex justify-center"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div>
+              {isLoading || !serverSettings ? (
+                <div className="p-20 flex flex-col items-center gap-4">
+                  <Loader2 className="animate-spin h-10 w-10 text-primary" />
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Récupération de la config...</p>
+                </div>
               ) : (
                 <div className="grid md:grid-cols-2">
                   {navFeatures.map((feat) => (
                     <div 
                       key={feat} 
-                      className="flex items-center justify-between p-6 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
+                      className="flex items-center justify-between p-6 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors group"
                     >
                       <div className="space-y-0.5">
-                        <Label htmlFor={`switch-${feat}`} className="text-base font-bold cursor-pointer">
+                        <Label htmlFor={`switch-${feat}`} className="text-base font-bold cursor-pointer group-hover:text-primary transition-colors">
                           {FEATURE_LABELS[feat]}
                         </Label>
-                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">ID: {feat}</p>
+                        <p className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-50">API_ID: {feat}</p>
                       </div>
                       <Switch 
                         id={`switch-${feat}`} 
-                        checked={localSettings[feat]} 
+                        checked={serverSettings[feat] !== false} 
                         onCheckedChange={() => handleToggle(feat)}
+                        disabled={saveStatus === 'saving'}
                       />
                     </div>
                   ))}
@@ -142,12 +155,12 @@ export default function AdminNavigationPage() {
             </CardContent>
           </Card>
 
-          <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-4">
-            <RefreshCw className="h-6 w-6 text-amber-600 shrink-0 mt-1" />
+          <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-4 shadow-inner">
+            <Info className="h-6 w-6 text-blue-600 shrink-0 mt-1" />
             <div className="space-y-1">
-              <p className="font-bold text-amber-900">Synchronisation Instantanée</p>
-              <p className="text-sm text-amber-700 leading-relaxed">
-                Les changements prennent effet immédiatement sur les sessions des utilisateurs actifs. Aucune maintenance nécessaire.
+              <p className="font-bold text-blue-900">Comment ça marche ?</p>
+              <p className="text-sm text-blue-700 leading-relaxed">
+                Chaque interrupteur ci-dessus contrôle la visibilité du bouton correspondant dans le menu latéral. Si vous décochez "Assistant IA", le bouton disparaîtra immédiatement de l'écran de tous vos utilisateurs actifs.
               </p>
             </div>
           </div>

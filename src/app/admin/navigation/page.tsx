@@ -9,9 +9,10 @@ import { AppNavigationSettings, NavFeature, navFeatures } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, LayoutGrid, CloudCheck, CloudUpload, Shield, Info } from "lucide-react";
+import { Loader2, LayoutGrid, CloudCheck, CloudUpload, Shield, Info, AlertCircle, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from '@/components/ui/button';
 
 const FEATURE_LABELS: Record<NavFeature, string> = {
   reports: "Rapports de trafic",
@@ -58,7 +59,6 @@ export default function AdminNavigationPage() {
     try {
       await setDoc(settingsRef, updatedSettings);
       setSaveStatus('saved');
-      // On revient à l'état idle après 2 secondes
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (e: any) {
       setSaveStatus('error');
@@ -67,6 +67,27 @@ export default function AdminNavigationPage() {
         description: "Impossible de mettre à jour le dashboard.", 
         variant: "destructive" 
       });
+    }
+  };
+
+  const handleInitialize = async () => {
+    if (!isAdmin) return;
+    
+    // Création d'une config par défaut (tout à true)
+    const defaultConfig = navFeatures.reduce((acc, feat) => ({
+        ...acc,
+        [feat]: true
+    }), {} as AppNavigationSettings);
+
+    setSaveStatus('saving');
+    try {
+        await setDoc(settingsRef, defaultConfig);
+        setSaveStatus('saved');
+        toast({ title: "Configuration initialisée", description: "Tous les boutons sont désormais actifs par défaut." });
+        setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (e) {
+        setSaveStatus('error');
+        toast({ title: "Erreur", description: "Impossible d'initialiser la config.", variant: "destructive" });
     }
   };
 
@@ -123,14 +144,30 @@ export default function AdminNavigationPage() {
               <CardTitle className="text-xl">État des fonctionnalités</CardTitle>
               <CardDescription>Les changements sont appliqués instantanément sur le dashboard des utilisateurs.</CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              {isLoading || !serverSettings ? (
+            <CardContent className="p-0 min-h-[300px] flex items-center justify-center">
+              {isLoading ? (
                 <div className="p-20 flex flex-col items-center gap-4">
                   <Loader2 className="animate-spin h-10 w-10 text-primary" />
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Récupération de la config...</p>
                 </div>
+              ) : !serverSettings ? (
+                <div className="p-12 text-center space-y-6">
+                    <div className="bg-amber-100 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto text-amber-600">
+                        <AlertCircle className="h-8 w-8" />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="font-bold text-lg text-slate-800">Aucune configuration trouvée</h3>
+                        <p className="text-sm text-slate-500 max-w-xs mx-auto italic">
+                            Le système de pilotage n'a pas encore été initialisé dans la base de données.
+                        </p>
+                    </div>
+                    <Button onClick={handleInitialize} className="rounded-xl h-12 px-8 font-black shadow-lg shadow-primary/20">
+                        <Plus className="mr-2 h-5 w-5" />
+                        Initialiser la configuration
+                    </Button>
+                </div>
               ) : (
-                <div className="grid md:grid-cols-2">
+                <div className="grid md:grid-cols-2 w-full">
                   {navFeatures.map((feat) => (
                     <div 
                       key={feat} 

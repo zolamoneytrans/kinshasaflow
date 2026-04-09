@@ -18,10 +18,19 @@ import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { LoginValues, loginSchema } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
-import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Separator } from '../ui/separator';
 import Link from 'next/link';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const GoogleIcon = () => (
     <svg className="h-4 w-4" viewBox="0 0 48 48">
@@ -31,6 +40,74 @@ const GoogleIcon = () => (
       <path fill="#1976D2" d="M43.611,20.083H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C44.433,36.368,48,31,48,24C48,22.659,47.862,21.35,47.611,20.083z"></path>
     </svg>
 )
+
+function ResetPasswordDialog() {
+    const { auth } = useFirebase();
+    const { toast } = useToast();
+    const [email, setEmail] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleReset = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email) return;
+        setIsLoading(true);
+        try {
+            await sendPasswordResetEmail(auth, email);
+            toast({
+                title: "E-mail envoyé",
+                description: "Un lien de réinitialisation a été envoyé à votre adresse e-mail.",
+            });
+            setIsOpen(false);
+        } catch (error: any) {
+            console.error("Error sending reset email:", error);
+            toast({
+                title: "Erreur",
+                description: "Impossible d'envoyer l'e-mail. Vérifiez l'adresse saisie.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="link" size="sm" className="px-0 font-bold h-auto" type="button">
+                    Mot de passe oublié ?
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md rounded-3xl border-none">
+                <DialogHeader>
+                    <DialogTitle className="text-2xl font-black">Réinitialiser le mot de passe</DialogTitle>
+                    <DialogDescription className="font-medium text-slate-500">
+                        Entrez votre adresse e-mail pour recevoir un lien de réinitialisation sécurisé.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleReset} className="space-y-6 pt-4">
+                    <div className="space-y-2">
+                        <FormLabel className="font-bold text-slate-700">Votre adresse e-mail</FormLabel>
+                        <Input 
+                            type="email" 
+                            placeholder="nom@exemple.com" 
+                            className="h-12 rounded-xl border-2"
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)} 
+                            required 
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit" className="w-full h-12 rounded-xl font-black text-lg shadow-lg shadow-primary/20" disabled={isLoading}>
+                            {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                            Envoyer le lien
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 export function LoginForm() {
     const { toast } = useToast();
@@ -109,12 +186,12 @@ export function LoginForm() {
     }
 
     return (
-        <Card className="w-full">
-            <CardHeader>
-                <CardTitle>Se connecter</CardTitle>
-                <CardDescription>Accédez à votre compte pour continuer.</CardDescription>
+        <Card className="w-full shadow-2xl border-none rounded-3xl overflow-hidden">
+            <CardHeader className="bg-primary p-8 text-white">
+                <CardTitle className="text-3xl font-black tracking-tight">Se connecter</CardTitle>
+                <CardDescription className="text-primary-foreground/80 font-medium">Accédez à votre compte pour continuer.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="space-y-4">
@@ -123,9 +200,9 @@ export function LoginForm() {
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel className="font-bold text-slate-700">Email</FormLabel>
                                         <FormControl>
-                                            <Input type="email" placeholder="nom@exemple.com" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                            <Input type="email" placeholder="nom@exemple.com" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -136,40 +213,43 @@ export function LoginForm() {
                                 name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Mot de passe</FormLabel>
+                                        <div className="flex items-center justify-between">
+                                            <FormLabel className="font-bold text-slate-700">Mot de passe</FormLabel>
+                                            <ResetPasswordDialog />
+                                        </div>
                                         <FormControl>
-                                            <Input type="password" placeholder="********" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                            <Input type="password" placeholder="********" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
-                        <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-black shadow-lg shadow-primary/20" disabled={isSubmitting || isGoogleSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
                             Se connecter
                         </Button>
                     </form>
                 </Form>
-                <div className="relative my-6">
+                <div className="relative my-8">
                     <div className="absolute inset-0 flex items-center">
                         <span className="w-full border-t" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
+                        <span className="bg-background px-4 text-muted-foreground font-bold tracking-widest">
                         Ou continuer avec
                         </span>
                     </div>
                 </div>
-                 <Button variant="outline" className="w-full" onClick={onGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
+                 <Button variant="outline" className="w-full h-12 rounded-2xl font-bold border-2" onClick={onGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
                     {isGoogleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
                     Google
                 </Button>
             </CardContent>
-            <CardFooter className="flex justify-center">
-                <p className="text-sm text-muted-foreground">
+            <CardFooter className="flex justify-center border-t bg-slate-50 p-6">
+                <p className="text-sm text-muted-foreground font-medium">
                     Vous n'avez pas de compte?{" "}
-                    <Link href="/signup" className="text-primary hover:underline">
+                    <Link href="/signup" className="text-primary font-bold hover:underline">
                         S'inscrire
                     </Link>
                 </p>

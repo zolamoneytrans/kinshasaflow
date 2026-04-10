@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -25,12 +24,15 @@ export default function TourismAdminDashboard() {
 
     if (isUserLoading) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
-    if (!user || user.email !== 'drnduwa@gmail.com') {
+    const isAdmin = user?.email === 'drnduwa@gmail.com';
+    const isTourismAdmin = user?.email === 'contact.congonamotema@gmail.com' || isAdmin;
+
+    if (!user || !isTourismAdmin) {
         return (
             <div className="flex flex-col h-full w-full items-center justify-center gap-4">
                 <AlertTriangle className="h-12 w-12 text-destructive" />
                 <h2 className="text-2xl font-bold">Accès Refusé</h2>
-                <p className="text-muted-foreground">Espace réservé à l'administration.</p>
+                <p className="text-muted-foreground">Espace réservé à l'administration du tourisme.</p>
                 <Button onClick={() => router.push('/')}>Retour à l'accueil</Button>
             </div>
         );

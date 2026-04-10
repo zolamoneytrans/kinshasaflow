@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -160,6 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [profile, pathname, toast]);
 
   const isAdmin = user?.email === 'drnduwa@gmail.com';
+  const isTourismAdmin = user?.email === 'contact.congonamotema@gmail.com' || isAdmin;
   
   const getPageTitle = () => {
     if (pathname === '/reports') return 'Rapports de trafic';
@@ -469,106 +469,122 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
               
 
-              {isAdmin && (
+              {(isAdmin || isTourismAdmin) && (
                 <>
                   <SidebarSeparator className="my-4 bg-sidebar-border/30" />
                   <div className="px-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Administration</div>
                   
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/navigation'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/navigation" className="font-medium flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <LayoutGrid className="text-destructive" />
-                          <span>Admin Navigation</span>
-                        </div>
-                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">CONFIG</Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/navigation'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/navigation" className="font-medium flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <LayoutGrid className="text-destructive" />
+                            <span>Admin Navigation</span>
+                          </div>
+                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">CONFIG</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/stars" className="font-medium flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <Users className="text-destructive" />
-                          <span>Admin Stars & Users</span>
-                        </div>
-                        <Badge variant="outline" className="h-4 px-1 text-[8px] border-destructive/30 text-destructive font-black">SYS</Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/stars" className="font-medium flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <Users className="text-destructive" />
+                            <span>Admin Stars & Users</span>
+                          </div>
+                          <Badge variant="outline" className="h-4 px-1 text-[8px] border-destructive/30 text-destructive font-black">SYS</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/transport" className="font-medium flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <Shield className="text-destructive" />
-                          <span>Admin Transport</span>
-                        </div>
-                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">2</Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/transport" className="font-medium flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <Shield className="text-destructive" />
+                            <span>Admin Transport</span>
+                          </div>
+                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">2</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/logement" className="font-medium flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <BedDouble className="text-destructive" />
-                          <span>Admin Logement</span>
-                        </div>
-                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">1</Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/logement" className="font-medium flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <BedDouble className="text-destructive" />
+                            <span>Admin Logement</span>
+                          </div>
+                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">1</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/car-rental" className="font-medium flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <Car className="text-destructive" />
-                          <span>Admin Location</span>
-                        </div>
-                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">4</Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/car-rental" className="font-medium flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <Car className="text-destructive" />
+                            <span>Admin Location</span>
+                          </div>
+                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">4</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/tourism'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/tourism" className="font-medium flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <Compass className="text-destructive" />
-                          <span>Admin Tourisme</span>
-                        </div>
-                        <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black">BOOK</Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isTourismAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/tourism'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/tourism" className="font-medium flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <Compass className="text-destructive" />
+                            <span>Admin Tourisme</span>
+                          </div>
+                          <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black">BOOK</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/adverts" className="font-medium flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <Megaphone className="text-destructive" />
-                          <span>Admin Publicités</span>
-                        </div>
-                        <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black">ADS</Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/adverts" className="font-medium flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <Megaphone className="text-destructive" />
+                            <span>Admin Publicités</span>
+                          </div>
+                          <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black">ADS</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} className="hover:bg-sidebar-accent">
-                      <Link href="/admin/messages" className="font-medium flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <Mail className="text-destructive" />
-                          <span>Admin Messages</span>
-                        </div>
-                        <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">NEW</Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/messages" className="font-medium flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <Mail className="text-destructive" />
+                            <span>Admin Messages</span>
+                          </div>
+                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">NEW</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </>
               )}
             </SidebarMenu>

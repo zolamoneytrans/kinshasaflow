@@ -246,7 +246,10 @@ const AddEventDialog = () => {
   });
 
   const onSubmit = async (data: TourismEventFormValues) => {
-    if (!user || user.email !== 'drnduwa@gmail.com') {
+    const isAdmin = user?.email === 'drnduwa@gmail.com';
+    const isTourismAdmin = user?.email === 'contact.congonamotema@gmail.com' || isAdmin;
+
+    if (!user || !isTourismAdmin) {
       toast({ title: "Accès refusé", description: "Seul l'administrateur peut effectuer cette action.", variant: 'destructive' });
       return;
     }
@@ -355,6 +358,7 @@ export default function TourismPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const isAdmin = user?.email === 'drnduwa@gmail.com';
+  const isTourismAdmin = user?.email === 'contact.congonamotema@gmail.com' || isAdmin;
 
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Tous');
@@ -449,7 +453,7 @@ export default function TourismPage() {
       <div className="max-w-7xl mx-auto px-4 md:px-8">
 
         {/* ── Admin bar ── */}
-        {isAdmin && (
+        {isTourismAdmin && (
           <motion.div
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -460,7 +464,7 @@ export default function TourismPage() {
                 <Star className="h-4 w-4 text-amber-600 fill-amber-400" />
               </div>
               <div>
-                <p className="text-sm font-bold text-amber-900">Mode Administrateur</p>
+                <p className="text-sm font-bold text-amber-900">Mode Administrateur Tourisme</p>
                 <p className="text-xs text-amber-700/70">Gérez vos offres et réservations</p>
               </div>
             </div>
@@ -571,7 +575,7 @@ export default function TourismPage() {
             </div>
           ) : filteredEvents.length > 0 ? (
             filteredEvents.map((event, idx) => (
-              <EventCard key={event.id} event={event} isAdmin={isAdmin} onDelete={handleDelete} index={idx} />
+              <EventCard key={event.id} event={event as any} isAdmin={isTourismAdmin} onDelete={handleDelete} index={idx} />
             ))
           ) : (
             <motion.div

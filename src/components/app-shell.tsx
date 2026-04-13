@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -28,8 +27,8 @@ import { Logo } from './logo';
 import { NotificationPermission } from './notification-permission';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { doc, collection, query, limit } from 'firebase/firestore';
-import { UserProfile, AppNavigationSettings, AppSubscriptionSettings, AppNotification } from '@/lib/types';
+import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
+import { UserProfile, AppNavigationSettings, AppSubscriptionSettings, AppNotification, EventReport } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { sendEmailVerification } from 'firebase/auth';
@@ -147,6 +146,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const notifsRef = useMemoFirebase(() => query(collection(firestore, 'notifications'), limit(10)), [firestore]);
   const { data: notifs } = useCollection<AppNotification>(notifsRef);
 
+  // Reports Badge Logic
+  const eventsRef = useMemoFirebase(() => query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(20)), [firestore]);
+  const { data: events } = useCollection<EventReport>(eventsRef);
+  const [unreadReports, setUnreadReports] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const lastSeenStr = localStorage.getItem('last_seen_reports');
+    const lastSeen = lastSeenStr ? parseInt(lastSeenStr) : 0;
+
+    if (pathname === '/reports') {
+      localStorage.setItem('last_seen_reports', Date.now().toString());
+      setUnreadReports(0);
+    } else if (events) {
+      const count = events.filter(e => {
+        const ts = e.createdAt?.toMillis ? e.createdAt.toMillis() : Date.now();
+        return ts > lastSeen;
+      }).length;
+      setUnreadReports(count);
+    }
+  }, [events, pathname]);
+
   useEffect(() => {
     if (!profile || !subSettings) return;
 
@@ -245,6 +267,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <Home className={pathname === '/reports' ? "text-accent" : "text-primary"} />
                         <span>Rapports</span>
                       </div>
+                      {unreadReports > 0 && (
+                        <Badge variant="destructive" className="h-5 px-1.5 min-w-[20px] justify-center text-[10px] animate-pulse rounded-full font-black">
+                          {unreadReports}
+                        </Badge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

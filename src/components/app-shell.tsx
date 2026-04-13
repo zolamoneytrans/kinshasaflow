@@ -7,7 +7,7 @@ import {
   Home, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, 
   Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
-  Palmtree, Compass, LayoutGrid, Utensils, Bell
+  Palmtree, Compass, LayoutGrid, Utensils, Bell, Send
 } from 'lucide-react';
 import {
   Sidebar,
@@ -204,11 +204,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/notifications') return 'Notifications';
     if (pathname === '/mes-stars') return subSettings?.mode === 'cash' ? 'Mon Abonnement' : 'Mes Stars';
     if (pathname === '/privacy') return 'Confidentialité & CGU';
+    if (pathname.startsWith('/admin')) return 'Administration';
     return 'Kinshasa Flow';
   }
 
   const getPageDescription = () => {
     if (pathname === '/notifications') return 'Découvrez ce qui se passe dans la communauté.';
+    if (pathname.startsWith('/admin')) return 'Gestion interne de la plateforme.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -495,7 +497,84 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} className="hover:bg-sidebar-accent">
                         <Link href="/admin/stars" className="font-medium">
                           <Users className="text-destructive" />
-                          <span>Stars & Users</span>
+                          <span>Stars & Utilisateurs</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/notifications'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/notifications" className="font-medium">
+                          <Send className="text-destructive" />
+                          <span>Notifications Admin</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/adverts" className="font-medium">
+                          <Video className="text-destructive" />
+                          <span>Publicités</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/transport" className="font-medium">
+                          <Bus className="text-destructive" />
+                          <span>Transport</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/logement" className="font-medium">
+                          <BedDouble className="text-destructive" />
+                          <span>Logement</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/car-rental" className="font-medium">
+                          <Car className="text-destructive" />
+                          <span>Location</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {isTourismAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/tourism'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/tourism" className="font-medium">
+                          <Palmtree className="text-destructive" />
+                          <span>Tourisme</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} className="hover:bg-sidebar-accent">
+                        <Link href="/admin/messages" className="font-medium">
+                          <Mail className="text-destructive" />
+                          <span>Messages</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

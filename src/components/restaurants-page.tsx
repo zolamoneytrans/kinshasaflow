@@ -22,6 +22,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -17,13 +18,12 @@ import { Heart, MessageCircle, Send, UploadCloud, Loader2, User, MoreVertical, T
 import { useUser, useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { collection, query, orderBy, serverTimestamp, doc, setDoc, deleteDoc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, orderBy, serverTimestamp, doc, setDoc, deleteDoc, updateDoc, increment, addDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Skeleton } from './ui/skeleton';
 
-// --- Comment Component ---
 const CommentItem = ({ comment }: { comment: WithId<Comment> }) => {
     const formattedTime = comment.createdAt ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true, locale: fr }) : '...';
     return (
@@ -43,7 +43,6 @@ const CommentItem = ({ comment }: { comment: WithId<Comment> }) => {
     )
 }
 
-// --- Video Card Component ---
 const VideoCard = ({ video }: { video: WithId<Video> }) => {
     const [newComment, setNewComment] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -79,7 +78,7 @@ const VideoCard = ({ video }: { video: WithId<Video> }) => {
         setIsSubmittingComment(true);
         const commentData = {
             userId: user.uid,
-            author: user.isAnonymous ? "Utilisateur Anonyme" : (user.displayName || "Utilisateur Anonyme"),
+            author: user.isAnonymous ? "Anonyme" : (user.displayName || "Utilisateur"),
             avatar: user.photoURL || "",
             text: newComment,
             createdAt: serverTimestamp(),
@@ -92,28 +91,21 @@ const VideoCard = ({ video }: { video: WithId<Video> }) => {
     
     const handleDelete = async () => {
         if (user?.uid !== video.userId) return;
-
         setIsDeleting(true);
         try {
-            // Delete video from storage
             const storage = getStorage(firebaseApp);
             const videoFileRef = storageRef(storage, video.videoUrl);
             await deleteObject(videoFileRef);
-
-            // Delete video document from firestore
             await deleteDoc(videoDocRef);
-
-            toast({ title: "Vidéo supprimée", description: "Votre vidéo a été supprimée avec succès." });
+            toast({ title: "Vidéo supprimée" });
         } catch (error) {
-            console.error("Error deleting video:", error);
-            toast({ title: "Erreur", description: "Impossible de supprimer la vidéo. Veuillez réessayer.", variant: "destructive" });
+            toast({ title: "Erreur", variant: "destructive" });
             setIsDeleting(false);
         }
-        // The component will unmount on successful deletion, so no need to setIsDeleting(false) in success path
     };
 
     return (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden rounded-3xl border-none shadow-sm">
             <CardHeader className="flex-row items-center justify-between gap-3 p-4">
                 <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border">
@@ -142,17 +134,12 @@ const VideoCard = ({ video }: { video: WithId<Video> }) => {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle>Êtes-vous sûr?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Cette action est irréversible. La vidéo sera définitivement supprimée de nos serveurs.
-                                        </AlertDialogDescription>
+                                        <AlertDialogTitle>Supprimer cette vidéo ?</AlertDialogTitle>
+                                        <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                                            {isDeleting ? <Loader2 className="mr-2 animate-spin" /> : null}
-                                            Supprimer
-                                        </AlertDialogAction>
+                                        <AlertDialogAction onClick={handleDelete} className="bg-destructive">Supprimer</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
@@ -161,61 +148,24 @@ const VideoCard = ({ video }: { video: WithId<Video> }) => {
                 )}
             </CardHeader>
             <CardContent className="p-0">
-                <video
-                    className="w-full h-auto aspect-video bg-muted"
-                    src={video.videoUrl}
-                    controls
-                    poster={video.thumbnailUrl}
-                    preload="metadata"
-                >
-                    Votre navigateur ne supporte pas la balise vidéo.
-                </video>
+                <video className="w-full aspect-video bg-black" src={video.videoUrl} controls preload="metadata" />
             </CardContent>
-            <Collapsible>
-                <CardFooter className="p-2 flex flex-col items-start gap-2">
-                    <div className="flex items-center gap-2 w-full">
-                        <Button variant="ghost" size="sm" className="flex items-center gap-1.5 text-muted-foreground" onClick={handleLike}>
-                            <Heart className="h-4 w-4" />
-                            <span>{video.likes}</span>
-                        </Button>
-                        <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="sm" className="flex items-center gap-1.5 text-muted-foreground">
-                                <MessageCircle className="h-4 w-4" />
-                                <span>{comments?.length ?? 0}</span>
-                            </Button>
-                        </CollapsibleTrigger>
-                        <span className="text-xs text-muted-foreground ml-auto">Source: Kinshasa Flow</span>
-                    </div>
-                    <CollapsibleContent className="w-full space-y-4 pt-2">
-                        <div className="space-y-3 max-h-60 overflow-y-auto px-2">
-                            {areCommentsLoading ? <div className="text-center text-sm text-muted-foreground py-4">Chargement des commentaires...</div>
-                               : comments && comments.length > 0 ? (
-                                comments.map(comment => <CommentItem key={comment.id} comment={comment} />)
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">Aucun commentaire. Soyez le premier !</p>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2 pt-2 border-t">
-                            <Input 
-                                placeholder="Ajouter un commentaire..." 
-                                value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
-                                disabled={isSubmittingComment || !user}
-                            />
-                            <Button size="icon" onClick={handleAddComment} disabled={!newComment.trim() || isSubmittingComment || !user}>
-                                {isSubmittingComment ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4" />}
-                                <span className="sr-only">Envoyer</span>
-                            </Button>
-                        </div>
-                    </CollapsibleContent>
-                </CardFooter>
-            </Collapsible>
+            <CardFooter className="p-2 flex flex-col items-start gap-2">
+                <div className="flex items-center gap-4 w-full px-2">
+                    <button onClick={handleLike} className="flex items-center gap-1.5 text-muted-foreground hover:text-red-500 transition-colors">
+                        <Heart className="h-5 w-5" />
+                        <span className="text-xs font-bold">{video.likes}</span>
+                    </button>
+                    <button className="flex items-center gap-1.5 text-muted-foreground">
+                        <MessageCircle className="h-5 w-5" />
+                        <span className="text-xs font-bold">{comments?.length ?? 0}</span>
+                    </button>
+                </div>
+            </CardFooter>
         </Card>
     );
 };
 
-// --- Upload Dialog Component ---
 const UploadVideoDialog = () => {
     const [open, setOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -229,49 +179,47 @@ const UploadVideoDialog = () => {
     });
 
     const onSubmit = async (data: VideoUploadFormValues) => {
-        if (!user) {
-            toast({ title: "Veuillez vous connecter", description: "Vous devez être connecté pour publier une vidéo.", variant: 'destructive' });
-            return;
-        }
-
+        if (!user) return;
         setIsSubmitting(true);
         const file = data.video[0];
-
-        if (file.size > 60 * 1024 * 1024) { // Limit to ~60MB as a proxy for 1 minute
-            toast({ title: "Fichier trop volumineux", description: "Veuillez sélectionner une vidéo de moins d'une minute.", variant: 'destructive'});
-            setIsSubmitting(false);
-            return;
-        }
 
         try {
             const newVideoRef = doc(collection(firestore, 'videos'));
             const videoId = newVideoRef.id;
-            
             const storage = getStorage(firebaseApp);
             const fileRef = storageRef(storage, `videos/${user.uid}/${videoId}`);
 
             await uploadBytes(fileRef, file);
             const videoUrl = await getDownloadURL(fileRef);
 
-            const videoData: Video = {
+            const videoData = {
                 title: data.title,
                 videoUrl,
                 thumbnailUrl: `https://picsum.photos/seed/${videoId}/1280/720`,
                 userId: user.uid,
-                user: user.isAnonymous ? "Utilisateur Anonyme" : (user.displayName || "Utilisateur"),
+                user: user.isAnonymous ? "Anonyme" : (user.displayName || "Utilisateur"),
                 userAvatar: user.photoURL || "",
                 likes: 0,
-                createdAt: serverTimestamp() as any,
+                createdAt: serverTimestamp(),
             };
 
             await setDoc(newVideoRef, videoData);
+
+            // Global Notification
+            const notifRef = collection(firestore, 'notifications');
+            await addDoc(notifRef, {
+                type: 'video_added',
+                title: 'Nouvelle vidéo !',
+                message: `${videoData.user} a partagé une nouvelle vidéo de Kinshasa.`,
+                timestamp: serverTimestamp(),
+                link: '/videos'
+            });
             
-            toast({ title: 'Vidéo mise en ligne !', description: 'Votre vidéo a été ajoutée au fil.' });
+            toast({ title: 'Vidéo publiée !' });
             setOpen(false);
             form.reset();
         } catch (error) {
-            console.error("Error uploading video:", error);
-            toast({ title: 'Erreur', description: "Une erreur est survenue lors de la mise en ligne.", variant: 'destructive' });
+            toast({ title: 'Erreur', variant: 'destructive' });
         } finally {
             setIsSubmitting(false);
         }
@@ -280,53 +228,24 @@ const UploadVideoDialog = () => {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="w-full md:w-auto">
-                    <UploadCloud className="mr-2" />
-                    Mettre en ligne une vidéo
+                <Button className="rounded-2xl h-12 px-6 font-black shadow-lg">
+                    <UploadCloud className="mr-2 h-5 w-5" />
+                    Publier une vidéo
                 </Button>
             </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Mettre en ligne votre vidéo</DialogTitle>
-                </DialogHeader>
+            <DialogContent className="rounded-3xl">
+                <DialogHeader><DialogTitle>Partager une vidéo</DialogTitle></DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="title"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Titre de la vidéo</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Ex: Incroyable ambiance à Matonge" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="video"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Fichier vidéo (max 1 min)</FormLabel>
-                                    <FormControl>
-                                        <Input 
-                                            type="file" 
-                                            accept="video/mp4,video/quicktime" 
-                                            onChange={(e) => field.onChange(e.target.files)}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <FormField control={form.control} name="title" render={({ field }) => (
+                            <FormItem><FormLabel>Titre</FormLabel><FormControl><Input placeholder="Ex: Matinée à Gombe" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                         <FormField control={form.control} name="video" render={({ field }) => (
+                            <FormItem><FormLabel>Fichier vidéo</FormLabel><FormControl><Input type="file" accept="video/*" onChange={(e) => field.onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>
+                        )} />
                         <DialogFooter>
-                            <DialogClose asChild>
-                                <Button type="button" variant="secondary" disabled={isSubmitting}>Annuler</Button>
-                            </DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 animate-spin" />}
+                            <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl">
+                                {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
                                 Mettre en ligne
                             </Button>
                         </DialogFooter>
@@ -337,51 +256,24 @@ const UploadVideoDialog = () => {
     )
 }
 
-const VideoSkeleton = () => (
-    <Card>
-        <CardHeader className="flex-row items-center gap-3 p-4">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-[150px]" />
-                <Skeleton className="h-3 w-[100px]" />
-            </div>
-        </CardHeader>
-        <CardContent className="p-0">
-            <Skeleton className="w-full aspect-video" />
-        </CardContent>
-        <CardFooter className="p-2">
-            <Skeleton className="h-8 w-full" />
-        </CardFooter>
-    </Card>
-);
-
-// --- Main Feed Component ---
 export default function VideosFeed() {
     const { firestore } = useFirebase();
     const { user } = useUser();
-    
     const videosCollection = useMemoFirebase(() => collection(firestore, 'videos'), [firestore]);
     const videosQuery = useMemoFirebase(() => query(videosCollection, orderBy('createdAt', 'desc')), [videosCollection]);
     const { data: videos, isLoading } = useCollection<Video>(videosQuery);
 
     return (
-        <div className="w-full h-full overflow-y-auto pr-2">
-            <div className="max-w-3xl mx-auto space-y-6 pb-4">
-                {user && 
-                    <div className="p-4 border rounded-lg bg-card">
-                        <UploadVideoDialog />
-                    </div>
-                }
+        <div className="w-full h-full overflow-y-auto bg-slate-50/50">
+            <div className="max-w-2xl mx-auto space-y-6 p-4 md:p-8">
+                {user && <UploadVideoDialog />}
                 {isLoading ? (
-                    Array.from({ length: 3 }).map((_, i) => <VideoSkeleton key={i} />)
+                    Array.from({ length: 3 }).map((_, i) => <Card key={i} className="h-64 rounded-3xl animate-pulse bg-slate-200" />)
                 ) : videos && videos.length > 0 ? (
-                     videos.map(video => (
-                        <VideoCard key={video.id} video={video} />
-                    ))
+                     videos.map(video => <VideoCard key={video.id} video={video} />)
                 ) : (
-                    <div className="text-center py-10 rounded-lg border bg-card">
-                        <p className="text-muted-foreground">Aucune vidéo pour le moment.</p>
-                        <p className="text-sm text-muted-foreground">Soyez le premier à en mettre une en ligne !</p>
+                    <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed">
+                        <p className="text-muted-foreground font-bold">Aucune vidéo pour le moment.</p>
                     </div>
                 )}
             </div>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,7 +20,7 @@ import { useState, useEffect } from 'react';
 import { SignupValues, signupSchema, STAR_COSTS } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
 import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup, updateProfile, User as FirebaseUser, sendEmailVerification } from 'firebase/auth';
-import { doc, setDoc, runTransaction, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, runTransaction, collection, serverTimestamp, addDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -66,7 +67,6 @@ export function SignupForm() {
         await runTransaction(firestore, async (transaction) => {
             const userSnap = await transaction.get(userRef);
             
-            // On n'initialise que si le profil n'existe pas déjà (cas Google)
             if (!userSnap.exists()) {
                 const userData = {
                     id: user.uid,
@@ -92,6 +92,16 @@ export function SignupForm() {
                     description: "Bonus de bienvenue - Inscription",
                     timestamp: serverTimestamp(),
                 });
+
+                // Trigger Global Notification
+                const notifRef = collection(firestore, 'notifications');
+                addDoc(notifRef, {
+                    type: 'user_joined',
+                    title: 'Nouveau Kinois !',
+                    message: `${userData.name} vient de rejoindre la communauté Kinshasa Flow. Bienvenue !`,
+                    timestamp: serverTimestamp(),
+                    userId: user.uid
+                });
             }
         });
     }
@@ -103,16 +113,12 @@ export function SignupForm() {
             const firebaseUser = userCredential.user;
 
             await updateProfile(firebaseUser, { displayName: data.name });
-            
-            // Envoyer l'email de vérification
             await sendEmailVerification(firebaseUser);
-
-            // Initialiser le profil avec le bonus
             await initializeUserProfile(firebaseUser, data);
 
             toast({
                 title: 'Compte créé !',
-                description: "Veuillez vérifier votre e-mail pour activer votre compte. Nous vous avons offert 25 stars !",
+                description: "Veuillez vérifier votre e-mail pour activer votre compte. 25 stars offertes !",
                 variant: 'default',
             });
             
@@ -145,7 +151,7 @@ export function SignupForm() {
 
             toast({
                 title: 'Bienvenue!',
-                description: "Vous êtes connecté avec Google. 25 stars vous ont été offertes.",
+                description: "Vous êtes connecté avec Google. 25 stars offertes.",
                 variant: 'default',
             });
             router.push('/');

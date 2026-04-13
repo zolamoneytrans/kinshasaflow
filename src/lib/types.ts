@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 import { Timestamp } from "firebase/firestore";
 
@@ -15,7 +16,7 @@ export const STAR_COSTS = {
 
 // App Navigation Features
 export const navFeatures = [
-  'reports', 'liveTraffic', 'map', 'assistant', 'myStars', 'report', 'police', 
+  'reports', 'liveTraffic', 'map', 'assistant', 'notifications', 'myStars', 'report', 'police', 
   'routes', 'announcements', 'logement', 'transport', 'carRental', 'tourism', 
   'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share'
 ] as const;
@@ -26,6 +27,7 @@ export const appNavigationSettingsSchema = z.object({
   liveTraffic: z.boolean().default(true),
   map: z.boolean().default(true),
   assistant: z.boolean().default(true),
+  notifications: z.boolean().default(true),
   myStars: z.boolean().default(true),
   report: z.boolean().default(true),
   police: z.boolean().default(true),
@@ -79,6 +81,17 @@ export const userProfileSchema = z.object({
   createdAt: z.instanceof(Timestamp).or(z.any()).optional(),
 });
 export type UserProfile = z.infer<typeof userProfileSchema>;
+
+// Notification Schema
+export const appNotificationSchema = z.object({
+  type: z.enum(['user_joined', 'traffic_report', 'video_added', 'system_alert']),
+  title: z.string(),
+  message: z.string(),
+  timestamp: z.instanceof(Timestamp).or(z.any()),
+  link: z.string().optional(),
+  userId: z.string().optional(),
+});
+export type AppNotification = z.infer<typeof appNotificationSchema>;
 
 // Star Transaction
 export const starTransactionSchema = z.object({

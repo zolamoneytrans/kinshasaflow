@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -66,110 +67,20 @@
         "isProfileComplete"
       ]
     },
-    "StarTransaction": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StarTransaction",
+    "AppNotification": {
+      "title": "AppNotification",
       "type": "object",
-      "description": "Records every instance where a user's Star balance changes, detailing gains, purchases, and expenditures.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StarTransaction entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User involved in this transaction. (Relationship: User 1:N StarTransaction)"
-        },
-        "type": {
-          "type": "string",
-          "description": "The category of the transaction: 'purchase' (Stars bought), 'earned' (Stars obtained freely), or 'spent' (Stars consumed for features).",
-          "format": "enum"
-        },
-        "starsChange": {
-          "type": "number",
-          "description": "The amount of Stars changed by this transaction (positive for gains/purchases, negative for expenditures)."
-        },
-        "balanceAfterTransaction": {
-          "type": "number",
-          "description": "The user's Star balance immediately after this transaction occurred."
-        },
-        "description": {
-          "type": "string",
-          "description": "A human-readable description of the transaction (e.g., 'Purchased Standard Star Pack', 'Earned for referring a friend', 'Spent 5 stars on Premium Photo AI Enhancement')."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "The date and time when the transaction took place.",
-          "format": "date-time"
-        },
-        "relatedObjectId": {
-          "type": "string",
-          "description": "Optional: Reference to the ID of an associated entity (e.g., StarPackage ID if purchased, GeneratedID if stars were spent on an ID creation). Leave null if not applicable."
-        },
-        "relatedObjectType": {
-          "type": "string",
-          "description": "Optional: Indicates the type of the 'relatedObjectId' (e.g., 'StarPackage', 'GeneratedID', 'StarEarningActionType', 'StarSpendingFeatureType'). Leave null if not applicable."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "type",
-        "starsChange",
-        "balanceAfterTransaction",
-        "description",
-        "timestamp"
-      ]
-    },
-    "AdvertVideo": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AdvertVideo",
-      "type": "object",
-      "description": "Represents an advertisement video that users can watch to earn stars.",
+      "description": "Global notifications for real-time engagement.",
       "properties": {
         "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["user_joined", "traffic_report", "video_added", "system_alert"] },
         "title": { "type": "string" },
-        "videoUrl": { "type": "string", "format": "uri" },
-        "thumbnailUrl": { "type": "string", "format": "uri" },
-        "duration": { "type": "number" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "link": { "type": "string" },
+        "userId": { "type": "string" }
       },
-      "required": ["id", "title", "videoUrl", "createdAt"]
-    },
-    "TourismEvent": {
-      "title": "TourismEvent",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "location": { "type": "string" },
-        "price": { "type": "number" },
-        "imageUrls": { "type": "array", "items": { "type": "string" } },
-        "category": { "type": "string" },
-        "whatsapp": { "type": "string" },
-        "phone": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "title", "description", "location", "price", "imageUrls", "category"]
-    },
-    "TourismBooking": {
-      "title": "TourismBooking",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "eventId": { "type": "string" },
-        "eventTitle": { "type": "string" },
-        "userName": { "type": "string" },
-        "userPhone": { "type": "string" },
-        "bookingDate": { "type": "string", "format": "date-time" },
-        "numberOfPeople": { "type": "number" },
-        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "eventId", "eventTitle", "userName", "userPhone", "bookingDate", "numberOfPeople", "status", "createdAt"]
+      "required": ["id", "type", "title", "message", "timestamp"]
     },
     "AppNavigationSettings": {
       "title": "AppNavigationSettings",
@@ -180,6 +91,7 @@
         "liveTraffic": { "type": "boolean" },
         "map": { "type": "boolean" },
         "assistant": { "type": "boolean" },
+        "notifications": { "type": "boolean" },
         "myStars": { "type": "boolean" },
         "report": { "type": "boolean" },
         "police": { "type": "boolean" },
@@ -230,6 +142,16 @@
             "$ref": "#/backend/entities/AppNavigationSettings"
           },
           "description": "Global application navigation configuration."
+        }
+      },
+      {
+        "path": "/notifications/{id}",
+        "definition": {
+          "entityName": "AppNotification",
+          "schema": {
+            "$ref": "#/backend/entities/AppNotification"
+          },
+          "description": "Global notification feed."
         }
       }
     ]

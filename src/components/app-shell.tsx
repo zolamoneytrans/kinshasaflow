@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import {
   Home, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, 
   Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
-  Palmtree, Compass, LayoutGrid, Utensils
+  Palmtree, Compass, LayoutGrid, Utensils, Bell
 } from 'lucide-react';
 import {
   Sidebar,
@@ -21,14 +22,14 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { UserNav } from './auth/user-nav';
-import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import React, { useEffect, useState, useCallback } from 'react';
 import { Logo } from './logo';
 import { NotificationPermission } from './notification-permission';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { doc } from 'firebase/firestore';
-import { UserProfile, AppNavigationSettings, AppSubscriptionSettings } from '@/lib/types';
+import { doc, collection, query, limit } from 'firebase/firestore';
+import { UserProfile, AppNavigationSettings, AppSubscriptionSettings, AppNotification } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { sendEmailVerification } from 'firebase/auth';
@@ -40,11 +41,6 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const [isResending, setIsResending] = useState(false);
 
-  // Watch subscription settings
-  const subSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'subscription'), [firestore]);
-  const { data: subSettings } = useDoc<AppSubscriptionSettings>(subSettingsRef);
-
-  // Watch blocking status
   const profileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc<UserProfile>(profileRef);
 
@@ -62,7 +58,6 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // 1. Blocking overlay (Banned)
   if (profile?.isBlocked) {
     return (
       <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 text-center">
@@ -83,7 +78,6 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // 2. Verification overlay (Unactivated)
   if (!user.emailVerified && !user.isAnonymous && user.providerData.some(p => p.providerId === 'password')) {
     const handleResend = async () => {
         setIsResending(true);
@@ -130,9 +124,6 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // 3. Subscription Check (only for Premium actions, handled in specific pages, 
-  // but we can show a warning in Mes Stars)
-
   return <>{children}</>;
 }
 
@@ -149,9 +140,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const subSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'subscription'), [firestore]);
   const { data: subSettings } = useDoc<AppSubscriptionSettings>(subSettingsRef);
 
-  // Configuration de navigation globale (Pilotage par l'admin)
   const navSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'navigation'), [firestore]);
   const { data: navSettings } = useDoc<AppNavigationSettings>(navSettingsRef);
+
+  // Notifications Badge Logic
+  const notifsRef = useMemoFirebase(() => query(collection(firestore, 'notifications'), limit(10)), [firestore]);
+  const { data: notifs } = useCollection<AppNotification>(notifsRef);
 
   useEffect(() => {
     if (!profile || !subSettings) return;
@@ -170,7 +164,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         });
       }
     } else {
-      // Mode Cash
       const isExpired = profile.cashSubscriptionExpiry?.toDate() ? profile.cashSubscriptionExpiry.toDate() < new Date() : true;
       if (isExpired && pathname !== '/mes-stars' && !['/', '/privacy'].includes(pathname)) {
         toast({
@@ -208,40 +201,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/kinshasa') return 'Statistiques de Kinshasa';
     if (pathname === '/assistant') return 'Assistant IA';
     if (pathname === '/map') return 'Carte du Trafic';
+    if (pathname === '/notifications') return 'Notifications';
     if (pathname === '/mes-stars') return subSettings?.mode === 'cash' ? 'Mon Abonnement' : 'Mes Stars';
     if (pathname === '/privacy') return 'Confidentialité & CGU';
-    if (pathname.startsWith('/admin/stars')) return 'Admin Stars';
-    if (pathname.startsWith('/admin/transport')) return 'Admin Transport';
-    if (pathname.startsWith('/admin/logement')) return 'Admin Logement';
-    if (pathname.startsWith('/admin/car-rental')) return 'Admin Location';
-    if (pathname.startsWith('/admin/adverts')) return 'Admin Publicités';
-    if (pathname.startsWith('/admin/messages')) return 'Admin Messages';
-    if (pathname.startsWith('/admin/tourism')) return 'Admin Tourisme';
-    if (pathname.startsWith('/admin/navigation')) return 'Pilotage Navigation';
     return 'Kinshasa Flow';
   }
 
   const getPageDescription = () => {
-    if (pathname === '/reports') return 'Mises à jour en temps réel pour Kinshasa';
-    if (pathname === '/live-traffic') return 'Un flux en direct du trafic dans la ville de Kinshasa';
-    if (pathname === '/police-routiere') return 'Signalements de la présence policière à Kinshasa';
-    if (pathname === '/routes') return 'Statistiques sur les infrastructures routières';
-    if (pathname === '/annonces') return 'Mises à jour du gouvernement pour les automobilistes';
-    if (pathname === '/logement') return 'Trouvez un appartement de type RBNB à Kinshasa.';
-    if (pathname === '/transport') return 'Abonnements, covoiturage, et plus.';
-    if (pathname === '/location-voiture') return 'Louez un véhicule pour vos déplacements à Kinshasa.';
-    if (pathname === '/tourisme') return 'Réservez des excursions et découvrez Kinshasa.';
-    if (pathname === '/restaurants') return 'Découvrez les meilleures tables de Kinshasa.';
-    if (pathname === '/contact') return 'Envoyez-nous vos questions, suggestions ou plaintes.';
-    if (pathname === '/signaler-embouteillage') return 'Signalez un incident pour aider les autres conducteurs';
-    if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
-    if (pathname === '/videos') return 'Un aperçu de la vie à Kinshasa en vidéos.';
-    if (pathname === '/kinshasa') return 'Informations et statistiques sur la ville.';
-    if (pathname === '/assistant') return 'Posez des questions sur les itinéraires à Kinshasa.';
-    if (pathname === '/map') return 'Visualisez le trafic en temps réel à Kinshasa.';
-    if (pathname === '/mes-stars') return 'Gérez votre solde de stars et monétisez votre usage.';
-    if (pathname === '/privacy') return 'Conditions Générales d\'Utilisation et Politique de données.';
-    if (pathname.startsWith('/admin')) return 'Espace réservé à l\'administration système.';
+    if (pathname === '/notifications') return 'Découvrez ce qui se passe dans la communauté.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
 
@@ -252,12 +219,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     '/privacy',
   ].includes(pathname);
 
-  const shareMessage = "Salut ! J'utilise Kinshasa Flow pour éviter les embouteillages à Kinshasa. Inscris-toi ici : https://kinshasaflow.online";
-
-  // Helper pour vérifier si une fonctionnalité est autorisée par l'admin
   const isEnabled = useCallback((feature: keyof AppNavigationSettings) => {
-    if (!navSettings) return true; // Visible par défaut si non chargé
-    return navSettings[feature] !== false; // Uniquement masqué si explicitement false
+    if (!navSettings) return true;
+    return navSettings[feature] !== false;
   }, [navSettings]);
 
   return (
@@ -273,16 +237,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SidebarMenu className="p-3 gap-1">
               {isEnabled('reports') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/reports'} tooltip={{children: "Rapports"}} className="hover:bg-sidebar-accent transition-all duration-200">
+                  <SidebarMenuButton asChild isActive={pathname === '/reports'} className="hover:bg-sidebar-accent">
                     <Link href="/reports" className="font-medium flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
                         <Home className={pathname === '/reports' ? "text-accent" : "text-primary"} />
                         <span>Rapports</span>
                       </div>
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -290,7 +250,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('liveTraffic') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} tooltip={{children: "Embouteillage en Temps Réel"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} className="hover:bg-sidebar-accent">
                     <Link href="/live-traffic" className="font-medium">
                       <Activity className={pathname === '/live-traffic' ? "text-accent" : "text-primary"} />
                       <span>Temps Réel</span>
@@ -301,7 +261,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('map') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/map'} tooltip={{children: "Carte"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/map'} className="hover:bg-sidebar-accent">
                     <Link href="/map" className="font-medium">
                       <Map className={pathname === '/map' ? "text-accent" : "text-primary"} />
                       <span>Carte</span>
@@ -312,13 +272,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('assistant') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/assistant'} tooltip={{children: "Assistant IA"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/assistant'} className="hover:bg-sidebar-accent">
                     <Link href="/assistant" className="font-medium flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
                         <Bot className={pathname === '/assistant' ? "text-accent" : "text-primary"} />
-                        <span>Assistant</span>
+                        <span>Assistant IA</span>
                       </div>
-                      <Badge variant="success" className="h-4 px-1.5 text-[8px] font-black uppercase tracking-tighter">NEW</Badge>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('notifications') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/notifications'} className="hover:bg-sidebar-accent">
+                    <Link href="/notifications" className="font-medium flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Bell className={pathname === '/notifications' ? "text-accent" : "text-primary"} />
+                        <span>Notifications</span>
+                      </div>
+                      {notifs && notifs.length > 0 && (
+                        <Badge variant="destructive" className="h-4 px-1 text-[8px] animate-pulse">NOUVEAU</Badge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -326,25 +301,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('myStars') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/mes-stars'} tooltip={{children: subSettings?.mode === 'cash' ? "Abonnement" : "Mes Stars"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/mes-stars'} className="hover:bg-sidebar-accent">
                     <Link href="/mes-stars" className="font-medium flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
                         {subSettings?.mode === 'cash' ? <Shield className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} /> : <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />}
                         <span>{subSettings?.mode === 'cash' ? "Mon Accès" : "Mes Stars"}</span>
                       </div>
-                      {profile && subSettings?.mode === 'stars' && (
-                        <Badge variant="outline" className="h-5 bg-amber-500/10 border-amber-500/30 text-amber-600 font-bold px-1.5 text-[10px]">
-                          {profile.currentStarsBalance}
-                        </Badge>
-                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
 
+              <SidebarSeparator className="my-2 opacity-20" />
+
               {isEnabled('report') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} tooltip={{children: "Signaler un Embouteillage"}} className="bg-primary/10 hover:bg-primary/20 mt-2 border border-primary/20">
+                  <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} className="bg-primary/10 hover:bg-primary/20 mt-2 border border-primary/20">
                     <Link href="/signaler-embouteillage" className="font-bold text-primary-foreground">
                       <PlusCircle className={pathname === '/signaler-embouteillage' ? "text-accent" : "text-primary"} />
                       <span>Signaler</span>
@@ -355,13 +327,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('police') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} tooltip={{children: "Police Routière"}} className="hover:bg-sidebar-accent">
-                    <Link href="/police-routiere" className="font-medium flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Siren className={pathname === '/police-routiere' ? "text-accent" : "text-primary"} />
-                        <span>Police</span>
-                      </div>
-                      <div className="bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-black shadow-sm">!</div>
+                  <SidebarMenuButton asChild isActive={pathname === '/police-routiere'} className="hover:bg-sidebar-accent">
+                    <Link href="/police-routiere" className="font-medium">
+                      <Siren className={pathname === '/police-routiere' ? "text-accent" : "text-primary"} />
+                      <span>Police</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -369,7 +338,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('routes') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/routes'} tooltip={{children: "État des Routes"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/routes'} className="hover:bg-sidebar-accent">
                     <Link href="/routes" className="font-medium">
                       <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
                       <span>Routes</span>
@@ -380,13 +349,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('announcements') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/annonces'} tooltip={{children: "Annonces"}} className="hover:bg-sidebar-accent">
-                    <Link href="/annonces" className="font-medium flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Landmark className={pathname === '/annonces' ? "text-accent" : "text-primary"} />
-                        <span>Annonces</span>
-                      </div>
-                      <Badge variant="secondary" className="h-4 px-1 text-[9px] font-bold">2</Badge>
+                  <SidebarMenuButton asChild isActive={pathname === '/annonces'} className="hover:bg-sidebar-accent">
+                    <Link href="/annonces" className="font-medium">
+                      <Landmark className={pathname === '/annonces' ? "text-accent" : "text-primary"} />
+                      <span>Annonces</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -394,7 +360,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('logement') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/logement'} tooltip={{children: "Logement"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/logement'} className="hover:bg-sidebar-accent">
                     <Link href="/logement" className="font-medium">
                       <Hotel className={pathname === '/logement' ? "text-accent" : "text-primary"} />
                       <span>Logement</span>
@@ -405,7 +371,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('transport') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/transport'} tooltip={{children: "Transport"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/transport'} className="hover:bg-sidebar-accent">
                     <Link href="/transport" className="font-medium">
                       <Bus className={pathname === '/transport' ? "text-accent" : "text-primary"} />
                       <span>Transport</span>
@@ -416,10 +382,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('carRental') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/location-voiture'} tooltip={{children: "Location de Véhicules"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/location-voiture'} className="hover:bg-sidebar-accent">
                     <Link href="/location-voiture" className="font-medium">
                       <Car className={pathname === '/location-voiture' ? "text-accent" : "text-primary"} />
-                      <span>Location Voiture</span>
+                      <span>Location</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -427,13 +393,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('tourism') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/tourisme'} tooltip={{children: "Tourisme"}} className="hover:bg-sidebar-accent">
-                    <Link href="/tourisme" className="font-medium flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Palmtree className={pathname === '/tourisme' ? "text-accent" : "text-primary"} />
-                        <span>Tourisme</span>
-                      </div>
-                      <Badge className="bg-emerald-500 text-[8px] h-4">OFFRES</Badge>
+                  <SidebarMenuButton asChild isActive={pathname === '/tourisme'} className="hover:bg-sidebar-accent">
+                    <Link href="/tourisme" className="font-medium">
+                      <Palmtree className={pathname === '/tourisme' ? "text-accent" : "text-primary"} />
+                      <span>Tourisme</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -441,7 +404,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('restaurants') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/restaurants'} tooltip={{children: "Restaurants"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/restaurants'} className="hover:bg-sidebar-accent">
                     <Link href="/restaurants" className="font-medium">
                       <Utensils className={pathname === '/restaurants' ? "text-accent" : "text-primary"} />
                       <span>Restaurants</span>
@@ -452,7 +415,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('events') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/evenements'} tooltip={{children: "Événements"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/evenements'} className="hover:bg-sidebar-accent">
                     <Link href="/evenements" className="font-medium">
                       <Megaphone className={pathname === '/evenements' ? "text-accent" : "text-primary"} />
                       <span>Événements</span>
@@ -463,7 +426,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('videos') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/videos'} tooltip={{children: "Vidéos"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/videos'} className="hover:bg-sidebar-accent">
                     <Link href="/videos" className="font-medium">
                       <Video className={pathname === '/videos' ? "text-accent" : "text-primary"} />
                       <span>Vidéos</span>
@@ -474,7 +437,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('kinshasa') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/kinshasa'} tooltip={{children: "Statistiques"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/kinshasa'} className="hover:bg-sidebar-accent">
                     <Link href="/kinshasa" className="font-medium">
                       <AreaChart className={pathname === '/kinshasa' ? "text-accent" : "text-primary"} />
                       <span>Kinshasa</span>
@@ -485,7 +448,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('contact') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/contact'} tooltip={{children: "Contact"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/contact'} className="hover:bg-sidebar-accent">
                     <Link href="/contact" className="font-medium">
                       <Mail className={pathname === '/contact' ? "text-accent" : "text-primary"} />
                       <span>Contact</span>
@@ -496,9 +459,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('share') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip={{children: "Partager"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild className="hover:bg-sidebar-accent">
                     <a 
-                      href={`https://wa.me/?text=${encodeURIComponent(shareMessage)}`} 
+                      href={`https://wa.me/?text=${encodeURIComponent("Salut ! J'utilise Kinshasa Flow pour éviter les embouteillages. Inscris-toi : https://kinshasaflow.online")}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="font-medium"
@@ -514,17 +477,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {(isAdmin || isTourismAdmin) && (
                 <>
                   <SidebarSeparator className="my-4 bg-sidebar-border/30" />
-                  <div className="px-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Administration</div>
+                  <div className="px-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Admin</div>
                   
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/navigation'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/navigation" className="font-medium flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <LayoutGrid className="text-destructive" />
-                            <span>Admin Navigation</span>
-                          </div>
-                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">CONFIG</Badge>
+                        <Link href="/admin/navigation" className="font-medium">
+                          <LayoutGrid className="text-destructive" />
+                          <span>Navigation</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -533,96 +493,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/stars" className="font-medium flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <Users className="text-destructive" />
-                            <span>Admin Stars & Users</span>
-                          </div>
-                          <Badge variant="outline" className="h-4 px-1 text-[8px] border-destructive/30 text-destructive font-black">SYS</Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {isAdmin && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/transport" className="font-medium flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <Shield className="text-destructive" />
-                            <span>Admin Transport</span>
-                          </div>
-                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">2</Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {isAdmin && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/logement" className="font-medium flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <BedDouble className="text-destructive" />
-                            <span>Admin Logement</span>
-                          </div>
-                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">1</Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {isAdmin && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/car-rental" className="font-medium flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <Car className="text-destructive" />
-                            <span>Admin Location</span>
-                          </div>
-                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">4</Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {isTourismAdmin && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname === '/admin/tourism'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/tourism" className="font-medium flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <Compass className="text-destructive" />
-                            <span>Admin Tourisme</span>
-                          </div>
-                          <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black">BOOK</Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {isAdmin && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/adverts" className="font-medium flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <Megaphone className="text-destructive" />
-                            <span>Admin Publicités</span>
-                          </div>
-                          <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black">ADS</Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {isAdmin && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/messages" className="font-medium flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <Mail className="text-destructive" />
-                            <span>Admin Messages</span>
-                          </div>
-                          <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black">NEW</Badge>
+                        <Link href="/admin/stars" className="font-medium">
+                          <Users className="text-destructive" />
+                          <span>Stars & Users</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

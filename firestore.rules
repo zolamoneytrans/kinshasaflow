@@ -93,6 +93,13 @@ service cloud.firestore {
       }
     }
 
+    /** Notifications */
+    match /notifications/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
     /** Logements (RBNB) */
     match /logements/{id} {
       allow read: if isSignedIn();

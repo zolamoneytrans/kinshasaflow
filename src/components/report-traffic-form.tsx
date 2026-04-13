@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,7 +29,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { reportFormSchema, ReportFormValues, UserProfile } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
-import { collection, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, runTransaction, addDoc } from 'firebase/firestore';
 
 
 export default function ReportTrafficForm() {
@@ -87,7 +88,6 @@ export default function ReportTrafficForm() {
 
             const eventsCollection = collection(firestore, 'events');
             
-            // We use an atomic transaction to save the report and reward the user with stars
             await runTransaction(firestore, async (transaction) => {
                 const userRef = doc(firestore, 'users', user.uid);
                 const userSnap = await transaction.get(userRef);
@@ -104,17 +104,14 @@ export default function ReportTrafficForm() {
                 const newBalance = currentBalance + 5;
                 const newTotalEarned = totalEarned + 5;
 
-                // 1. Update user balance
                 transaction.update(userRef, {
                     currentStarsBalance: newBalance,
                     totalStarsEarned: newTotalEarned
                 });
 
-                // 2. Save the traffic report
                 const newEventRef = doc(eventsCollection);
                 transaction.set(newEventRef, eventData);
 
-                // 3. Log the star transaction
                 const starTransRef = doc(collection(userRef, 'star_transactions'));
                 transaction.set(starTransRef, {
                     userId: user.uid,
@@ -124,11 +121,21 @@ export default function ReportTrafficForm() {
                     description: "Signalement d'incident",
                     timestamp: serverTimestamp(),
                 });
+
+                // Global Notification
+                const notifRef = collection(firestore, 'notifications');
+                transaction.set(doc(notifRef), {
+                    type: 'traffic_report',
+                    title: 'Nouvel incident signalé',
+                    message: `Un incident de type ${data.severity} a été signalé à ${data.location}.`,
+                    timestamp: serverTimestamp(),
+                    link: '/reports'
+                });
             });
 
             toast({
                 title: 'Rapport envoyé +5 ⭐!',
-                description: "Merci ! Vous avez gagné 5 stars pour votre contribution à la communauté.",
+                description: "Merci ! Vous avez gagné 5 stars pour votre contribution.",
                 variant: 'default',
             });
             
@@ -138,8 +145,8 @@ export default function ReportTrafficForm() {
         } catch (error) {
             console.error("Error submitting report:", error);
             toast({
-                title: 'Oh oh! Une erreur est survenue.',
-                description: "Impossible de soumettre votre rapport. Veuillez réessayer.",
+                title: 'Oh oh!',
+                description: "Impossible de soumettre votre rapport.",
                 variant: 'destructive',
             });
         } finally {

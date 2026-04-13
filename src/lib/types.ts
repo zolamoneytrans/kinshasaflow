@@ -44,6 +44,14 @@ export const appNavigationSettingsSchema = z.object({
 });
 export type AppNavigationSettings = z.infer<typeof appNavigationSettingsSchema>;
 
+export type SubscriptionMode = 'stars' | 'cash';
+
+export const appSubscriptionSettingsSchema = z.object({
+  mode: z.enum(['stars', 'cash']).default('stars'),
+  lastUpdated: z.instanceof(Timestamp).or(z.any()).optional(),
+});
+export type AppSubscriptionSettings = z.infer<typeof appSubscriptionSettingsSchema>;
+
 // User profile extension for Stars System
 export const userProfileSchema = z.object({
   id: z.string(),
@@ -53,10 +61,16 @@ export const userProfileSchema = z.object({
   phone: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
+  // Stars Model
   currentStarsBalance: z.number().default(0),
   totalStarsEarned: z.number().default(0),
   totalStarsPurchased: z.number().default(0),
   totalStarsUsed: z.number().default(0),
+  // Cash Model
+  isCashSubscribed: z.boolean().default(false),
+  cashSubscriptionExpiry: z.instanceof(Timestamp).or(z.any()).optional().nullable(),
+  hasUsedFreeTrial: z.boolean().default(false),
+  // Meta
   lastLoginTimestamp: z.instanceof(Timestamp).or(z.any()).optional(),
   consecutiveLoginDays: z.number().default(0),
   referralCode: z.string().optional(),
@@ -69,7 +83,7 @@ export type UserProfile = z.infer<typeof userProfileSchema>;
 // Star Transaction
 export const starTransactionSchema = z.object({
   userId: z.string(),
-  type: z.enum(['purchase', 'earned', 'spent', 'admin_adjustment']),
+  type: z.enum(['purchase', 'earned', 'spent', 'admin_adjustment', 'subscription_payment']),
   starsChange: z.number(),
   balanceAfterTransaction: z.number(),
   description: z.string(),

@@ -1,11 +1,12 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
-  Home, TrafficCone, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, 
-  Landmark, Video, AreaChart, Bot, Bell, Map, Hotel, Bus, Shield, BedDouble, 
-  Mail, Car, Star, Share2, Users, ShieldAlert, CheckCircle, AlertCircle, 
+  Home, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, 
+  Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
+  Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
   Palmtree, Compass, LayoutGrid
 } from 'lucide-react';
 import {
@@ -28,7 +29,7 @@ import { NotificationPermission } from './notification-permission';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { doc } from 'firebase/firestore';
-import { UserProfile, AppNavigationSettings } from '@/lib/types';
+import { UserProfile, AppNavigationSettings, AppSubscriptionSettings } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { sendEmailVerification } from 'firebase/auth';
@@ -39,6 +40,10 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
   const [isResending, setIsResending] = useState(false);
+
+  // Watch subscription settings
+  const subSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'subscription'), [firestore]);
+  const { data: subSettings } = useDoc<AppSubscriptionSettings>(subSettingsRef);
 
   // Watch blocking status
   const profileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
@@ -105,7 +110,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
                     <h2 className="text-3xl font-black tracking-tight text-slate-900">Activez votre compte</h2>
                     <p className="text-slate-500 font-medium leading-relaxed">
                         Un e-mail de confirmation a été envoyé à <span className="font-bold text-primary">{user.email}</span>. 
-                        Veuillez cliquer sur le lien pour débloquer vos <span className="text-amber-600 font-bold">25 stars</span> et l'accès à l'application.
+                        Veuillez cliquer sur le lien pour activer votre accès premium.
                     </p>
                 </div>
                 
@@ -126,6 +131,9 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // 3. Subscription Check (only for Premium actions, handled in specific pages, 
+  // but we can show a warning in Mes Stars)
+
   return <>{children}</>;
 }
 
@@ -139,24 +147,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc<UserProfile>(userProfileRef);
 
+  const subSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'subscription'), [firestore]);
+  const { data: subSettings } = useDoc<AppSubscriptionSettings>(subSettingsRef);
+
   // Configuration de navigation globale (Pilotage par l'admin)
   const navSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'navigation'), [firestore]);
   const { data: navSettings } = useDoc<AppNavigationSettings>(navSettingsRef);
 
   useEffect(() => {
-    if (profile && profile.currentStarsBalance < 5 && pathname !== '/mes-stars' && !['/', '/privacy'].includes(pathname)) {
-      toast({
-        title: 'Solde faible — ' + profile.currentStarsBalance + ' stars restantes',
-        description: 'Certaines fonctionnalités premium seront bientôt bloquées.',
-        variant: 'destructive',
-        action: (
-          <ToastAction altText="Recharger" onClick={() => window.location.href = '/mes-stars'}>
-            Recharger
-          </ToastAction>
-        ),
-      });
+    if (!profile || !subSettings) return;
+
+    if (subSettings.mode === 'stars') {
+      if (profile.currentStarsBalance < 5 && pathname !== '/mes-stars' && !['/', '/privacy'].includes(pathname)) {
+        toast({
+          title: 'Solde faible — ' + profile.currentStarsBalance + ' stars restantes',
+          description: 'Votre solde est presque épuisé.',
+          variant: 'destructive',
+          action: (
+            <ToastAction altText="Recharger" onClick={() => window.location.href = '/mes-stars'}>
+              Recharger
+            </ToastAction>
+          ),
+        });
+      }
+    } else {
+      // Mode Cash
+      const isExpired = profile.cashSubscriptionExpiry?.toDate() ? profile.cashSubscriptionExpiry.toDate() < new Date() : true;
+      if (isExpired && pathname !== '/mes-stars' && !['/', '/privacy'].includes(pathname)) {
+        toast({
+          title: 'Abonnement expiré',
+          description: 'Veuillez renouveler votre abonnement.',
+          variant: 'destructive',
+          action: (
+            <ToastAction altText="S'abonner" onClick={() => window.location.href = '/mes-stars'}>
+              S'abonner
+            </ToastAction>
+          ),
+        });
+      }
     }
-  }, [profile, pathname, toast]);
+  }, [profile, subSettings, pathname, toast]);
 
   const isAdmin = user?.email === 'drnduwa@gmail.com';
   const isTourismAdmin = user?.email === 'contact.congonamotema@gmail.com' || isAdmin;
@@ -178,16 +208,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/kinshasa') return 'Statistiques de Kinshasa';
     if (pathname === '/assistant') return 'Assistant IA';
     if (pathname === '/map') return 'Carte du Trafic';
-    if (pathname === '/mes-stars') return 'Mes Stars';
+    if (pathname === '/mes-stars') return subSettings?.mode === 'cash' ? 'Mon Abonnement' : 'Mes Stars';
     if (pathname === '/privacy') return 'Confidentialité & CGU';
-    if (pathname === '/admin/stars') return 'Admin Stars';
-    if (pathname === '/admin/transport') return 'Admin Transport';
-    if (pathname === '/admin/logement') return 'Admin Logement';
-    if (pathname === '/admin/car-rental') return 'Admin Location';
-    if (pathname === '/admin/adverts') return 'Admin Publicités';
-    if (pathname === '/admin/messages') return 'Admin Messages';
-    if (pathname === '/admin/tourism') return 'Admin Tourisme';
-    if (pathname === '/admin/navigation') return 'Pilotage Navigation';
+    if (pathname.startsWith('/admin/stars')) return 'Admin Stars';
+    if (pathname.startsWith('/admin/transport')) return 'Admin Transport';
+    if (pathname.startsWith('/admin/logement')) return 'Admin Logement';
+    if (pathname.startsWith('/admin/car-rental')) return 'Admin Location';
+    if (pathname.startsWith('/admin/adverts')) return 'Admin Publicités';
+    if (pathname.startsWith('/admin/messages')) return 'Admin Messages';
+    if (pathname.startsWith('/admin/tourism')) return 'Admin Tourisme';
+    if (pathname.startsWith('/admin/navigation')) return 'Pilotage Navigation';
     return 'Kinshasa Flow';
   }
 
@@ -295,13 +325,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('myStars') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/mes-stars'} tooltip={{children: "Mes Stars"}} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/mes-stars'} tooltip={{children: subSettings?.mode === 'cash' ? "Abonnement" : "Mes Stars"}} className="hover:bg-sidebar-accent">
                     <Link href="/mes-stars" className="font-medium flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
-                        <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />
-                        <span>Mes Stars</span>
+                        {subSettings?.mode === 'cash' ? <Shield className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} /> : <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />}
+                        <span>{subSettings?.mode === 'cash' ? "Mon Accès" : "Mes Stars"}</span>
                       </div>
-                      {profile && (
+                      {profile && subSettings?.mode === 'stars' && (
                         <Badge variant="outline" className="h-5 bg-amber-500/10 border-amber-500/30 text-amber-600 font-bold px-1.5 text-[10px]">
                           {profile.currentStarsBalance}
                         </Badge>

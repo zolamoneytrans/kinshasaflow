@@ -4,22 +4,23 @@
 import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/app-shell";
 import { useUser, useFirebase, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, setDoc } from "firebase/firestore";
-import { AppNavigationSettings, NavFeature, navFeatures } from "@/lib/types";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { AppNavigationSettings, NavFeature, navFeatures, AppSubscriptionSettings } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, LayoutGrid, Cloud, CloudUpload, Shield, Info, AlertCircle, Plus } from "lucide-react";
+import { Loader2, LayoutGrid, Cloud, CloudUpload, Shield, Info, AlertCircle, Plus, Wallet, Coins } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from '@/components/ui/button';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const FEATURE_LABELS: Record<NavFeature, string> = {
   reports: "Rapports de trafic",
   liveTraffic: "Temps Réel",
   map: "Carte du Trafic",
   assistant: "Assistant IA",
-  myStars: "Mes Stars",
+  myStars: "Mes Stars / Abonnements",
   report: "Signaler un incident",
   police: "Police Routière",
   routes: "État des Routes",
@@ -46,7 +47,9 @@ export default function AdminNavigationPage() {
   const settingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'navigation'), [firestore]);
   const { data: serverSettings, isLoading } = useDoc<AppNavigationSettings>(settingsRef);
 
-  // Sauvegarde automatique lors d'un changement
+  const subSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'subscription'), [firestore]);
+  const { data: subSettings, isLoading: isSubLoading } = useDoc<AppSubscriptionSettings>(subSettingsRef);
+
   const handleToggle = async (feature: NavFeature) => {
     if (!isAdmin || !serverSettings) return;
 
@@ -70,10 +73,26 @@ export default function AdminNavigationPage() {
     }
   };
 
+  const handleModeChange = async (mode: 'stars' | 'cash') => {
+    if (!isAdmin) return;
+    setSaveStatus('saving');
+    try {
+      await setDoc(subSettingsRef, {
+        mode,
+        lastUpdated: serverTimestamp()
+      });
+      setSaveStatus('saved');
+      toast({ title: "Modèle de monétisation mis à jour", description: `Le mode ${mode === 'stars' ? 'Stars' : 'Abonnement'} est désormais actif.` });
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (e) {
+      setSaveStatus('error');
+      toast({ title: "Erreur", description: "Impossible de changer de mode.", variant: "destructive" });
+    }
+  };
+
   const handleInitialize = async () => {
     if (!isAdmin) return;
     
-    // Création d'une config par défaut (tout à true)
     const defaultConfig = navFeatures.reduce((acc, feat) => ({
         ...acc,
         [feat]: true
@@ -82,6 +101,7 @@ export default function AdminNavigationPage() {
     setSaveStatus('saving');
     try {
         await setDoc(settingsRef, defaultConfig);
+        await setDoc(subSettingsRef, { mode: 'stars', lastUpdated: serverTimestamp() });
         setSaveStatus('saved');
         toast({ title: "Configuration initialisée", description: "Tous les boutons sont désormais actifs par défaut." });
         setTimeout(() => setSaveStatus('idle'), 2000);
@@ -104,7 +124,7 @@ export default function AdminNavigationPage() {
   return (
     <AppShell>
       <div className="w-full h-full overflow-y-auto p-4 md:p-8 space-y-8 bg-slate-50/50">
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-4xl mx-auto space-y-8 pb-20">
           
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
@@ -112,7 +132,7 @@ export default function AdminNavigationPage() {
                 <LayoutGrid className="text-primary h-8 w-8" />
                 Pilotage du Dashboard
               </h1>
-              <p className="text-muted-foreground font-medium italic">Activez ou désactivez les boutons en temps réel pour tous les utilisateurs.</p>
+              <p className="text-muted-foreground font-medium italic">Activez ou désactivez les boutons et choisissez votre modèle de revenus.</p>
             </div>
 
             <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100 min-w-[180px] justify-center">
@@ -138,6 +158,60 @@ export default function AdminNavigationPage() {
               </AnimatePresence>
             </div>
           </div>
+
+          <Card className="border-none shadow-sm overflow-hidden rounded-[2rem]">
+            <CardHeader className="bg-primary p-8 text-white">
+              <CardTitle className="text-xl flex items-center gap-2"><Wallet className="h-5 w-5" /> Modèle de Monétisation</CardTitle>
+              <CardDescription className="text-primary-foreground/80 font-medium">Basculez entre le système de Stars et l'Abonnement fixe.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8">
+              {isSubLoading ? <Loader2 className="animate-spin mx-auto" /> : (
+                <RadioGroup 
+                  value={subSettings?.mode || 'stars'} 
+                  onValueChange={(v: any) => handleModeChange(v)} 
+                  className="grid md:grid-cols-2 gap-6"
+                >
+                  <div>
+                    <RadioGroupItem value="stars" id="mode-stars" className="peer sr-only" />
+                    <Label 
+                      htmlFor="mode-stars" 
+                      className="flex flex-col gap-4 p-6 rounded-2xl border-2 cursor-pointer transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover:bg-slate-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-amber-100 p-3 rounded-xl text-amber-600"><Coins className="h-6 w-6" /></div>
+                        <div>
+                          <p className="font-black text-lg">Modèle Stars</p>
+                          <p className="text-xs text-muted-foreground font-bold">Paiement à l'usage</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                        Les utilisateurs achètent des packs de stars et paient pour chaque action (IA, Map, Verification).
+                      </p>
+                    </Label>
+                  </div>
+
+                  <div>
+                    <RadioGroupItem value="cash" id="mode-cash" className="peer sr-only" />
+                    <Label 
+                      htmlFor="mode-cash" 
+                      className="flex flex-col gap-4 p-6 rounded-2xl border-2 cursor-pointer transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover:bg-slate-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-blue-100 p-3 rounded-xl text-blue-600"><Wallet className="h-6 w-6" /></div>
+                        <div>
+                          <p className="font-black text-lg">Modèle Abonnement</p>
+                          <p className="text-xs text-muted-foreground font-bold">Forfait mensuel/annuel</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                        1 mois gratuit, puis 0.5$/mois ou 5$/an. Accès illimité à toutes les fonctions premium.
+                      </p>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              )}
+            </CardContent>
+          </Card>
 
           <Card className="border-none shadow-sm overflow-hidden rounded-[2rem]">
             <CardHeader className="bg-white border-b border-slate-100 p-8">
@@ -197,7 +271,7 @@ export default function AdminNavigationPage() {
             <div className="space-y-1">
               <p className="font-bold text-blue-900">Comment ça marche ?</p>
               <p className="text-sm text-blue-700 leading-relaxed">
-                Chaque interrupteur ci-dessus contrôle la visibilité du bouton correspondant dans le menu latéral. Si vous décochez "Assistant IA", le bouton disparaîtra immédiatement de l'écran de tous vos utilisateurs actifs.
+                Chaque interrupteur ci-dessus contrôle la visibilité du bouton correspondant dans le menu latéral. Si vous changez le modèle de monétisation, l'écran "Mes Stars" des utilisateurs changera radicalement pour refléter le nouveau mode de paiement.
               </p>
             </div>
           </div>

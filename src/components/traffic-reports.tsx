@@ -9,7 +9,8 @@ import {
   Clock, 
   Star,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  PlusCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ import { EventReport, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 type TrafficStatus = 'EMBOUTEILLAGE' | 'DENSE' | 'MODÉRÉ' | 'FLUIDE' | 'INCONNU';
 
@@ -139,7 +141,13 @@ export default function TrafficReports() {
                 {lastUpdated && <p className="text-[10px] font-black text-primary uppercase mt-1">Dernière mise à jour : {format(lastUpdated, 'HH:mm:ss')}</p>}
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+                <Button asChild className="rounded-xl h-10 bg-primary hover:bg-primary/90 text-white shadow-lg font-bold">
+                    <Link href="/signaler-embouteillage">
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Signaler
+                    </Link>
+                </Button>
                 <Badge variant="secondary" className="bg-amber-100 text-amber-700 h-10 px-4 rounded-xl border-amber-200">
                     <Star className="h-4 w-4 mr-2 fill-amber-500" />
                     {profile?.currentStarsBalance || 0} Stars

@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -7,7 +6,7 @@ import {
   Home, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, 
   Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
-  Palmtree, Compass, LayoutGrid
+  Palmtree, Compass, LayoutGrid, Utensils
 } from 'lucide-react';
 import {
   Sidebar,
@@ -201,6 +200,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/transport') return 'Solutions de Transport';
     if (pathname === '/location-voiture') return 'Location de Véhicules';
     if (pathname === '/tourisme') return 'Tourisme & Découverte';
+    if (pathname === '/restaurants') return 'Restaurants & Saveurs';
     if (pathname === '/contact') return 'Contactez-nous';
     if (pathname === '/signaler-embouteillage') return 'Signaler un Embouteillage';
     if (pathname === '/evenements') return 'Événements';
@@ -231,6 +231,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/transport') return 'Abonnements, covoiturage, et plus.';
     if (pathname === '/location-voiture') return 'Louez un véhicule pour vos déplacements à Kinshasa.';
     if (pathname === '/tourisme') return 'Réservez des excursions et découvrez Kinshasa.';
+    if (pathname === '/restaurants') return 'Découvrez les meilleures tables de Kinshasa.';
     if (pathname === '/contact') return 'Envoyez-nous vos questions, suggestions ou plaintes.';
     if (pathname === '/signaler-embouteillage') return 'Signalez un incident pour aider les autres conducteurs';
     if (pathname === '/evenements') return 'Consultez les incidents signalés par la communauté';
@@ -433,6 +434,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <span>Tourisme</span>
                       </div>
                       <Badge className="bg-emerald-500 text-[8px] h-4">OFFRES</Badge>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('restaurants') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/restaurants'} tooltip={{children: "Restaurants"}} className="hover:bg-sidebar-accent">
+                    <Link href="/restaurants" className="font-medium">
+                      <Utensils className={pathname === '/restaurants' ? "text-accent" : "text-primary"} />
+                      <span>Restaurants</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

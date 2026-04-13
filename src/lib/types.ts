@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { Timestamp } from "firebase/firestore";
 
@@ -18,7 +17,7 @@ export const STAR_COSTS = {
 export const navFeatures = [
   'reports', 'liveTraffic', 'map', 'assistant', 'myStars', 'report', 'police', 
   'routes', 'announcements', 'logement', 'transport', 'carRental', 'tourism', 
-  'events', 'videos', 'kinshasa', 'contact', 'share'
+  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share'
 ] as const;
 export type NavFeature = typeof navFeatures[number];
 
@@ -39,6 +38,7 @@ export const appNavigationSettingsSchema = z.object({
   events: z.boolean().default(true),
   videos: z.boolean().default(true),
   kinshasa: z.boolean().default(true),
+  restaurants: z.boolean().default(true),
   contact: z.boolean().default(true),
   share: z.boolean().default(true),
 });
@@ -415,3 +415,15 @@ export const tourismBookingFormSchema = z.object({
   numberOfPeople: z.coerce.number().int().min(1, "Minimum 1 personne."),
 });
 export type TourismBookingFormValues = z.infer<typeof tourismBookingFormSchema>;
+
+export interface Restaurant {
+  id: string;
+  name: string;
+  commune: string;
+  address: string;
+  rating: number;
+  image: string;
+  coords: { lat: number; lng: number };
+  cuisine: string;
+  priceRange: '$' | '$$' | '$$$' | '$$$$';
+}

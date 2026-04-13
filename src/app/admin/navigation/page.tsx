@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -32,6 +31,7 @@ const FEATURE_LABELS: Record<NavFeature, string> = {
   events: "Événements Communautaires",
   videos: "Vidéos Feed",
   kinshasa: "Statistiques Kinshasa",
+  restaurants: "Restaurants & Gastronomie",
   contact: "Contactez-nous",
   share: "Bouton Partager",
 };

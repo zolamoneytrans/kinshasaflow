@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, limit, serverTimestamp, runTransaction, getDoc } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit, serverTimestamp, runTransaction, getDoc, Timestamp } from 'firebase/firestore';
 import { UserProfile, StarTransaction, WithId, AdvertVideo, AppSubscriptionSettings } from '@/lib/types';
 import { initiateMbiyoPaymentAction, checkMbiyoTransactionStatusAction } from '@/app/actions';
 import { 
@@ -31,7 +30,8 @@ import {
   RefreshCw,
   Zap,
   Calendar,
-  CreditCard
+  CreditCard,
+  Shield
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';

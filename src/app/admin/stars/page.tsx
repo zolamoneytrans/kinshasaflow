@@ -3,17 +3,19 @@
 import React, { useState, useMemo } from 'react';
 import { AppShell } from "@/components/app-shell";
 import { useUser, useFirebase, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, runTransaction, serverTimestamp } from "firebase/firestore";
+import { collection, doc, runTransaction, serverTimestamp, Timestamp } from "firebase/firestore";
 import { UserProfile, WithId } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Star, ShieldAlert, UserX, UserCheck, Plus } from "lucide-react";
+import { Loader2, Search, Star, ShieldAlert, UserX, UserCheck, Plus, ShieldCheck, Calendar, XCircle, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { format, addMonths, addYears } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export default function AdminStarsPage() {
   const { user } = useUser();
@@ -97,6 +99,55 @@ export default function AdminStarsPage() {
     }
   };
 
+  const handleUpdateSubscription = async (targetUser: WithId<UserProfile>, action: 'grant_month' | 'grant_year' | 'cancel') => {
+    if (!isAdmin) return;
+    setIsUpdating(targetUser.id);
+
+    try {
+      const userRef = doc(firestore, 'users', targetUser.id);
+      
+      await runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) throw new Error("Utilisateur introuvable");
+        
+        let newExpiry: Date | null = null;
+        let isSubscribed = false;
+
+        if (action === 'grant_month') {
+          const baseDate = targetUser.cashSubscriptionExpiry?.toDate() || new Date();
+          newExpiry = addMonths(baseDate > new Date() ? baseDate : new Date(), 1);
+          isSubscribed = true;
+        } else if (action === 'grant_year') {
+          const baseDate = targetUser.cashSubscriptionExpiry?.toDate() || new Date();
+          newExpiry = addYears(baseDate > new Date() ? baseDate : new Date(), 1);
+          isSubscribed = true;
+        }
+
+        transaction.update(userRef, {
+          isCashSubscribed: isSubscribed,
+          cashSubscriptionExpiry: newExpiry ? Timestamp.fromDate(newExpiry) : null
+        });
+
+        // Log the transaction
+        const transRef = doc(collection(userRef, 'star_transactions'));
+        transaction.set(transRef, {
+          userId: targetUser.id,
+          type: 'admin_adjustment',
+          starsChange: 0,
+          balanceAfterTransaction: targetUser.currentStarsBalance || 0,
+          description: `Ajustement Abonnement : ${action === 'cancel' ? 'Révocation' : 'Octroi d\'accès'}`,
+          timestamp: serverTimestamp(),
+        });
+      });
+
+      toast({ title: "Abonnement mis à jour", description: `Les droits d'accès de ${targetUser.email} ont été modifiés.` });
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally {
+      setIsUpdating(null);
+    }
+  };
+
   if (!isAdmin) return (
     <AppShell>
       <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -114,9 +165,9 @@ export default function AdminStarsPage() {
           <div>
             <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
               <Star className="text-amber-500 fill-amber-500" />
-              Gestion des Utilisateurs & Stars
+              Pilotage Communauté
             </h1>
-            <p className="text-muted-foreground">Pilotez les comptes et les soldes de la communauté.</p>
+            <p className="text-muted-foreground">Gérez les comptes, les stars et les abonnements premium.</p>
           </div>
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -129,10 +180,10 @@ export default function AdminStarsPage() {
           </div>
         </div>
 
-        <Card className="border-none shadow-sm overflow-hidden">
+        <Card className="border-none shadow-sm overflow-hidden rounded-3xl">
           <CardHeader className="bg-slate-50/50">
-            <CardTitle>Liste des Kinois ({filteredUsers.length})</CardTitle>
-            <CardDescription>Actions directes sur les profils et portefeuilles.</CardDescription>
+            <CardTitle>Utilisateurs Inscrits ({filteredUsers.length})</CardTitle>
+            <CardDescription>Actions directes sur les profils et privilèges.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -140,69 +191,141 @@ export default function AdminStarsPage() {
                 <TableRow>
                   <TableHead>Utilisateur</TableHead>
                   <TableHead>Solde Stars</TableHead>
-                  <TableHead>Statut</TableHead>
+                  <TableHead>Abonnement Cash</TableHead>
+                  <TableHead>Statut Compte</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={4} className="h-32 text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="h-32 text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                 ) : filteredUsers.length > 0 ? (
-                  filteredUsers.map(u => (
-                    <TableRow key={u.id} className={u.isBlocked ? "bg-red-50/30" : ""}>
-                      <TableCell>
-                        <div className="font-bold">{u.name || "Sans nom"}</div>
-                        <div className="text-xs text-muted-foreground">{u.email}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-amber-100 text-amber-700 font-black">
-                          {u.currentStarsBalance || 0} ⭐
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {u.isBlocked ? (
-                          <Badge variant="destructive" className="flex items-center gap-1 w-fit">
-                            <UserX className="h-3 w-3" /> Bloqué
-                          </Badge>
-                        ) : (
-                          <Badge variant="success" className="flex items-center gap-1 w-fit">
-                            <UserCheck className="h-3 w-3" /> Actif
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="rounded-lg h-8">
-                              Ajuster Stars
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Ajuster Stars pour {u.email}</DialogTitle>
-                            </DialogHeader>
-                            <StarAdjustmentForm 
-                              user={u} 
-                              onAdjust={(amt, reason) => handleAdjustStars(u, amt, reason)} 
-                              isLoading={isUpdating === u.id} 
-                            />
-                          </DialogContent>
-                        </Dialog>
+                  filteredUsers.map(u => {
+                    const isPremium = u.isCashSubscribed && u.cashSubscriptionExpiry?.toDate() > new Date();
+                    const expiryDate = u.cashSubscriptionExpiry?.toDate();
 
-                        <Button 
-                          size="icon" 
-                          variant={u.isBlocked ? "success" : "destructive"} 
-                          className="h-8 w-8 rounded-lg"
-                          onClick={() => handleToggleBlock(u)}
-                          disabled={isUpdating === u.id}
-                        >
-                          {isUpdating === u.id ? <Loader2 className="h-4 w-4 animate-spin" /> : (u.isBlocked ? <UserCheck className="h-4 w-4" /> : <UserX className="h-4 w-4" />)}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                    return (
+                      <TableRow key={u.id} className={u.isBlocked ? "bg-red-50/30" : ""}>
+                        <TableCell>
+                          <div className="font-bold">{u.name || "Sans nom"}</div>
+                          <div className="text-xs text-muted-foreground">{u.email}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="bg-amber-100 text-amber-700 font-black">
+                            {u.currentStarsBalance || 0} ⭐
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {isPremium ? (
+                            <div className="space-y-1">
+                              <Badge className="bg-emerald-500 text-white font-bold flex items-center gap-1 w-fit">
+                                <ShieldCheck className="h-3 w-3" /> PREMIUM
+                              </Badge>
+                              {expiryDate && <p className="text-[10px] text-muted-foreground font-medium">Expire le {format(expiryDate, 'dd/MM/yyyy')}</p>}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-slate-400 border-slate-200">Standard</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {u.isBlocked ? (
+                            <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                              <XCircle className="h-3 w-3" /> Suspendu
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-emerald-100 text-emerald-700 flex items-center gap-1 w-fit">
+                              <UserCheck className="h-3 w-3" /> Actif
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button size="sm" variant="outline" className="rounded-lg h-8 border-primary/20 text-primary hover:bg-primary/5">
+                                Gérer Stars
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="rounded-3xl">
+                              <DialogHeader>
+                                <DialogTitle>Ajuster Stars pour {u.email}</DialogTitle>
+                              </DialogHeader>
+                              <StarAdjustmentForm 
+                                user={u} 
+                                onAdjust={(amt, reason) => handleAdjustStars(u, amt, reason)} 
+                                isLoading={isUpdating === u.id} 
+                              />
+                            </DialogContent>
+                          </Dialog>
+
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button size="sm" variant="outline" className="rounded-lg h-8 border-emerald-200 text-emerald-600 hover:bg-emerald-50">
+                                Accès Cash
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="rounded-3xl">
+                              <DialogHeader>
+                                <DialogTitle>Gestion de l'accès Premium</DialogTitle>
+                                <DialogDescription>Modifiez les droits d'accès direct de {u.email}.</DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4 py-4">
+                                <div className="p-4 bg-muted/50 rounded-2xl border flex items-center justify-between">
+                                  <div>
+                                    <p className="text-xs font-black uppercase text-slate-400">Statut actuel</p>
+                                    <p className="font-bold">{isPremium ? "Abonné Premium" : "Utilisateur Gratuit"}</p>
+                                  </div>
+                                  {isPremium && expiryDate && (
+                                    <div className="text-right">
+                                      <p className="text-xs font-black uppercase text-slate-400">Fin d'accès</p>
+                                      <p className="font-bold text-primary">{format(expiryDate, 'dd MMMM yyyy', { locale: fr })}</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-2">
+                                  <Button 
+                                    className="h-12 rounded-xl justify-start font-bold" 
+                                    onClick={() => handleUpdateSubscription(u, 'grant_month')}
+                                    disabled={isUpdating === u.id}
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" /> Offrir 1 mois d'accès
+                                  </Button>
+                                  <Button 
+                                    className="h-12 rounded-xl justify-start font-bold bg-emerald-600 hover:bg-emerald-700" 
+                                    onClick={() => handleUpdateSubscription(u, 'grant_year')}
+                                    disabled={isUpdating === u.id}
+                                  >
+                                    <CreditCard className="mr-2 h-4 w-4" /> Offrir 1 an d'accès
+                                  </Button>
+                                  <Button 
+                                    variant="destructive" 
+                                    className="h-12 rounded-xl justify-start font-bold" 
+                                    onClick={() => handleUpdateSubscription(u, 'cancel')}
+                                    disabled={isUpdating === u.id || !u.isCashSubscribed}
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" /> Révoquer/Annuler l'accès
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+
+                          <Button 
+                            size="icon" 
+                            variant={u.isBlocked ? "success" : "destructive"} 
+                            className="h-8 w-8 rounded-lg"
+                            onClick={() => handleToggleBlock(u)}
+                            disabled={isUpdating === u.id}
+                            title={u.isBlocked ? "Débloquer" : "Bloquer l'utilisateur"}
+                          >
+                            {isUpdating === u.id ? <Loader2 className="h-4 w-4 animate-spin" /> : (u.isBlocked ? <UserCheck className="h-4 w-4" /> : <UserX className="h-4 w-4" />)}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 ) : (
-                  <TableRow><TableCell colSpan={4} className="h-32 text-center text-muted-foreground italic">Aucun utilisateur trouvé.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">Aucun utilisateur trouvé.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -220,20 +343,22 @@ function StarAdjustmentForm({ user, onAdjust, isLoading }: { user: UserProfile, 
   return (
     <div className="space-y-4 py-4">
       <div className="space-y-2">
-        <Label>Montant (positif pour ajouter, négatif pour retirer)</Label>
+        <Label className="font-bold">Montant (ex: 50 ou -20)</Label>
         <Input 
           type="number" 
-          placeholder="Ex: 50 ou -20" 
+          placeholder="Ex: 50" 
           value={amount} 
           onChange={e => setAmount(e.target.value)} 
+          className="h-12 rounded-xl border-2"
         />
       </div>
       <div className="space-y-2">
-        <Label>Motif de l'ajustement</Label>
+        <Label className="font-bold">Motif de l'ajustement</Label>
         <Input 
-          placeholder="Ex: Récompense événement spécial" 
+          placeholder="Ex: Bonus fidélité" 
           value={reason} 
           onChange={e => setReason(e.target.value)} 
+          className="h-12 rounded-xl border-2"
         />
       </div>
       <DialogFooter>
@@ -244,10 +369,10 @@ function StarAdjustmentForm({ user, onAdjust, isLoading }: { user: UserProfile, 
             setAmount("");
             setReason("");
           }}
-          className="w-full"
+          className="w-full h-12 rounded-2xl font-bold"
         >
-          {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Plus className="mr-2 h-4 w-4" />}
-          Appliquer l'ajustement
+          {isLoading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+          Appliquer
         </Button>
       </DialogFooter>
     </div>

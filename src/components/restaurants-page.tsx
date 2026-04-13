@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,24 @@ export default function RestaurantsPage() {
   const [navTarget, setNavTarget] = useState<Restaurant | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const filterTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-fold logic for filters
+  useEffect(() => {
+    if (showFilters) {
+      // Clear existing timeout if any
+      if (filterTimeoutRef.current) clearTimeout(filterTimeoutRef.current);
+      
+      // Set new timeout to fold back after 8 seconds
+      filterTimeoutRef.current = setTimeout(() => {
+        setShowFilters(false);
+      }, 8000);
+    }
+
+    return () => {
+      if (filterTimeoutRef.current) clearTimeout(filterTimeoutRef.current);
+    };
+  }, [showFilters, activeCommune, minRating]); // Reset timer if user interacts with filters
 
   // Demander la localisation au chargement
   useEffect(() => {
@@ -88,7 +106,7 @@ export default function RestaurantsPage() {
               <Button 
                 variant="outline" 
                 onClick={() => setShowFilters(!showFilters)}
-                className={cn("h-14 px-6 rounded-2xl border-2 font-black gap-2", showFilters ? "bg-primary text-white border-primary" : "bg-white")}
+                className={cn("h-14 px-6 rounded-2xl border-2 font-black gap-2 transition-all", showFilters ? "bg-primary text-white border-primary shadow-lg scale-95" : "bg-white")}
               >
                 <SlidersHorizontal className="h-5 w-5" />
                 Filtres
@@ -98,9 +116,9 @@ export default function RestaurantsPage() {
             <AnimatePresence>
               {showFilters && (
                 <motion.div 
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
+                  initial={{ height: 0, opacity: 0, y: -10 }}
+                  animate={{ height: 'auto', opacity: 1, y: 0 }}
+                  exit={{ height: 0, opacity: 0, y: -10 }}
                   className="overflow-hidden"
                 >
                   <div className="grid md:grid-cols-2 gap-6 pt-2 pb-4">
@@ -140,6 +158,14 @@ export default function RestaurantsPage() {
                         ))}
                       </div>
                     </div>
+                  </div>
+                  <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden mb-2">
+                    <motion.div 
+                      className="h-full bg-primary/30" 
+                      initial={{ width: "100%" }} 
+                      animate={{ width: "0%" }} 
+                      transition={{ duration: 8, ease: "linear" }}
+                    />
                   </div>
                 </motion.div>
               )}

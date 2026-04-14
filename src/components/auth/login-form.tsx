@@ -20,8 +20,7 @@ import { LoginValues, loginSchema, STAR_COSTS, UserProfile } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
 import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail, User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { doc, setDoc, runTransaction, collection, serverTimestamp, addDoc, getDoc } from 'firebase/firestore';
-import { Separator } from '../ui/separator';
+import { doc, setDoc, runTransaction, collection, serverTimestamp, getDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import {
   Dialog,
@@ -118,6 +117,14 @@ export function LoginForm() {
     
     const { auth, firestore } = useFirebase();
     const { user, isUserLoading } = useUser();
+
+    const form = useForm<LoginValues>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            email: '',
+            password: '',
+        },
+    });
 
     useEffect(() => {
         if (user) {

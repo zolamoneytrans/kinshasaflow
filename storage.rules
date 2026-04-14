@@ -1,31 +1,33 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Autorisation totale en lecture
+    // 1. Autorisation universelle en lecture pour tous les fichiers
     match /{allPaths=**} {
       allow read: if true;
     }
 
-    // Autorisation d'écriture simplifiée au maximum pour l'admin principal
-    match /{allPaths=**} {
-      allow write: if request.auth != null && 
-                   request.auth.token.email == 'drnduwa@gmail.com';
-    }
-
-    // Règle spécifique pour le dossier tourisme (Admin principal + Admin tourisme)
+    // 2. Règle prioritaire pour le dossier tourisme
+    // Autorise l'admin principal ET l'admin tourisme spécifique
     match /tourism/{allPaths=**} {
       allow write: if request.auth != null && 
                    (request.auth.token.email == 'drnduwa@gmail.com' || 
                     request.auth.token.email == 'contact.congonamotema@gmail.com');
     }
     
-    // Autres dossiers
+    // 3. Gestion des avatars personnels
     match /avatars/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // 4. Gestion des vidéos communautaires
     match /videos/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 5. Règle de secours pour l'administrateur principal sur toute la structure
+    match /{allPaths=**} {
+      allow write: if request.auth != null && 
+                   request.auth.token.email == 'drnduwa@gmail.com';
     }
   }
 }

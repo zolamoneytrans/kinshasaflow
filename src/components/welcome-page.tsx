@@ -10,10 +10,6 @@ import React, { useState, useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from './ui/badge';
 
-// Import des images personnalisées
-import echangeurBg from '@/myimages/echangeur.png';
-import heroSvg from '@/myimages/kinshasa_flow_hero.svg';
-
 const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -50,6 +46,10 @@ const FeatureCard = ({ icon, title, description, color }: { icon: React.ReactNod
 export default function WelcomePage() {
     const [installPrompt, setInstallPrompt] = useState<any>(null);
     const heroImageData = PlaceHolderImages.find(img => img.id === 'kinshasa-hero');
+    
+    // Fallback image urls if custom images are not provided
+    const echangeurBgUrl = "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1200";
+    const heroImageUrl = "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&q=80&w=1600";
 
     useEffect(() => {
         const handleBeforeInstallPrompt = (e: Event) => {
@@ -74,33 +74,27 @@ export default function WelcomePage() {
 
     return (
         <div className="relative min-h-screen w-full text-foreground overflow-x-hidden flex flex-col">
-            {/* --- BACKGROUND LAYERS (Fixed to viewport) --- */}
-            
-            {/* Layer 1: Base Background Color */}
+            {/* --- BACKGROUND LAYERS --- */}
             <div className="fixed inset-0 -z-50 bg-background"></div>
-
-            {/* Layer 2: Dots Pattern */}
             <div className="fixed inset-0 -z-40 bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.12]"></div>
             
-            {/* Layer 3: Mesh Gradients */}
             <div className="fixed top-[-5%] left-[-5%] -z-30 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[120px] pointer-events-none"></div>
             <div className="fixed top-[30%] right-[-10%] -z-30 h-[500px] w-[500px] rounded-full bg-accent/10 blur-[130px] pointer-events-none"></div>
             <div className="fixed bottom-[-10%] left-[10%] -z-30 h-[600px] w-[600px] rounded-full bg-blue-400/10 blur-[150px] pointer-events-none"></div>
 
-            {/* Layer 4: Echangeur Custom Background Image */}
             <div className="fixed inset-0 -z-20 pointer-events-none overflow-hidden">
                 <Image
-                    src={echangeurBg}
+                    src={echangeurBgUrl}
                     alt=""
                     fill
                     className="object-cover object-center"
-                    style={{ opacity: 0.25 }}
+                    style={{ opacity: 0.15 }}
                     priority
+                    data-ai-hint="city traffic"
                 />
             </div>
 
             {/* --- PAGE CONTENT --- */}
-
             <motion.header
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -191,16 +185,16 @@ export default function WelcomePage() {
                         <div className="absolute -inset-4 bg-gradient-to-r from-primary via-accent to-blue-400 rounded-[2.5rem] blur-2xl opacity-15 group-hover:opacity-30 transition duration-1000"></div>
                         <div className="relative aspect-[4/3] md:aspect-video lg:aspect-[21/9] rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white/50 ring-1 ring-white/20 bg-white">
                             <Image 
-                                src={heroSvg} 
+                                src={heroImageUrl} 
                                 alt={heroImageData?.description || "Kinshasa Flow Hero"} 
                                 fill 
-                                className="object-contain p-4 md:p-8 transition-transform duration-700 group-hover:scale-105"
+                                className="object-cover transition-transform duration-700 group-hover:scale-105"
                                 priority
+                                data-ai-hint="city roads"
                             />
                         </div>
                     </motion.div>
                     
-                    {/* Caption strictly under the image */}
                     <motion.div 
                         initial={{ opacity: 0, x: -20 }}
                         whileInView={{ opacity: 1, x: 0 }}

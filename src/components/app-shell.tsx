@@ -39,17 +39,22 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
   const [isResending, setIsResending] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const profileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc<UserProfile>(profileRef);
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isMounted && !isUserLoading && !user) {
       router.push('/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, isMounted]);
 
-  if (isUserLoading || !user) {
+  if (!isMounted || isUserLoading || !user) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -206,7 +211,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [profile, subSettings, pathname, toast]);
 
   const isAdmin = user?.email === 'drnduwa@gmail.com';
-  const isTourismAdmin = user?.email === 'contact.congonamotema@gmail.com' || isAdmin;
+  const isPartnerAdmin = user?.email === 'contact.congonamotema@gmail.com' || isAdmin;
   
   const getPageTitle = () => {
     if (pathname === '/reports') return 'Rapports de trafic';
@@ -506,7 +511,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
               
 
-              {(isAdmin || isTourismAdmin) && (
+              {isPartnerAdmin && (
                 <>
                   <SidebarSeparator className="my-4 bg-sidebar-border/30" />
                   <div className="px-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Admin</div>
@@ -588,7 +593,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </SidebarMenuItem>
                   )}
 
-                  {isTourismAdmin && (
+                  {isPartnerAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/tourism'} className="hover:bg-sidebar-accent">
                         <Link href="/admin/tourism" className="font-medium">

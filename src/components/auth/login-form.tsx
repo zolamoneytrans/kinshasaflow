@@ -125,14 +125,6 @@ export function LoginForm() {
         }
     }, [user, router]);
 
-    const form = useForm<LoginValues>({
-        resolver: zodResolver(loginSchema),
-        defaultValues: {
-            email: '',
-            password: '',
-        },
-    });
-
     async function initializeUserProfile(user: FirebaseUser) {
         const userRef = doc(firestore, 'users', user.uid);
         const userSnap = await getDoc(userRef);
@@ -140,15 +132,21 @@ export function LoginForm() {
         if (!userSnap.exists()) {
             const transRef = doc(collection(userRef, 'star_transactions'));
             await runTransaction(firestore, async (transaction) => {
-                const userData = {
+                const userData: UserProfile = {
                     id: user.uid,
-                    email: user.email,
+                    email: user.email || '',
                     name: user.displayName || '',
                     photoURL: user.photoURL || '',
                     currentStarsBalance: STAR_COSTS.SIGNUP_BONUS,
                     totalStarsEarned: STAR_COSTS.SIGNUP_BONUS,
+                    totalStarsPurchased: 0,
+                    totalStarsUsed: 0,
+                    consecutiveLoginDays: 0,
                     isProfileComplete: true,
-                    createdAt: serverTimestamp(),
+                    isBlocked: false,
+                    isCashSubscribed: false,
+                    hasUsedFreeTrial: false,
+                    createdAt: serverTimestamp() as any,
                 };
 
                 transaction.set(userRef, userData, { merge: true });

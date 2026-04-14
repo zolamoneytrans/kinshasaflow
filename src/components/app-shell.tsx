@@ -57,6 +57,8 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const isSpecialUser = user.email === 'drnduwa@gmail.com' || user.email === 'contact.congonamotema@gmail.com';
+
   if (profile?.isBlocked) {
     return (
       <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 text-center">
@@ -77,7 +79,8 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user.emailVerified && !user.isAnonymous && user.providerData.some(p => p.providerId === 'password')) {
+  // Exempt special users from the verification wall to ensure they can always connect
+  if (!user.emailVerified && !user.isAnonymous && user.providerData.some(p => p.providerId === 'password') && !isSpecialUser) {
     const handleResend = async () => {
         setIsResending(true);
         try {

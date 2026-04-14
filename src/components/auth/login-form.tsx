@@ -16,10 +16,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { LoginValues, loginSchema } from '@/lib/types';
+import { LoginValues, loginSchema, STAR_COSTS, UserProfile } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
-import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail, User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { doc, setDoc, runTransaction, collection, serverTimestamp, addDoc, getDoc } from 'firebase/firestore';
 import { Separator } from '../ui/separator';
 import Link from 'next/link';
 import {
@@ -115,7 +116,7 @@ export function LoginForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
     
-    const { auth } = useFirebase();
+    const { auth, firestore } = useFirebase();
     const { user, isUserLoading } = useUser();
 
     useEffect(() => {
@@ -131,6 +132,38 @@ export function LoginForm() {
             password: '',
         },
     });
+
+    async function initializeUserProfile(user: FirebaseUser) {
+        const userRef = doc(firestore, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+            const transRef = doc(collection(userRef, 'star_transactions'));
+            await runTransaction(firestore, async (transaction) => {
+                const userData = {
+                    id: user.uid,
+                    email: user.email,
+                    name: user.displayName || '',
+                    photoURL: user.photoURL || '',
+                    currentStarsBalance: STAR_COSTS.SIGNUP_BONUS,
+                    totalStarsEarned: STAR_COSTS.SIGNUP_BONUS,
+                    isProfileComplete: true,
+                    createdAt: serverTimestamp(),
+                };
+
+                transaction.set(userRef, userData, { merge: true });
+
+                transaction.set(transRef, {
+                    userId: user.uid,
+                    type: 'earned',
+                    starsChange: STAR_COSTS.SIGNUP_BONUS,
+                    balanceAfterTransaction: STAR_COSTS.SIGNUP_BONUS,
+                    description: "Bonus de bienvenue - Google Connect",
+                    timestamp: serverTimestamp(),
+                });
+            });
+        }
+    }
 
     async function onSubmit(data: LoginValues) {
         setIsSubmitting(true);
@@ -158,7 +191,11 @@ export function LoginForm() {
         setIsGoogleSubmitting(true);
         try {
             const provider = new GoogleAuthProvider();
-            await signInWithPopup(auth, provider);
+            const result = await signInWithPopup(auth, provider);
+            
+            // Ensure profile exists even if logging in for the first time via Google
+            await initializeUserProfile(result.user);
+
             toast({
                 title: 'Connexion réussie!',
                 description: "Vous êtes maintenant connecté avec Google.",

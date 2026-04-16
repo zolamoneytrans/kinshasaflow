@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -58,7 +57,6 @@ export default function KFlowNav() {
     const [isUnlocking, setIsUnlocking] = useState(false);
     const [routeInfo, setRouteInfo] = useState<{distance: string, duration: string} | null>(null);
     const [currentAlert, setCurrentAlert] = useState<KFlowAlert | null>(null);
-    const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
 
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
     const { data: profile } = useDoc<UserProfile>(userRef);
@@ -242,17 +240,8 @@ export default function KFlowNav() {
                             onAlertUpdate={(alert) => setCurrentAlert(alert)}
                         />
                         
-                        {/* Incident Markers on Map */}
-                        {incidents?.map(incident => (
-                            <Marker 
-                                key={incident.id} 
-                                position={incident.coords || KINSHASA_CENTER} 
-                                icon={{
-                                    url: incident.severity === 'high' ? 'https://maps.google.com/mapfiles/ms/icons/red-pushpin.png' : 'https://maps.google.com/mapfiles/ms/icons/yellow-pushpin.png',
-                                    scaledSize: new google.maps.Size(32, 32)
-                                }}
-                            />
-                        ))}
+                        {/* Incident Markers on Map - Safely handled via component */}
+                        <IncidentMarkers incidents={incidents || null} />
                     </Map>
                 </div>
                 
@@ -288,6 +277,31 @@ const TrafficLayerComponent = () => {
         return () => trafficLayer.setMap(null);
     }, [map]);
     return null;
+};
+
+/**
+ * Safely renders markers by checking for window.google presence
+ */
+const IncidentMarkers = ({ incidents }: { incidents: EventReport[] | null }) => {
+    const map = useMap();
+    if (!map || !incidents || typeof window === 'undefined' || !(window as any).google) return null;
+
+    const google = (window as any).google;
+
+    return (
+        <>
+            {incidents.map(incident => (
+                <Marker 
+                    key={incident.id} 
+                    position={incident.coords || KINSHASA_CENTER} 
+                    icon={{
+                        url: incident.severity === 'high' ? 'https://maps.google.com/mapfiles/ms/icons/red-pushpin.png' : 'https://maps.google.com/mapfiles/ms/icons/yellow-pushpin.png',
+                        scaledSize: new google.maps.Size(32, 32)
+                    }}
+                />
+            ))}
+        </>
+    );
 };
 
 function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, onAlertUpdate }: { 
@@ -339,7 +353,6 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
                 });
 
                 // --- Simulate K-Flow AI Alerts based on route ---
-                // In a real scenario, we'd analyze route segments. Here we simulate.
                 setTimeout(() => {
                     onAlertUpdate({
                         id: 'a1',

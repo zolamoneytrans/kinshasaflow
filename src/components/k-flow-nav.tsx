@@ -104,7 +104,7 @@ export default function KFlowNav() {
                     }
                 },
                 (err) => console.warn("GPS Access Denied", err),
-                { enableHighAccuracy: true, distanceFilter: 10 }
+                { enableHighAccuracy: true }
             );
             return () => navigator.geolocation.clearWatch(watchId);
         }
@@ -331,7 +331,7 @@ const IncidentMarkers = ({ incidents }: { incidents: EventReport[] | null }) => 
             {incidents.map(incident => (
                 <Marker 
                     key={incident.id} 
-                    position={incident.coords || KINSHASA_CENTER} 
+                    position={(incident as any).coords || KINSHASA_CENTER} 
                     icon={{
                         url: incident.severity === 'high' ? 'https://maps.google.com/mapfiles/ms/icons/red-pushpin.png' : 'https://maps.google.com/mapfiles/ms/icons/yellow-pushpin.png',
                         scaledSize: new google.maps.Size(32, 32)
@@ -433,7 +433,7 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
             timeouts.forEach(t => clearTimeout(t));
             onAlertUpdate(null);
         };
-    }, [isNavigating, origin, destination, routesLibrary, directionsRenderer]); // Notez qu'on utilise 'origin' (routingLocation) stabilisé
+    }, [isNavigating, origin, destination, routesLibrary, directionsRenderer]);
 
     return null;
 }

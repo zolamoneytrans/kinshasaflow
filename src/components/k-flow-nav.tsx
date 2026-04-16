@@ -333,21 +333,25 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
     useEffect(() => {
         if (!isNavigating || !origin || !destination || !routesLibrary || !directionsRenderer) return;
 
+        // Verify that the google object and necessary namespaces are available
+        const googleGlobal = (window as any).google;
+        if (!googleGlobal || !googleGlobal.maps) return;
+
         // Use arrays to store timeout IDs so we can clear them properly on cleanup
         const timeouts: NodeJS.Timeout[] = [];
 
-        const service = new google.maps.DirectionsService();
+        const service = new googleGlobal.maps.DirectionsService();
         service.route({
             origin: origin,
             destination: destination,
-            travelMode: google.maps.TravelMode.DRIVING,
+            travelMode: googleGlobal.maps.TravelMode.DRIVING,
             provideRouteAlternatives: true,
             drivingOptions: {
                 departureTime: new Date(),
-                trafficModel: google.maps.TravelModel.BEST_GUESS
+                trafficModel: googleGlobal.maps.TrafficModel.BEST_GUESS
             }
-        }, (result, status) => {
-            if (status === google.maps.DirectionsStatus.OK && result) {
+        }, (result: any, status: any) => {
+            if (status === googleGlobal.maps.DirectionsStatus.OK && result) {
                 directionsRenderer.setDirections(result);
                 const route = result.routes[0].legs[0];
                 onRouteUpdate({
@@ -359,7 +363,6 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
                 onAlertUpdate(null);
 
                 // --- Simulate K-Flow AI Alerts based on route ---
-                // We store the timeout IDs to clear them if origin/destination changes rapidly
                 const t1 = setTimeout(() => {
                     onAlertUpdate({
                         id: 'a1',

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   APIProvider, 
   Map, 
@@ -48,10 +48,23 @@ interface KFlowAlert {
     icon: any;
 }
 
+// Fonction utilitaire pour calculer la distance entre deux points en mètres
+function calculateDistance(p1: {lat: number, lng: number}, p2: {lat: number, lng: number}) {
+    const R = 6371000; // Rayon de la terre en mètres
+    const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+    const dLng = (p2.lng - p1.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
 export default function KFlowNav() {
     const { user, firestore } = useFirebase();
     const { toast } = useToast();
     const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+    const [routingLocation, setRoutingLocation] = useState<{lat: number, lng: number} | null>(null);
     const [destination, setDestination] = useState<string>('');
     const [isNavigating, setIsNavigating] = useState(false);
     const [isUnlocking, setIsUnlocking] = useState(false);
@@ -61,16 +74,37 @@ export default function KFlowNav() {
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
     const { data: profile } = useDoc<UserProfile>(userRef);
 
+    const lastRoutingUpdateRef = useRef<number>(0);
+    const lastLocationRef = useRef<{lat: number, lng: number} | null>(null);
+
     const eventsQuery = useMemoFirebase(() => query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(10)), [firestore]);
     const { data: incidents } = useCollection<EventReport>(eventsQuery);
 
-    // Watch location
+    // Watch location avec filtrage de mouvement pour éviter les glitchs
     useEffect(() => {
         if (typeof window !== 'undefined' && navigator.geolocation) {
             const watchId = navigator.geolocation.watchPosition(
-                (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                (pos) => {
+                    const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    setUserLocation(newLoc);
+
+                    // Logique de stabilisation : On ne met à jour l'itinéraire que si :
+                    // 1. C'est la première fois
+                    // 2. On a bougé de plus de 30 mètres
+                    // 3. Plus de 20 secondes se sont écoulées
+                    const now = Date.now();
+                    const shouldUpdateRoute = !lastLocationRef.current || 
+                        calculateDistance(lastLocationRef.current, newLoc) > 30 || 
+                        (now - lastRoutingUpdateRef.current) > 20000;
+
+                    if (shouldUpdateRoute) {
+                        lastLocationRef.current = newLoc;
+                        lastRoutingUpdateRef.current = now;
+                        setRoutingLocation(newLoc);
+                    }
+                },
                 (err) => console.warn("GPS Access Denied", err),
-                { enableHighAccuracy: true }
+                { enableHighAccuracy: true, distanceFilter: 10 }
             );
             return () => navigator.geolocation.clearWatch(watchId);
         }
@@ -115,8 +149,11 @@ export default function KFlowNav() {
                     timestamp: serverTimestamp(),
                 });
             });
+            
+            // On force une mise à jour immédiate de la route lors du démarrage
+            setRoutingLocation(userLocation);
             setIsNavigating(true);
-            toast({ title: "Navigation déverrouillée", description: "L'IA analyse le meilleur itinéraire..." });
+            toast({ title: "Navigation déverrouillée", description: "Analyse de l'itinéraire en cours..." });
         } catch (error) {
             toast({ title: "Erreur", description: "Impossible de déduire les stars.", variant: "destructive" });
         } finally {
@@ -233,14 +270,13 @@ export default function KFlowNav() {
                     >
                         <TrafficLayerComponent />
                         <DirectionsHandler 
-                            origin={userLocation} 
+                            origin={routingLocation} 
                             destination={destination} 
                             isNavigating={isNavigating}
                             onRouteUpdate={(info) => setRouteInfo(info)}
                             onAlertUpdate={(alert) => setCurrentAlert(alert)}
                         />
                         
-                        {/* Incident Markers on Map - Safely handled via component */}
                         <IncidentMarkers incidents={incidents || null} />
                     </Map>
                 </div>
@@ -251,10 +287,15 @@ export default function KFlowNav() {
                         <div className="bg-white rounded-[2rem] p-4 shadow-2xl border border-slate-100 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="h-2 w-2 bg-emerald-500 rounded-full animate-ping" />
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Navigation GPS active</p>
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">GPS Actif</p>
                             </div>
-                            <Button variant="ghost" size="sm" className="text-primary font-black text-[10px] uppercase gap-1">
-                                <Zap className="h-3 w-3 fill-primary" /> Recalculer
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setRoutingLocation({...userLocation!})}
+                                className="text-primary font-black text-[10px] uppercase gap-1"
+                            >
+                                <Zap className="h-3 w-3 fill-primary" /> Actualiser
                             </Button>
                         </div>
                     </div>
@@ -279,9 +320,6 @@ const TrafficLayerComponent = () => {
     return null;
 };
 
-/**
- * Safely renders markers by checking for window.google presence
- */
 const IncidentMarkers = ({ incidents }: { incidents: EventReport[] | null }) => {
     const map = useMap();
     if (!map || !incidents || typeof window === 'undefined' || !(window as any).google) return null;
@@ -315,6 +353,7 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
     const routesLibrary = useMapsLibrary('routes');
     const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
 
+    // Initialisation du renderer
     useEffect(() => {
         if (!routesLibrary || !map) return;
         const renderer = new google.maps.DirectionsRenderer({
@@ -330,17 +369,16 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
         return () => renderer.setMap(null);
     }, [routesLibrary, map]);
 
+    // Calcul de l'itinéraire et gestion des alertes
     useEffect(() => {
         if (!isNavigating || !origin || !destination || !routesLibrary || !directionsRenderer) return;
 
-        // Verify that the google object and necessary namespaces are available
         const googleGlobal = (window as any).google;
         if (!googleGlobal || !googleGlobal.maps) return;
 
-        // Use arrays to store timeout IDs so we can clear them properly on cleanup
         const timeouts: NodeJS.Timeout[] = [];
-
         const service = new googleGlobal.maps.DirectionsService();
+
         service.route({
             origin: origin,
             destination: destination,
@@ -354,15 +392,16 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
             if (status === googleGlobal.maps.DirectionsStatus.OK && result) {
                 directionsRenderer.setDirections(result);
                 const route = result.routes[0].legs[0];
+                
                 onRouteUpdate({
                     distance: route.distance?.text || '',
                     duration: route.duration_in_traffic?.text || route.duration?.text || ''
                 });
 
-                // Clear any existing alerts before starting a new sequence
+                // Reset des alertes
                 onAlertUpdate(null);
 
-                // --- Simulate K-Flow AI Alerts based on route ---
+                // Simulation séquentielle des alertes IA (propre)
                 const t1 = setTimeout(() => {
                     onAlertUpdate({
                         id: 'a1',
@@ -382,20 +421,19 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
                         distance: 'Recalcul en cours...',
                         icon: Zap
                     });
-                }, 8000);
+                }, 10000);
                 timeouts.push(t2);
 
-                const t3 = setTimeout(() => onAlertUpdate(null), 12000);
+                const t3 = setTimeout(() => onAlertUpdate(null), 16000);
                 timeouts.push(t3);
             }
         });
 
-        // Cleanup function to clear all timeouts if the effect re-runs or component unmounts
         return () => {
             timeouts.forEach(t => clearTimeout(t));
             onAlertUpdate(null);
         };
-    }, [isNavigating, origin, destination, routesLibrary, directionsRenderer, onRouteUpdate, onAlertUpdate]);
+    }, [isNavigating, origin, destination, routesLibrary, directionsRenderer]); // Notez qu'on utilise 'origin' (routingLocation) stabilisé
 
     return null;
 }

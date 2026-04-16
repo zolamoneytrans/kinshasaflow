@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -276,20 +275,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                </div>
             </SidebarHeader>
             <SidebarMenu className="p-3 gap-1">
-              {isEnabled('kFlowNav') && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/k-flow-nav'} className="bg-primary hover:bg-primary/90 text-white mb-2 shadow-lg shadow-primary/20">
-                    <Link href="/k-flow-nav" className="font-bold flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Navigation className={pathname === '/k-flow-nav' ? "text-accent" : "text-white"} />
-                        <span>K-Flow Nav</span>
-                      </div>
-                      <Badge className="bg-white/20 text-white text-[8px]">PREMIUM</Badge>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
+              
               {isEnabled('reports') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/reports'} className="hover:bg-sidebar-accent">
@@ -314,6 +300,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link href="/live-traffic" className="font-medium">
                       <Activity className={pathname === '/live-traffic' ? "text-accent" : "text-primary"} />
                       <span>Temps Réel</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('kFlowNav') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/k-flow-nav'} className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 mb-2 shadow-sm">
+                    <Link href="/k-flow-nav" className="font-bold flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Navigation className={pathname === '/k-flow-nav' ? "text-accent" : "text-primary"} />
+                        <span>K-Flow Nav</span>
+                      </div>
+                      <Badge className="bg-primary/20 text-primary text-[8px]">PREMIUM</Badge>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

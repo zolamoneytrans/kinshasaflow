@@ -150,12 +150,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'navigation'), [firestore]);
   const { data: navSettings } = useDoc<AppNavigationSettings>(navSettingsRef);
 
-  // Notifications Badge Logic
-  const notifsRef = useMemoFirebase(() => query(collection(firestore, 'notifications'), limit(10)), [firestore]);
+  // Notifications Badge Logic - Only fetch if user is logged in
+  const notifsRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'notifications'), limit(10));
+  }, [firestore, user]);
   const { data: notifs } = useCollection<AppNotification>(notifsRef);
 
-  // Reports Badge Logic
-  const eventsRef = useMemoFirebase(() => query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(20)), [firestore]);
+  // Reports Badge Logic - Only fetch if user is logged in
+  const eventsRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(20));
+  }, [firestore, user]);
   const { data: events } = useCollection<EventReport>(eventsRef);
   const [unreadReports, setUnreadReports] = useState(0);
 

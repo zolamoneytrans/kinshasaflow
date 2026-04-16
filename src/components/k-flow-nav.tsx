@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useFirebase, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection, query, orderBy, limit } from 'firebase/firestore';
-import { STAR_COSTS, UserProfile, EventReport } from '@/lib/types';
+import { STAR_COSTS, UserProfile, EventReport, WithId } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -320,7 +320,7 @@ const TrafficLayerComponent = () => {
     return null;
 };
 
-const IncidentMarkers = ({ incidents }: { incidents: EventReport[] | null }) => {
+const IncidentMarkers = ({ incidents }: { incidents: WithId<EventReport>[] | null }) => {
     const map = useMap();
     if (!map || !incidents || typeof window === 'undefined' || !(window as any).google) return null;
 

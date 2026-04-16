@@ -36,6 +36,7 @@ const FEATURE_LABELS: Record<NavFeature, string> = {
   restaurants: "Restaurants & Gastronomie",
   contact: "Contactez-nous",
   share: "Bouton Partager",
+  kFlowNav: "K-Flow Navigation GPS",
 };
 
 export default function AdminNavigationPage() {

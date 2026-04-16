@@ -18,7 +18,7 @@ export const STAR_COSTS = {
 export const navFeatures = [
   'reports', 'liveTraffic', 'map', 'assistant', 'notifications', 'myStars', 'report', 'police', 
   'routes', 'announcements', 'logement', 'transport', 'carRental', 'tourism', 
-  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share'
+  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share', 'kFlowNav'
 ] as const;
 export type NavFeature = typeof navFeatures[number];
 
@@ -43,6 +43,7 @@ export const appNavigationSettingsSchema = z.object({
   restaurants: z.boolean().default(true),
   contact: z.boolean().default(true),
   share: z.boolean().default(true),
+  kFlowNav: z.boolean().default(true),
 });
 export type AppNavigationSettings = z.infer<typeof appNavigationSettingsSchema>;
 

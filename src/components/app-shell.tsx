@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import {
   Home, Activity, Siren, PlusCircle, Megaphone, Loader2, Route, 
   Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
-  Palmtree, Compass, LayoutGrid, Utensils, Bell, Send
+  Palmtree, Compass, LayoutGrid, Utensils, Bell, Send, Navigation
 } from 'lucide-react';
 import {
   Sidebar,
@@ -238,6 +239,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/assistant') return 'Assistant IA';
     if (pathname === '/map') return 'Carte du Trafic';
     if (pathname === '/notifications') return 'Notifications';
+    if (pathname === '/k-flow-nav') return 'K-Flow Nav';
     if (pathname === '/mes-stars') return subSettings?.mode === 'cash' ? 'Mon Abonnement' : 'Mes Stars';
     if (pathname === '/privacy') return 'Confidentialité & CGU';
     if (pathname.startsWith('/admin')) return 'Administration';
@@ -246,6 +248,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const getPageDescription = () => {
     if (pathname === '/notifications') return 'Découvrez ce qui se passe dans la communauté.';
+    if (pathname === '/k-flow-nav') return 'Votre copilote GPS intelligent.';
     if (pathname.startsWith('/admin')) return 'Gestion interne de la plateforme.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
   }
@@ -273,6 +276,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                </div>
             </SidebarHeader>
             <SidebarMenu className="p-3 gap-1">
+              {isEnabled('kFlowNav') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/k-flow-nav'} className="bg-primary hover:bg-primary/90 text-white mb-2 shadow-lg shadow-primary/20">
+                    <Link href="/k-flow-nav" className="font-bold flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Navigation className={pathname === '/k-flow-nav' ? "text-accent" : "text-white"} />
+                        <span>K-Flow Nav</span>
+                      </div>
+                      <Badge className="bg-white/20 text-white text-[8px]">PREMIUM</Badge>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
               {isEnabled('reports') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/reports'} className="hover:bg-sidebar-accent">

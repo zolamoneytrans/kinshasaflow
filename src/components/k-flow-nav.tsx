@@ -333,6 +333,9 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
     useEffect(() => {
         if (!isNavigating || !origin || !destination || !routesLibrary || !directionsRenderer) return;
 
+        // Use arrays to store timeout IDs so we can clear them properly on cleanup
+        const timeouts: NodeJS.Timeout[] = [];
+
         const service = new google.maps.DirectionsService();
         service.route({
             origin: origin,
@@ -341,7 +344,7 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
             provideRouteAlternatives: true,
             drivingOptions: {
                 departureTime: new Date(),
-                trafficModel: google.maps.TrafficModel.BEST_GUESS
+                trafficModel: google.maps.TravelModel.BEST_GUESS
             }
         }, (result, status) => {
             if (status === google.maps.DirectionsStatus.OK && result) {
@@ -352,8 +355,12 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
                     duration: route.duration_in_traffic?.text || route.duration?.text || ''
                 });
 
+                // Clear any existing alerts before starting a new sequence
+                onAlertUpdate(null);
+
                 // --- Simulate K-Flow AI Alerts based on route ---
-                setTimeout(() => {
+                // We store the timeout IDs to clear them if origin/destination changes rapidly
+                const t1 = setTimeout(() => {
                     onAlertUpdate({
                         id: 'a1',
                         type: 'red',
@@ -362,8 +369,9 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
                         icon: AlertTriangle
                     });
                 }, 3000);
+                timeouts.push(t1);
 
-                setTimeout(() => {
+                const t2 = setTimeout(() => {
                     onAlertUpdate({
                         id: 'a2',
                         type: 'info',
@@ -372,10 +380,18 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
                         icon: Zap
                     });
                 }, 8000);
+                timeouts.push(t2);
 
-                setTimeout(() => onAlertUpdate(null), 12000);
+                const t3 = setTimeout(() => onAlertUpdate(null), 12000);
+                timeouts.push(t3);
             }
         });
+
+        // Cleanup function to clear all timeouts if the effect re-runs or component unmounts
+        return () => {
+            timeouts.forEach(t => clearTimeout(t));
+            onAlertUpdate(null);
+        };
     }, [isNavigating, origin, destination, routesLibrary, directionsRenderer, onRouteUpdate, onAlertUpdate]);
 
     return null;

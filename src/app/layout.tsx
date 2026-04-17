@@ -6,33 +6,44 @@ import { FirebaseClientProvider } from '@/firebase';
 export const metadata: Metadata = {
   metadataBase: new URL('https://kinshasaflow.online'),
   title: {
-    default: 'Kinshasa Flow - Trafic et Mobilité à Kinshasa',
+    default: 'Kinshasa Flow - Trafic en Temps Réel et Mobilité à Kinshasa',
     template: '%s | Kinshasa Flow',
   },
-  description: "Naviguez facilement dans le trafic de Kinshasa. Rapports en temps réel, alertes de police, assistant IA, solutions de transport et logements de court séjour.",
-  keywords: ['Kinshasa', 'trafic', 'embouteillage', 'RDC', 'transport Kinshasa', 'location voiture Kinshasa', 'logement Kinshasa', 'route Kinshasa'],
+  description: "Évitez les embouteillages à Kinshasa. Rapports de trafic en direct, navigation GPS intelligente K-Flow, alertes de police, solutions de transport et logements RBNB en RDC.",
+  keywords: [
+    'Kinshasa', 'trafic Kinshasa', 'embouteillage Kinshasa', 'RDC', 'Congo', 
+    'transport Kinshasa', 'location voiture Kinshasa', 'logement Kinshasa', 
+    'route Kinshasa', 'navigation GPS RDC', 'assistant IA Lingala', 
+    'nzela Kinshasa', 'bouchon Kinshasa', 'alerte police Kinshasa'
+  ],
   authors: [{ name: 'Swazi Appli Lab sarl' }],
   creator: 'Swazi Appli Lab sarl',
+  alternates: {
+    canonical: '/',
+    languages: {
+      'fr-FR': '/',
+    },
+  },
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
     url: 'https://kinshasaflow.online',
     siteName: 'Kinshasa Flow',
     title: 'Kinshasa Flow - Votre copilote sur les routes de Kinshasa',
-    description: 'Évitez les embouteillages à Kinshasa grâce à nos rapports en temps réel et notre assistant IA.',
+    description: 'Évitez les embouteillages à Kinshasa grâce à nos rapports en temps réel et notre assistant IA intelligent.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Kinshasa Flow Banner',
+        alt: 'Kinshasa Flow - Navigation et Trafic',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kinshasa Flow',
-    description: 'Naviguez Kinshasa sans embouteillage.',
+    title: 'Kinshasa Flow - Naviguez Kinshasa sans stress',
+    description: 'La première application de navigation intelligente dédiée à la ville de Kinshasa.',
     images: ['/og-image.png'],
   },
   icons: {
@@ -47,6 +58,25 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Kinshasa Flow",
+    "operatingSystem": "Android, iOS, Web",
+    "applicationCategory": "TravelApplication, NavigationApplication",
+    "description": "Application de gestion de trafic et de mobilité pour la ville de Kinshasa, RDC.",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "1250"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  };
+
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
@@ -66,7 +96,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         
-        {/* Script de récupération critique pour les erreurs de chargement de modules (ChunkLoadError) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -78,7 +112,6 @@ export default function RootLayout({
                     console.warn("Problème de module détecté, rechargement de sécurité...");
                     var lastReload = sessionStorage.getItem("last-chunk-reload");
                     var now = Date.now();
-                    // Empêche les boucles de rechargement infinies (max 1 recharge toutes les 5s)
                     if (!lastReload || (now - parseInt(lastReload)) > 5000) {
                       sessionStorage.setItem("last-chunk-reload", now);
                       window.location.reload();

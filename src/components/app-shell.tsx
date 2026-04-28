@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -671,3 +672,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

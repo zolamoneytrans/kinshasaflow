@@ -227,7 +227,8 @@ export default function KFlowNav() {
             setIsNavigating(true);
             setAutoFollow(true);
             setIs3D(true);
-            toast({ title: "Navigation active", description: "Bon voyage avec K-Flow !" });
+            setSelectedRouteIndex(0); // Reset selection
+            toast({ title: "Navigation active", description: "Calcul des itinéraires optimisés..." });
         } catch (error) {
             toast({ title: "Erreur", description: "Échec de validation.", variant: "destructive" });
         } finally {
@@ -614,20 +615,16 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
             }
         });
 
-        // Add listeners to select routes by clicking on them
-        google.maps.event.addListener(rendererNormal, 'routeindex_changed', () => onRouteSelect(0));
-        google.maps.event.addListener(rendererSmart, 'routeindex_changed', () => onRouteSelect(1));
-
         setRenderers([rendererNormal, rendererSmart]);
 
         return () => {
             rendererNormal.setMap(null);
             rendererSmart.setMap(null);
         };
-    }, [routesLibrary, map, onRouteSelect]);
+    }, [routesLibrary, map]);
 
     useEffect(() => {
-        if (!isNavigating || !origin || !destination || !routesLibrary || renderers.length === 0) return;
+        if (!isNavigating || !origin || !destination || !routesLibrary || renderers.length === 0 || !map) return;
 
         const g = (window as any).google;
         if (lastPosUpdate.current && g?.maps?.geometry?.spherical) {
@@ -650,22 +647,23 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
             }
         }, (result, status) => {
             if (status === google.maps.DirectionsStatus.OK && result) {
-                // Handle routes
                 const routes = result.routes;
                 
-                // We show up to 2 routes
+                // Update and Show Renderers
                 renderers.forEach((r, idx) => {
                     if (routes[idx]) {
+                        r.setMap(map); // Re-attach to map in case it was null
                         r.setDirections(result);
                         r.setRouteIndex(idx);
                         
-                        // Highlight selected
+                        // Highlight logic
+                        const isSelected = selectedRouteIndex === idx;
                         r.setOptions({
                             polylineOptions: {
                                 ...r.get('polylineOptions'),
-                                strokeOpacity: selectedRouteIndex === idx ? 0.9 : 0.3,
-                                strokeWeight: selectedRouteIndex === idx ? 12 : 6,
-                                zIndex: selectedRouteIndex === idx ? 30 : 10
+                                strokeOpacity: isSelected ? 0.9 : 0.25,
+                                strokeWeight: isSelected ? 12 : 6,
+                                zIndex: isSelected ? 30 : 10
                             }
                         });
                     } else {
@@ -688,7 +686,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                 });
 
                 lastPosUpdate.current = origin;
-                const activeLeg = routes[selectedRouteIndex].legs[0];
+                const activeLeg = routes[Math.min(selectedRouteIndex, routes.length - 1)].legs[0];
                 
                 onRouteUpdate({ 
                     distance: activeLeg.distance?.text || '', 
@@ -701,10 +699,10 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                     allRoutes: summaries
                 });
 
-                // Recommendation Logic
-                if (summaries.length > 1 && summaries[1].isSmart) {
+                // Recommend Smart Route
+                if (summaries.length > 1 && summaries[1].isSmart && selectedRouteIndex === 0) {
                     const gain = (routes[0].legs[0].duration_in_traffic?.value || 0) - (routes[1].legs[0].duration_in_traffic?.value || 0);
-                    if (gain > 120 && selectedRouteIndex === 0) { // If smart is 2+ mins faster
+                    if (gain > 120) {
                         toast({
                             title: "Itinéraire plus rapide !",
                             description: "Un trajet intelligent est disponible pour éviter les bouchons.",
@@ -713,7 +711,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                     }
                 }
 
-                // Standard Alert Logic
+                // Alert Logic
                 const now = Date.now();
                 const ratio = (activeLeg.duration_in_traffic?.value || 0) / (activeLeg.duration?.value || 1);
                 
@@ -737,7 +735,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
         });
 
         return () => { if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current); };
-    }, [isNavigating, origin, destination, routesLibrary, renderers, selectedRouteIndex, onAlertUpdate, onRouteUpdate, toast, onRouteSelect]);
+    }, [isNavigating, origin, destination, routesLibrary, renderers, selectedRouteIndex, onAlertUpdate, onRouteUpdate, toast, onRouteSelect, map]);
 
     return null;
 }

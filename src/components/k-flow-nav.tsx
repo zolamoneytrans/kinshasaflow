@@ -258,23 +258,29 @@ export default function KFlowNav() {
             const mainRoute = result.routes[0];
             const leg = mainRoute.legs[0];
             
-            // --- HIGH PRECISION TRAFFIC BREAKDOWN ---
-            // Extract and classify traffic for each step
+            // --- ANALYSE DE TRAFIC HAUTE PRÉCISION ---
             const legDurationTypical = leg.duration?.value || 1;
             const legDurationTraffic = leg.duration_in_traffic?.value || legDurationTypical;
             const legDistanceTotal = leg.distance?.value || 1;
             
+            let blockedCount = 0;
+            let congestedCount = 0;
+
             const rawSegments: TrafficSegment[] = leg.steps.map(step => {
                 const currentDuration = step.duration?.value || 0;
-                // Estimate typical duration proportional to distance
                 const typicalDuration = (step.distance?.value / legDistanceTotal) * legDurationTypical;
                 const ratio = typicalDuration > 0 ? currentDuration / typicalDuration : 1;
                 
                 let status: TrafficSegment['status'] = 'fluide';
-                if (ratio > 1.8) status = 'bloqué';
-                else if (ratio > 1.2) status = 'congestionné';
+                if (ratio > 1.8) {
+                    status = 'bloqué';
+                    blockedCount++;
+                }
+                else if (ratio > 1.25) {
+                    status = 'congestionné';
+                    congestedCount++;
+                }
                 
-                // Clean instructions for place names
                 const name = step.instructions.replace(/<[^>]*>?/gm, '').split(',')[0];
 
                 return {
@@ -287,18 +293,14 @@ export default function KFlowNav() {
                 };
             });
 
-            // Merge adjacent segments with same status to avoid noise
             const mergedSegments: TrafficSegment[] = [];
             if (rawSegments.length > 0) {
                 let current = { ...rawSegments[0] };
-                
                 for (let i = 1; i < rawSegments.length; i++) {
                     const step = rawSegments[i];
-                    // Merge if status is same or if segment is very short (< 500m)
                     if (step.status === current.status || (step.distanceText.includes(' m') && !step.distanceText.includes(' km'))) {
                         current.to = step.from;
                         current.delayMinutes += step.delayMinutes;
-                        // For display, we keep a readable path
                     } else {
                         mergedSegments.push(current);
                         current = { ...step };
@@ -308,20 +310,28 @@ export default function KFlowNav() {
             }
 
             const globalDelay = Math.max(0, Math.round((legDurationTraffic - legDurationTypical) / 60));
+            const delayRatio = globalDelay / (legDurationTypical / 60);
 
-            // Recommendation Logic
+            // --- RECOMMANDATION BASÉE SUR LES STATS DU FLUX ---
             let bestIdx = 0;
-            let rec = "Nous recommandons l'itinéraire standard pour sa simplicité.";
+            let rec = "Le flux est globalement fluide. Profitez d'un trajet sans encombre.";
+            
+            if (delayRatio > 0.4 || blockedCount > 0) {
+                rec = "Flux critique détecté : plusieurs zones rouges ralentissent ce trajet. Prudence recommandée.";
+            } else if (delayRatio > 0.15 || congestedCount > 2) {
+                rec = "Flux ralenti : prévoyez quelques minutes supplémentaires sur les axes chargés.";
+            }
+
             if (result.routes.length > 1) {
                 const dur0 = result.routes[0].legs[0].duration_in_traffic?.value || result.routes[0].legs[0].duration?.value || 0;
                 const dur1 = result.routes[1].legs[0].duration_in_traffic?.value || result.routes[1].legs[0].duration?.value || 0;
                 if (dur1 < dur0 - 120) {
                     bestIdx = 1;
-                    rec = "L'itinéraire intelligent est fortement recommandé pour éviter les zones de congestion détectées.";
+                    rec = `L'itinéraire intelligent K-Flow permet de gagner ${Math.round((dur0-dur1)/60)} min en contournant les zones saturées.`;
                 }
             }
 
-            // Deduct Stars
+            // Déduction des Stars
             await runTransaction(firestore, async (transaction) => {
                 const userDoc = await transaction.get(userRef!);
                 const data = userDoc.data() as UserProfile;
@@ -370,7 +380,7 @@ export default function KFlowNav() {
         setShowSummary(false);
         setAutoFollow(true);
         setIs3D(true);
-        toast({ title: "Guidage actif", description: "Suivez les instructions sur la carte." });
+        toast({ title: "Guidage actif", description: "Suivez les instructions pour naviguer dans Kinshasa." });
     };
 
     const handleReCenter = () => {
@@ -384,7 +394,7 @@ export default function KFlowNav() {
     return (
         <div className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-slate-950 flex flex-col border border-slate-800">
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                {/* Search Bar Overlay */}
+                {/* Overlay Barre de Recherche */}
                 {!isNavigating && !showSummary && (
                     <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4">
                         <motion.div 
@@ -398,7 +408,7 @@ export default function KFlowNav() {
                                 </div>
                                 <div className="flex-1">
                                     <h2 className="text-lg font-black text-slate-900 tracking-tight">K-Flow Nav</h2>
-                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Analyse Trafic Haute Précision</p>
+                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Navigation Temps Réel Kinshasa</p>
                                 </div>
                                 <Badge variant="secondary" className="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full border-amber-200">
                                     {STAR_COSTS.NAVIGATION_SESSION} ⭐
@@ -417,14 +427,14 @@ export default function KFlowNav() {
                                     disabled={isUnlocking || !destination}
                                     className="h-12 px-6 rounded-xl font-black shadow-xl shadow-primary/30"
                                 >
-                                    {isUnlocking ? <Loader2 className="animate-spin" /> : "GO"}
+                                    {isUnlocking ? <Loader2 className="animate-spin" /> : "ALLER"}
                                 </Button>
                             </div>
                         </motion.div>
                     </div>
                 )}
 
-                {/* Whiteboard Summary Overlay */}
+                {/* Overlay Résumé "Whiteboard" */}
                 <AnimatePresence>
                     {showSummary && summaryData && (
                         <motion.div 
@@ -441,7 +451,7 @@ export default function KFlowNav() {
                                     </button>
                                     <div className="space-y-2 relative z-10">
                                         <div className="flex justify-between items-start">
-                                            <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">ANALYSE STRATÉGIQUE</Badge>
+                                            <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">SYNTHÈSE STRATÉGIQUE</Badge>
                                             <button onClick={() => setDebugMode(!debugMode)} className="text-white/20 hover:text-white transition-all"><Bug className="h-4 w-4"/></button>
                                         </div>
                                         <h2 className="text-3xl font-black tracking-tight leading-tight">{summaryData.destination}</h2>
@@ -452,7 +462,7 @@ export default function KFlowNav() {
                                             </div>
                                             <div className="w-px h-8 bg-white/20"></div>
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Arrivée Est.</span>
+                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Arrivée Prévue</span>
                                                 <span className="text-xl font-black">{summaryData.duration}</span>
                                             </div>
                                             <div className="w-px h-8 bg-white/20"></div>
@@ -469,7 +479,7 @@ export default function KFlowNav() {
                                 <div className="flex-1 overflow-y-auto p-8 space-y-8">
                                     <div className="space-y-4">
                                         <h3 className="text-xs font-black uppercase text-slate-400 tracking-[0.2em] flex items-center gap-2">
-                                            <Activity className="h-4 w-4" /> État des segments de route
+                                            <Activity className="h-4 w-4" /> État des tronçons routiers
                                         </h3>
                                         <div className="space-y-3">
                                             {summaryData.segments.map((seg, i) => (
@@ -486,11 +496,6 @@ export default function KFlowNav() {
                                                                 <p className="text-[10px] font-bold text-slate-400 uppercase">
                                                                     {seg.status} • {seg.distanceText}
                                                                 </p>
-                                                                {debugMode && (
-                                                                    <Badge variant="outline" className="text-[8px] py-0 border-primary/20 text-primary">
-                                                                        Ratio: {seg.debugRatio?.toFixed(2)}
-                                                                    </Badge>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -506,18 +511,18 @@ export default function KFlowNav() {
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-xs font-black text-primary uppercase tracking-widest">Conseil K-Flow</p>
-                                            <p className="text-sm text-slate-700 font-medium leading-relaxed">{summaryData.recommendation}</p>
+                                            <p className="text-sm text-slate-700 font-bold leading-relaxed">{summaryData.recommendation}</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4">
                                     <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-16 rounded-2xl font-black uppercase tracking-widest text-xs flex-1">
-                                        Fermer
+                                        Retour
                                     </Button>
                                     <Button onClick={handleStartNavigation} className="h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-sm flex-[2] shadow-2xl shadow-primary/30 gap-3">
                                         <Navigation2 className="h-6 w-6 fill-current" />
-                                        Démarrer Guidage
+                                        Lancer Guidage
                                     </Button>
                                 </div>
                             </div>
@@ -525,7 +530,7 @@ export default function KFlowNav() {
                     )}
                 </AnimatePresence>
 
-                {/* Navigation Header Overlay */}
+                {/* Overlay Header Navigation */}
                 {isNavigating && (
                     <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
                         <div className="w-full max-w-xl pointer-events-auto">
@@ -666,13 +671,13 @@ export default function KFlowNav() {
                                             <p className="text-sm font-bold text-slate-800 truncate mb-2">{destination}</p>
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-[10px]">
-                                                    <span className="text-slate-400 font-bold">ARRIVÉE EST.</span>
+                                                    <span className="text-slate-400 font-bold uppercase">Arrivée prévue</span>
                                                     <span className="text-emerald-600 font-black">
                                                         {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo.duration}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between text-[10px]">
-                                                    <span className="text-slate-400 font-bold">DISTANCE</span>
+                                                    <span className="text-slate-400 font-bold uppercase">Distance</span>
                                                     <span className="text-slate-700 font-black">
                                                         {routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || routeInfo.distance}
                                                     </span>
@@ -701,7 +706,7 @@ export default function KFlowNav() {
                                 <div className="flex items-center justify-between px-2">
                                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
                                         <ArrowRightLeft className="h-3 w-3" />
-                                        Comparaison d'itinéraires
+                                        Optimisation de trajet
                                     </p>
                                     <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 font-black text-[9px]">TRAFIC LIVE</Badge>
                                 </div>
@@ -723,7 +728,7 @@ export default function KFlowNav() {
                                                     "font-black text-[9px] uppercase px-2",
                                                     route.isSmart ? "bg-purple-600 text-white" : "bg-blue-600 text-white"
                                                 )}>
-                                                    {route.isSmart ? "Intelligent" : "Normal"}
+                                                    {route.isSmart ? "Intelligent" : "Standard"}
                                                 </Badge>
                                                 {selectedRouteIndex === i && <CheckCircle2 className={cn("h-4 w-4", route.isSmart ? "text-purple-600" : "text-blue-600")} />}
                                             </div>
@@ -765,6 +770,7 @@ function MapControls({ onReCenter, isAutoFollowing }: { onReCenter: () => void, 
             <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={onReCenter}
+                title="Recentrer sur ma position"
                 className={cn(
                     "h-12 w-12 rounded-2xl flex items-center justify-center shadow-2xl border-2 transition-all",
                     isAutoFollowing ? "bg-primary border-primary text-white" : "bg-white border-slate-100 text-slate-600 hover:bg-slate-50"
@@ -774,8 +780,8 @@ function MapControls({ onReCenter, isAutoFollowing }: { onReCenter: () => void, 
             </motion.button>
 
             <div className="flex flex-col rounded-2xl overflow-hidden border-2 border-slate-100 bg-white shadow-2xl">
-                <button onClick={handleZoomIn} className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 border-b border-slate-100"><Plus className="h-6 w-6" /></button>
-                <button onClick={handleZoomOut} className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50"><Minus className="h-6 w-6" /></button>
+                <button onClick={handleZoomIn} title="Zoom avant" className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 border-b border-slate-100"><Plus className="h-6 w-6" /></button>
+                <button onClick={handleZoomOut} title="Zoom arrière" className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50"><Minus className="h-6 w-6" /></button>
             </div>
         </div>
     );
@@ -804,7 +810,7 @@ function AutocompleteInput({ value, onChange, onSearch, isLoading }: { value: st
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <Input 
                 ref={inputRef}
-                placeholder="Destination à Kinshasa..." 
+                placeholder="Votre destination à Kinshasa..." 
                 value={value}
                 onChange={e => onChange(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && onSearch()}
@@ -832,7 +838,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
     const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const { toast } = useToast();
 
-    // Init Renderers
+    // Init Traceurs
     useEffect(() => {
         if (!routesLibrary || !map) return;
         
@@ -942,7 +948,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                     result: result
                 });
 
-                // Alert Logic (Improved)
+                // Logique d'alertes temps réel
                 const now = Date.now();
                 const currentStep = activeLeg.steps[0];
                 const ratio = (currentStep.duration?.value || 0) / ((currentStep.distance?.value / activeLeg.distance?.value) * activeLeg.duration?.value);
@@ -952,11 +958,11 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                     
                     let newAlert: TrafficAlert | null = null;
                     if (ratio > 1.8) {
-                        newAlert = { id: `a-${now}`, message: "Route bloquée dans moins de 1 km, veuillez changer d’itinéraire", type: 'red', timestamp: now };
+                        newAlert = { id: `a-${now}`, message: "Route bloquée dans moins de 1 km, veuillez changer d'itinéraire", type: 'red', timestamp: now };
                     } else if (ratio > 1.3) {
                         newAlert = { id: `a-${now}`, message: "Embouteillage détecté devant vous", type: 'yellow', timestamp: now };
                     } else if (ratio < 1.1) {
-                        newAlert = { id: `a-${now}`, message: "Circulation fluide à 1 km devant vous", type: 'green', timestamp: now };
+                        newAlert = { id: `a-${now}`, message: "Circulation fluide sur le prochain kilomètre", type: 'green', timestamp: now };
                     }
 
                     if (newAlert) {

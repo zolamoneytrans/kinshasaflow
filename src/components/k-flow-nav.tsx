@@ -33,7 +33,9 @@ import {
   Info,
   ShieldCheck,
   TrendingUp,
-  Map as MapIcon
+  Map as MapIcon,
+  Activity,
+  Bug
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -87,9 +89,11 @@ interface RouteInfo {
 interface TrafficSegment {
     from: string;
     to: string;
-    status: 'fluide' | 'congestionné' | 'bloqué';
+    status: 'fluide' | 'congestionné' | 'bloqué' | 'inconnu';
     delayMinutes: number;
+    distanceText: string;
     isIncident?: boolean;
+    debugRatio?: number;
 }
 
 interface SummaryData {
@@ -175,6 +179,7 @@ export default function KFlowNav() {
     const [autoFollow, setAutoFollow] = useState(true);
     const [showDestInfo, setShowDestInfo] = useState(false);
     const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
+    const [debugMode, setDebugMode] = useState(false);
     
     const map = useMap();
 
@@ -236,75 +241,75 @@ export default function KFlowNav() {
             const g = (window as any).google;
             if (!g) throw new Error("API Google Maps non chargée.");
 
-            // 1. Directions Calculation
             const service = new g.maps.DirectionsService();
             const result = await service.route({
                 origin: smoothLocation || KINSHASA_CENTER,
                 destination: destination,
                 travelMode: g.maps.TravelMode.DRIVING,
                 provideRouteAlternatives: true,
-                drivingOptions: { departureTime: new Date(), trafficModel: g.maps.TrafficModel.BEST_GUESS }
+                drivingOptions: { 
+                    departureTime: new Date(), 
+                    trafficModel: g.maps.TrafficModel.BEST_GUESS 
+                }
             });
 
             if (!result || !result.routes.length) throw new Error("Aucun itinéraire trouvé.");
 
             const mainRoute = result.routes[0];
             const leg = mainRoute.legs[0];
-            const path = mainRoute.overview_path;
             
-            // 2. Deep Traffic Breakdown Analysis
-            // Filter community incidents that are near the route path
-            const segments: TrafficSegment[] = [];
-            const routeIncidents = (incidents || []).filter(incident => {
-                if (!incident.location) return false;
-                // Manual coords check if available, otherwise just use distance matrix (simulated)
-                // For accuracy, we check each point of the overview path
-                return path.some(point => {
-                   // This is a placeholder for actual distance check if incidents had coords
-                   // Since some incidents might only have location strings, we'll try to find matches
-                   return incident.location.toLowerCase().includes(destination.toLowerCase()) || 
-                          (result.routes[0].summary && incident.location.toLowerCase().includes(result.routes[0].summary.toLowerCase()));
-                });
+            // --- HIGH PRECISION TRAFFIC BREAKDOWN ---
+            // Extract and classify traffic for each step
+            const legDurationTypical = leg.duration?.value || 1;
+            const legDurationTraffic = leg.duration_in_traffic?.value || legDurationTypical;
+            const legDistanceTotal = leg.distance?.value || 1;
+            
+            const rawSegments: TrafficSegment[] = leg.steps.map(step => {
+                const currentDuration = step.duration?.value || 0;
+                // Estimate typical duration proportional to distance
+                const typicalDuration = (step.distance?.value / legDistanceTotal) * legDurationTypical;
+                const ratio = typicalDuration > 0 ? currentDuration / typicalDuration : 1;
+                
+                let status: TrafficSegment['status'] = 'fluide';
+                if (ratio > 1.8) status = 'bloqué';
+                else if (ratio > 1.2) status = 'congestionné';
+                
+                // Clean instructions for place names
+                const name = step.instructions.replace(/<[^>]*>?/gm, '').split(',')[0];
+
+                return {
+                    from: name,
+                    to: "",
+                    status,
+                    delayMinutes: Math.max(0, Math.round((currentDuration - typicalDuration) / 60)),
+                    distanceText: step.distance?.text || '',
+                    debugRatio: ratio
+                };
             });
 
-            // Analyze route for delay vs duration to identify "Red/Yellow" zones based on overall leg
-            const totalDuration = leg.duration?.value || 0;
-            const totalInTraffic = leg.duration_in_traffic?.value || totalDuration;
-            const globalDelay = Math.max(0, Math.round((totalInTraffic - totalDuration) / 60));
-
-            // Populate segments with community reports first
-            routeIncidents.slice(0, 5).forEach(inc => {
-                segments.push({
-                    from: inc.location,
-                    to: "",
-                    status: inc.severity === 'high' ? 'bloqué' : 'congestionné',
-                    delayMinutes: inc.severity === 'high' ? 15 : 5,
-                    isIncident: true
-                });
-            });
-
-            // If no reports but high delay, add generic Google detected zones
-            if (segments.length === 0 && globalDelay > 5) {
-                // Heuristic: divide route into 3 segments and mark them based on global delay
-                segments.push({
-                    from: "Axe principal vers " + destination,
-                    to: "",
-                    status: globalDelay > 15 ? 'bloqué' : 'congestionné',
-                    delayMinutes: globalDelay
-                });
+            // Merge adjacent segments with same status to avoid noise
+            const mergedSegments: TrafficSegment[] = [];
+            if (rawSegments.length > 0) {
+                let current = { ...rawSegments[0] };
+                
+                for (let i = 1; i < rawSegments.length; i++) {
+                    const step = rawSegments[i];
+                    // Merge if status is same or if segment is very short (< 500m)
+                    if (step.status === current.status || (step.distanceText.includes(' m') && !step.distanceText.includes(' km'))) {
+                        current.to = step.from;
+                        current.delayMinutes += step.delayMinutes;
+                        // For display, we keep a readable path
+                    } else {
+                        mergedSegments.push(current);
+                        current = { ...step };
+                    }
+                }
+                mergedSegments.push(current);
             }
 
-            // Fallback for fluid routes
-            if (segments.length === 0) {
-                segments.push({
-                    from: "Tout l'itinéraire",
-                    to: "",
-                    status: 'fluide',
-                    delayMinutes: 0
-                });
-            }
+            const globalDelay = Math.max(0, Math.round((legDurationTraffic - legDurationTypical) / 60));
 
-            // 3. Recommendation Logic
+            // Recommendation Logic
             let bestIdx = 0;
             let rec = "Nous recommandons l'itinéraire standard pour sa simplicité.";
             if (result.routes.length > 1) {
@@ -312,11 +317,11 @@ export default function KFlowNav() {
                 const dur1 = result.routes[1].legs[0].duration_in_traffic?.value || result.routes[1].legs[0].duration?.value || 0;
                 if (dur1 < dur0 - 120) {
                     bestIdx = 1;
-                    rec = "L'itinéraire intelligent est fortement recommandé pour éviter les zones de congestion détectées par la communauté.";
+                    rec = "L'itinéraire intelligent est fortement recommandé pour éviter les zones de congestion détectées.";
                 }
             }
 
-            // 4. Deduct Stars (Premium Access)
+            // Deduct Stars
             await runTransaction(firestore, async (transaction) => {
                 const userDoc = await transaction.get(userRef!);
                 const data = userDoc.data() as UserProfile;
@@ -343,7 +348,7 @@ export default function KFlowNav() {
                 distance: leg.distance?.text || '--',
                 duration: leg.duration_in_traffic?.text || leg.duration?.text || '--',
                 delayMinutes: globalDelay,
-                segments,
+                segments: mergedSegments.filter(s => s.status !== 'fluide' || mergedSegments.length < 5),
                 recommendation: rec,
                 bestRouteIndex: bestIdx
             });
@@ -393,7 +398,7 @@ export default function KFlowNav() {
                                 </div>
                                 <div className="flex-1">
                                     <h2 className="text-lg font-black text-slate-900 tracking-tight">K-Flow Nav</h2>
-                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Analyse Trafic en Temps Réel</p>
+                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Analyse Trafic Haute Précision</p>
                                 </div>
                                 <Badge variant="secondary" className="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full border-amber-200">
                                     {STAR_COSTS.NAVIGATION_SESSION} ⭐
@@ -435,7 +440,10 @@ export default function KFlowNav() {
                                         <X className="h-6 w-6" />
                                     </button>
                                     <div className="space-y-2 relative z-10">
-                                        <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">ANALYSE DE TRAJET</Badge>
+                                        <div className="flex justify-between items-start">
+                                            <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">ANALYSE STRATÉGIQUE</Badge>
+                                            <button onClick={() => setDebugMode(!debugMode)} className="text-white/20 hover:text-white transition-all"><Bug className="h-4 w-4"/></button>
+                                        </div>
                                         <h2 className="text-3xl font-black tracking-tight leading-tight">{summaryData.destination}</h2>
                                         <div className="flex items-center gap-6 pt-4">
                                             <div className="flex flex-col">
@@ -444,7 +452,7 @@ export default function KFlowNav() {
                                             </div>
                                             <div className="w-px h-8 bg-white/20"></div>
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Temps Estimé</span>
+                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Arrivée Est.</span>
                                                 <span className="text-xl font-black">{summaryData.duration}</span>
                                             </div>
                                             <div className="w-px h-8 bg-white/20"></div>
@@ -461,11 +469,11 @@ export default function KFlowNav() {
                                 <div className="flex-1 overflow-y-auto p-8 space-y-8">
                                     <div className="space-y-4">
                                         <h3 className="text-xs font-black uppercase text-slate-400 tracking-[0.2em] flex items-center gap-2">
-                                            <TrendingUp className="h-4 w-4" /> Zones rouges et jaunes détectées
+                                            <Activity className="h-4 w-4" /> État des segments de route
                                         </h3>
                                         <div className="space-y-3">
                                             {summaryData.segments.map((seg, i) => (
-                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group">
                                                     <div className="flex items-center gap-4">
                                                         <div className={cn(
                                                             "w-3 h-3 rounded-full shadow-sm",
@@ -473,11 +481,17 @@ export default function KFlowNav() {
                                                             seg.status === 'congestionné' ? "bg-amber-500" : "bg-red-500"
                                                         )} />
                                                         <div>
-                                                            <p className="font-bold text-slate-800 text-sm">{seg.from}</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                                                                {seg.isIncident && <AlertCircle className="h-2 w-2 text-red-500" />}
-                                                                {seg.status}
-                                                            </p>
+                                                            <p className="font-bold text-slate-800 text-sm">{seg.from} {seg.to ? `→ ${seg.to}` : ''}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                                                    {seg.status} • {seg.distanceText}
+                                                                </p>
+                                                                {debugMode && (
+                                                                    <Badge variant="outline" className="text-[8px] py-0 border-primary/20 text-primary">
+                                                                        Ratio: {seg.debugRatio?.toFixed(2)}
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     {seg.delayMinutes > 0 && <span className="text-xs font-black text-red-500">+{seg.delayMinutes}m</span>}
@@ -491,7 +505,7 @@ export default function KFlowNav() {
                                             <ShieldCheck className="h-5 w-5" />
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-xs font-black text-primary uppercase tracking-widest">Recommandation K-Flow</p>
+                                            <p className="text-xs font-black text-primary uppercase tracking-widest">Conseil K-Flow</p>
                                             <p className="text-sm text-slate-700 font-medium leading-relaxed">{summaryData.recommendation}</p>
                                         </div>
                                     </div>
@@ -499,11 +513,11 @@ export default function KFlowNav() {
 
                                 <div className="p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4">
                                     <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-16 rounded-2xl font-black uppercase tracking-widest text-xs flex-1">
-                                        Voir sur la carte
+                                        Fermer
                                     </Button>
                                     <Button onClick={handleStartNavigation} className="h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-sm flex-[2] shadow-2xl shadow-primary/30 gap-3">
                                         <Navigation2 className="h-6 w-6 fill-current" />
-                                        Démarrer la navigation
+                                        Démarrer Guidage
                                     </Button>
                                 </div>
                             </div>
@@ -541,7 +555,7 @@ export default function KFlowNav() {
                                         className="text-white hover:bg-white/10 rounded-xl h-10 gap-2 border border-white/10"
                                     >
                                         {is3D ? <Layers className="h-4 w-4" /> : <Box className="h-4 w-4" />}
-                                        <span className="text-[10px] font-black uppercase">{is3D ? 'Mode 2D' : 'Mode 3D'}</span>
+                                        <span className="text-[10px] font-black uppercase">{is3D ? '2D' : '3D'}</span>
                                     </Button>
                                     <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); setShowDestInfo(false); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
                                         <X />
@@ -652,7 +666,7 @@ export default function KFlowNav() {
                                             <p className="text-sm font-bold text-slate-800 truncate mb-2">{destination}</p>
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-[10px]">
-                                                    <span className="text-slate-400 font-bold">TEMPS ESTIMÉ</span>
+                                                    <span className="text-slate-400 font-bold">ARRIVÉE EST.</span>
                                                     <span className="text-emerald-600 font-black">
                                                         {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo.duration}
                                                     </span>
@@ -717,7 +731,7 @@ export default function KFlowNav() {
                                             <div className="flex justify-between items-center mt-1 relative z-10">
                                                 <p className="text-[10px] font-bold text-slate-400">{route.distance}</p>
                                                 {route.delayMinutes > 0 && (
-                                                    <p className="text-[9px] font-black text-red-500">+{route.delayMinutes}m retard</p>
+                                                    <p className="text-[9px] font-black text-red-500">+{route.delayMinutes}m</p>
                                                 )}
                                             </div>
                                             {route.isSmart && (
@@ -818,7 +832,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
     const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const { toast } = useToast();
 
-    // Init Renderers (Max 2 routes for comparison)
+    // Init Renderers
     useEffect(() => {
         if (!routesLibrary || !map) return;
         
@@ -879,14 +893,12 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
             if (status === g.maps.DirectionsStatus.OK && result) {
                 const routes = result.routes;
                 
-                // Update and Show Renderers
                 renderers.forEach((r, idx) => {
                     if (routes[idx]) {
-                        r.setMap(map); // Re-attach to map in case it was null
+                        r.setMap(map);
                         r.setDirections(result);
                         r.setRouteIndex(idx);
                         
-                        // Highlight logic
                         const isSelected = selectedRouteIndex === idx;
                         r.setOptions({
                             polylineOptions: {
@@ -930,30 +942,21 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                     result: result
                 });
 
-                // Recommend Smart Route
-                if (summaries.length > 1 && summaries[1].isSmart && selectedRouteIndex === 0) {
-                    const gain = (routes[0].legs[0].duration_in_traffic?.value || 0) - (routes[1].legs[0].duration_in_traffic?.value || 0);
-                    if (gain > 120) {
-                        toast({
-                            title: "Itinéraire plus rapide !",
-                            description: "Un trajet intelligent est disponible pour éviter les bouchons.",
-                            action: <Button variant="outline" size="sm" onClick={() => onRouteSelect(1)}>Changer</Button>
-                        });
-                    }
-                }
-
-                // Alert Logic
+                // Alert Logic (Improved)
                 const now = Date.now();
-                const ratio = (activeLeg.duration_in_traffic?.value || 0) / (activeLeg.duration?.value || 1);
+                const currentStep = activeLeg.steps[0];
+                const ratio = (currentStep.duration?.value || 0) / ((currentStep.distance?.value / activeLeg.distance?.value) * activeLeg.duration?.value);
                 
                 if (now - lastAlertTime.current > 30000) {
                     if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
                     
                     let newAlert: TrafficAlert | null = null;
-                    if (ratio > 1.5) {
+                    if (ratio > 1.8) {
                         newAlert = { id: `a-${now}`, message: "Route bloquée dans moins de 1 km, veuillez changer d’itinéraire", type: 'red', timestamp: now };
-                    } else if (ratio > 1.25) {
-                        newAlert = { id: `a-${now}`, message: "Embouteillage détecté à 2 km devant vous", type: 'yellow', timestamp: now };
+                    } else if (ratio > 1.3) {
+                        newAlert = { id: `a-${now}`, message: "Embouteillage détecté devant vous", type: 'yellow', timestamp: now };
+                    } else if (ratio < 1.1) {
+                        newAlert = { id: `a-${now}`, message: "Circulation fluide à 1 km devant vous", type: 'green', timestamp: now };
                     }
 
                     if (newAlert) {

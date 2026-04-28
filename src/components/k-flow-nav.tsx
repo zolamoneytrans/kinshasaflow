@@ -7,6 +7,7 @@ import {
   useMap, 
   useMapsLibrary, 
   Marker,
+  InfoWindow,
 } from '@vis.gl/react-google-maps';
 import { 
   Navigation2, 
@@ -24,7 +25,8 @@ import {
   Minus,
   LocateFixed,
   Box,
-  Layers
+  Layers,
+  Flag
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -55,6 +57,13 @@ interface TrafficAlert {
     type: TrafficAlertType;
     distance?: string;
     timestamp: number;
+}
+
+interface RouteInfo {
+    distance: string;
+    duration: string;
+    durationInTraffic?: string;
+    destinationCoords?: { lat: number, lng: number };
 }
 
 /**
@@ -122,9 +131,10 @@ export default function KFlowNav() {
     const [isNavigating, setIsNavigating] = useState(false);
     const [is3D, setIs3D] = useState(true);
     const [isUnlocking, setIsUnlocking] = useState(false);
-    const [routeInfo, setRouteInfo] = useState<{distance: string, duration: string, durationInTraffic?: string} | null>(null);
+    const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
     const [activeAlert, setActiveAlert] = useState<TrafficAlert | null>(null);
     const [autoFollow, setAutoFollow] = useState(true);
+    const [showDestInfo, setShowDestInfo] = useState(false);
     
     const map = useMap();
 
@@ -288,7 +298,7 @@ export default function KFlowNav() {
                                                 {is3D ? <Layers className="h-4 w-4" /> : <Box className="h-4 w-4" />}
                                                 <span className="text-[10px] font-black uppercase">{is3D ? 'Mode 2D' : 'Mode 3D'}</span>
                                             </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
+                                            <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); setShowDestInfo(false); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
                                                 <X />
                                             </Button>
                                         </div>
@@ -367,6 +377,49 @@ export default function KFlowNav() {
                             onRouteUpdate={setRouteInfo}
                             onAlertUpdate={setActiveAlert}
                         />
+
+                        {isNavigating && routeInfo?.destinationCoords && (
+                            <>
+                                <Marker 
+                                    position={routeInfo.destinationCoords}
+                                    animation={(window as any).google?.maps?.Animation?.DROP}
+                                    onClick={() => setShowDestInfo(true)}
+                                    icon={{
+                                        path: "M14.5 2H6v20h2v-7h11l-2-6.5 2-6.5h-4.5z", // Custom checkered flag path
+                                        fillColor: '#f59e0b',
+                                        fillOpacity: 1,
+                                        strokeColor: '#000000',
+                                        strokeWeight: 2,
+                                        scale: 1.5,
+                                        anchor: (window as any).google ? new (window as any).google.maps.Point(12, 22) : { x: 12, y: 22 } as any
+                                    }}
+                                />
+                                {showDestInfo && (
+                                    <InfoWindow 
+                                        position={routeInfo.destinationCoords}
+                                        onCloseClick={() => setShowDestInfo(false)}
+                                    >
+                                        <div className="p-2 min-w-[150px]">
+                                            <p className="font-black text-slate-900 border-b pb-1 mb-2 uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                                <Flag className="h-3 w-3 text-amber-500" />
+                                                Destination
+                                            </p>
+                                            <p className="text-sm font-bold text-slate-800 truncate mb-2">{destination}</p>
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between text-[10px]">
+                                                    <span className="text-slate-400 font-bold">TEMPS ESTIMÉ</span>
+                                                    <span className="text-emerald-600 font-black">{routeInfo.durationInTraffic || routeInfo.duration}</span>
+                                                </div>
+                                                <div className="flex justify-between text-[10px]">
+                                                    <span className="text-slate-400 font-bold">DISTANCE</span>
+                                                    <span className="text-slate-700 font-black">{routeInfo.distance}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </InfoWindow>
+                                )}
+                            </>
+                        )}
                         
                         <IncidentMarkers incidents={incidents || []} />
                         <MapControls onReCenter={handleReCenter} isAutoFollowing={autoFollow} />
@@ -392,7 +445,7 @@ export default function KFlowNav() {
                                 <div className="flex gap-2">
                                     <Button 
                                         variant="destructive" 
-                                        onClick={() => { setIsNavigating(false); setActiveAlert(null); }}
+                                        onClick={() => { setIsNavigating(false); setActiveAlert(null); setShowDestInfo(false); }}
                                         className="rounded-2xl font-black text-[10px] uppercase px-5 h-11 shadow-lg shadow-red-200"
                                     >
                                         Quitter
@@ -471,7 +524,7 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
     origin: {lat: number, lng: number} | null, 
     destination: string, 
     isNavigating: boolean,
-    onRouteUpdate: (info: {distance: string, duration: string, durationInTraffic?: string}) => void,
+    onRouteUpdate: (info: RouteInfo) => void,
     onAlertUpdate: (alert: TrafficAlert | null) => void
 }) {
     const map = useMap();
@@ -518,10 +571,15 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
                 directionsRenderer.setDirections(result);
                 lastPosUpdate.current = origin;
                 const route = result.routes[0].legs[0];
+                
                 onRouteUpdate({ 
                     distance: route.distance?.text || '', 
                     duration: route.duration?.text || '', 
-                    durationInTraffic: route.duration_in_traffic?.text 
+                    durationInTraffic: route.duration_in_traffic?.text,
+                    destinationCoords: {
+                        lat: route.end_location.lat(),
+                        lng: route.end_location.lng()
+                    }
                 });
 
                 const now = Date.now();
@@ -558,7 +616,9 @@ const TrafficLayerComponent = () => {
     const map = useMap();
     useEffect(() => {
         if (!map) return;
-        const layer = new google.maps.TrafficLayer();
+        const g = (window as any).google;
+        if (!g) return;
+        const layer = new g.maps.TrafficLayer();
         layer.setMap(map);
         return () => layer.setMap(null);
     }, [map]);

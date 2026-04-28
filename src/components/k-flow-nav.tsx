@@ -28,7 +28,12 @@ import {
   Layers,
   Flag,
   ArrowRightLeft,
-  Clock
+  Clock,
+  ChevronRight,
+  Info,
+  ShieldCheck,
+  TrendingUp,
+  Map as MapIcon
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -76,6 +81,24 @@ interface RouteInfo {
     durationInTraffic?: string;
     destinationCoords?: { lat: number, lng: number };
     allRoutes?: RouteSummary[];
+    result?: google.maps.DirectionsResult;
+}
+
+interface TrafficSegment {
+    from: string;
+    to: string;
+    status: 'fluide' | 'congestionné' | 'bloqué';
+    delayMinutes: number;
+}
+
+interface SummaryData {
+    destination: string;
+    distance: string;
+    duration: string;
+    delayMinutes: number;
+    segments: TrafficSegment[];
+    recommendation: string;
+    bestRouteIndex: number;
 }
 
 /**
@@ -141,6 +164,9 @@ export default function KFlowNav() {
     const { smoothLocation, heading } = useInterpolatedLocation(rawLocation);
     const [destination, setDestination] = useState<string>('');
     const [isNavigating, setIsNavigating] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [showSummary, setShowSummary] = useState(false);
+    const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
     const [is3D, setIs3D] = useState(true);
     const [isUnlocking, setIsUnlocking] = useState(false);
     const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
@@ -174,7 +200,7 @@ export default function KFlowNav() {
     }, []);
 
     useEffect(() => {
-        if (map && smoothLocation && autoFollow) {
+        if (map && smoothLocation && autoFollow && !showSummary) {
             map.moveCamera({
                 center: smoothLocation,
                 heading: isNavigating && is3D ? heading : 0,
@@ -182,9 +208,9 @@ export default function KFlowNav() {
                 zoom: isNavigating ? 18 : 15
             });
         }
-    }, [map, smoothLocation, autoFollow, heading, isNavigating, is3D]);
+    }, [map, smoothLocation, autoFollow, heading, isNavigating, is3D, showSummary]);
 
-    const handleStartNavigation = async () => {
+    const handleAnalyzeRoute = async () => {
         if (!user || !profile) return;
         if (!destination) {
             toast({ title: "Destination vide", description: "Où souhaitez-vous aller ?", variant: "destructive" });
@@ -194,7 +220,7 @@ export default function KFlowNav() {
         if (profile.currentStarsBalance < STAR_COSTS.NAVIGATION_SESSION) {
             toast({
                 title: "Solde insuffisant",
-                description: `La navigation coûte ${STAR_COSTS.NAVIGATION_SESSION} stars.`,
+                description: `L'analyse premium coûte ${STAR_COSTS.NAVIGATION_SESSION} stars.`,
                 variant: "destructive",
                 action: <Button asChild variant="outline" size="sm"><Link href="/mes-stars">Boutique</Link></Button>
             });
@@ -202,7 +228,75 @@ export default function KFlowNav() {
         }
 
         setIsUnlocking(true);
+        setIsAnalyzing(true);
+
         try {
+            // 1. Directions Calculation
+            const service = new google.maps.DirectionsService();
+            const result = await service.route({
+                origin: smoothLocation || KINSHASA_CENTER,
+                destination: destination,
+                travelMode: google.maps.TravelMode.DRIVING,
+                provideRouteAlternatives: true,
+                drivingOptions: { departureTime: new Date(), trafficModel: google.maps.TrafficModel.BEST_GUESS }
+            });
+
+            if (!result || !result.routes.length) throw new Error("Aucun itinéraire trouvé.");
+
+            const mainRoute = result.routes[0];
+            const leg = mainRoute.legs[0];
+            
+            // 2. Segment Analysis
+            const segments: TrafficSegment[] = [];
+            const steps = leg.steps;
+            const stepCount = steps.length;
+            
+            // Analyze 3 major points of the route
+            const indices = [0, Math.floor(stepCount / 2), stepCount - 1];
+            const geocoder = new google.maps.Geocoder();
+
+            for (const idx of indices) {
+                const step = steps[idx];
+                const dur = step.duration?.value || 1;
+                const durT = step.duration_in_traffic?.value || dur;
+                const ratio = durT / dur;
+
+                let status: 'fluide' | 'congestionné' | 'bloqué' = 'fluide';
+                if (ratio > 1.6) status = 'bloqué';
+                else if (ratio > 1.25) status = 'congestionné';
+
+                // Try to get a name for this segment
+                let locationName = "Segment routier";
+                try {
+                    const geoRes = await geocoder.geocode({ location: step.start_location });
+                    if (geoRes.results[0]) {
+                        const addr = geoRes.results[0].address_components;
+                        const sub = addr.find(c => c.types.includes('sublocality') || c.types.includes('route'));
+                        if (sub) locationName = sub.long_name;
+                    }
+                } catch (e) {}
+
+                segments.push({
+                    from: locationName,
+                    to: "", // placeholder
+                    status,
+                    delayMinutes: Math.max(0, Math.round((durT - dur) / 60))
+                });
+            }
+
+            // 3. Recommendation Logic
+            let bestIdx = 0;
+            let rec = "Nous recommandons l'itinéraire standard pour sa simplicité.";
+            if (result.routes.length > 1) {
+                const dur0 = result.routes[0].legs[0].duration_in_traffic?.value || result.routes[0].legs[0].duration?.value || 0;
+                const dur1 = result.routes[1].legs[0].duration_in_traffic?.value || result.routes[1].legs[0].duration?.value || 0;
+                if (dur1 < dur0 - 120) {
+                    bestIdx = 1;
+                    rec = "L'itinéraire intelligent est fortement recommandé pour éviter les zones de congestion détectées.";
+                }
+            }
+
+            // 4. Deduct Stars (Premium Access)
             await runTransaction(firestore, async (transaction) => {
                 const userDoc = await transaction.get(userRef!);
                 const data = userDoc.data() as UserProfile;
@@ -219,21 +313,39 @@ export default function KFlowNav() {
                     type: 'spent',
                     starsChange: -STAR_COSTS.NAVIGATION_SESSION,
                     balanceAfterTransaction: newBalance,
-                    description: `Navigation vers ${destination}`,
+                    description: `Analyse trajet : ${destination}`,
                     timestamp: serverTimestamp(),
                 });
             });
+
+            setSummaryData({
+                destination,
+                distance: leg.distance?.text || '--',
+                duration: leg.duration_in_traffic?.text || leg.duration?.text || '--',
+                delayMinutes: Math.round(((leg.duration_in_traffic?.value || leg.duration?.value || 0) - (leg.duration?.value || 0)) / 60),
+                segments,
+                recommendation: rec,
+                bestRouteIndex: bestIdx
+            });
             
-            setIsNavigating(true);
-            setAutoFollow(true);
-            setIs3D(true);
-            setSelectedRouteIndex(0); // Reset selection
-            toast({ title: "Navigation active", description: "Calcul des itinéraires optimisés..." });
-        } catch (error) {
-            toast({ title: "Erreur", description: "Échec de validation.", variant: "destructive" });
+            setSelectedRouteIndex(bestIdx);
+            setShowSummary(true);
+
+        } catch (error: any) {
+            console.error(error);
+            toast({ title: "Erreur d'analyse", description: error.message || "Échec de connexion aux services Google.", variant: "destructive" });
         } finally {
             setIsUnlocking(false);
+            setIsAnalyzing(false);
         }
+    };
+
+    const handleStartNavigation = () => {
+        setIsNavigating(true);
+        setShowSummary(false);
+        setAutoFollow(true);
+        setIs3D(true);
+        toast({ title: "Guidage actif", description: "Suivez les instructions sur la carte." });
     };
 
     const handleReCenter = () => {
@@ -247,114 +359,204 @@ export default function KFlowNav() {
     return (
         <div className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-slate-950 flex flex-col border border-slate-800">
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
-                    <div className="w-full max-w-xl pointer-events-auto flex flex-col gap-3">
-                        <AnimatePresence mode="wait">
-                            {!isNavigating ? (
-                                <motion.div 
-                                    initial={{ y: -50, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    exit={{ y: -50, opacity: 0 }}
-                                    className="bg-white/95 backdrop-blur-2xl p-4 rounded-[2rem] shadow-2xl border border-white/20 flex flex-col gap-4"
+                {/* Search Bar Overlay */}
+                {!isNavigating && !showSummary && (
+                    <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4">
+                        <motion.div 
+                            initial={{ y: -50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="w-full max-w-xl bg-white/95 backdrop-blur-2xl p-4 rounded-[2rem] shadow-2xl border border-white/20 flex flex-col gap-4"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20">
+                                    <NavigationIcon className="text-white h-5 w-5" />
+                                </div>
+                                <div className="flex-1">
+                                    <h2 className="text-lg font-black text-slate-900 tracking-tight">K-Flow Nav</h2>
+                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Analyse Trafic en Temps Réel</p>
+                                </div>
+                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full border-amber-200">
+                                    {STAR_COSTS.NAVIGATION_SESSION} ⭐
+                                </Badge>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                                <AutocompleteInput 
+                                    value={destination} 
+                                    onChange={setDestination} 
+                                    onSearch={handleAnalyzeRoute}
+                                    isLoading={isUnlocking}
+                                />
+                                <Button 
+                                    onClick={handleAnalyzeRoute} 
+                                    disabled={isUnlocking || !destination}
+                                    className="h-12 px-6 rounded-xl font-black shadow-xl shadow-primary/30"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20">
-                                            <NavigationIcon className="text-white h-5 w-5" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h2 className="text-lg font-black text-slate-900 tracking-tight">K-Flow Nav 3D</h2>
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Navigation Temps Réel • Kinshasa</p>
-                                        </div>
-                                        <Badge variant="secondary" className="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full border-amber-200">
-                                            {STAR_COSTS.NAVIGATION_SESSION} ⭐
-                                        </Badge>
-                                    </div>
-                                    
-                                    <div className="flex gap-2">
-                                        <AutocompleteInput 
-                                            value={destination} 
-                                            onChange={setDestination} 
-                                            onSearch={handleStartNavigation}
-                                            isLoading={isUnlocking}
-                                        />
-                                        <Button 
-                                            onClick={handleStartNavigation} 
-                                            disabled={isUnlocking || !destination}
-                                            className="h-12 px-6 rounded-xl font-black shadow-xl shadow-primary/30"
-                                        >
-                                            {isUnlocking ? <Loader2 className="animate-spin" /> : "GO"}
-                                        </Button>
-                                    </div>
-                                </motion.div>
-                            ) : (
-                                <motion.div 
-                                    initial={{ y: -100, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    className="flex flex-col gap-3"
-                                >
-                                    <div className="bg-slate-900/95 backdrop-blur-xl p-4 rounded-[2rem] shadow-2xl border border-white/10 flex justify-between items-center text-white">
-                                        <div className="flex items-center gap-4">
-                                            <div className="bg-emerald-500 p-3 rounded-2xl shadow-lg shadow-emerald-500/20">
-                                                <Navigation2 className="h-6 w-6 fill-white" />
-                                            </div>
-                                            <div>
-                                                <p className="text-2xl font-black leading-none">
-                                                    {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo?.duration || '--'}
-                                                </p>
-                                                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">
-                                                    {routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || routeInfo?.distance || '--'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                onClick={() => setIs3D(!is3D)} 
-                                                className="text-white hover:bg-white/10 rounded-xl h-10 gap-2 border border-white/10"
-                                            >
-                                                {is3D ? <Layers className="h-4 w-4" /> : <Box className="h-4 w-4" />}
-                                                <span className="text-[10px] font-black uppercase">{is3D ? 'Mode 2D' : 'Mode 3D'}</span>
-                                            </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); setShowDestInfo(false); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
-                                                <X />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        <AnimatePresence>
-                            {activeAlert && (
-                                <motion.div
-                                    key={activeAlert.id}
-                                    initial={{ scale: 0.8, opacity: 0, y: -20 }}
-                                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                                    exit={{ scale: 0.8, opacity: 0 }}
-                                    className={cn(
-                                        "p-5 rounded-[2rem] shadow-2xl border-2 flex items-center gap-4 backdrop-blur-xl relative overflow-hidden",
-                                        activeAlert.type === 'red' ? "bg-red-600/95 border-red-400 text-white" :
-                                        activeAlert.type === 'yellow' ? "bg-amber-500/95 border-amber-300 text-slate-950" :
-                                        "bg-emerald-600/95 border-emerald-400 text-white"
-                                    )}
-                                >
-                                    <div className="p-3 bg-white/20 rounded-2xl shrink-0 shadow-inner">
-                                        {activeAlert.type === 'red' ? <AlertOctagon className="h-7 w-7" /> :
-                                         activeAlert.type === 'yellow' ? <AlertTriangle className="h-7 w-7" /> :
-                                         <CheckCircle2 className="h-7 w-7" />}
-                                    </div>
-                                    <div className="flex-1 pr-6">
-                                        <p className="text-sm font-black leading-tight uppercase tracking-tight">{activeAlert.message}</p>
-                                    </div>
-                                    <button onClick={() => setActiveAlert(null)} className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity">
-                                        <X className="h-4 w-4" />
-                                    </button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                    {isUnlocking ? <Loader2 className="animate-spin" /> : "GO"}
+                                </Button>
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
+                )}
+
+                {/* Whiteboard Summary Overlay */}
+                <AnimatePresence>
+                    {showSummary && summaryData && (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.05 }}
+                            className="absolute inset-0 z-50 bg-slate-900/90 backdrop-blur-xl p-4 md:p-8 flex items-center justify-center"
+                        >
+                            <div className="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                                <div className="bg-primary p-8 text-white relative">
+                                    <div className="absolute top-[-30%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+                                    <button onClick={() => setShowSummary(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
+                                        <X className="h-6 w-6" />
+                                    </button>
+                                    <div className="space-y-2 relative z-10">
+                                        <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">ANALYSE DE TRAJET</Badge>
+                                        <h2 className="text-3xl font-black tracking-tight leading-tight">{summaryData.destination}</h2>
+                                        <div className="flex items-center gap-6 pt-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Distance</span>
+                                                <span className="text-xl font-black">{summaryData.distance}</span>
+                                            </div>
+                                            <div className="w-px h-8 bg-white/20"></div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Temps Estimé</span>
+                                                <span className="text-xl font-black">{summaryData.duration}</span>
+                                            </div>
+                                            <div className="w-px h-8 bg-white/20"></div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Retard Trafic</span>
+                                                <span className={cn("text-xl font-black", summaryData.delayMinutes > 5 ? "text-amber-300" : "text-emerald-300")}>
+                                                    {summaryData.delayMinutes > 0 ? `+${summaryData.delayMinutes} min` : "Fluide"}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                                    <div className="space-y-4">
+                                        <h3 className="text-xs font-black uppercase text-slate-400 tracking-[0.2em] flex items-center gap-2">
+                                            <TrendingUp className="h-4 w-4" /> État des segments
+                                        </h3>
+                                        <div className="space-y-3">
+                                            {summaryData.segments.map((seg, i) => (
+                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={cn(
+                                                            "w-3 h-3 rounded-full shadow-sm",
+                                                            seg.status === 'fluide' ? "bg-emerald-500" :
+                                                            seg.status === 'congestionné' ? "bg-amber-500" : "bg-red-500"
+                                                        )} />
+                                                        <div>
+                                                            <p className="font-bold text-slate-800 text-sm">{seg.from}</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase">{seg.status}</p>
+                                                        </div>
+                                                    </div>
+                                                    {seg.delayMinutes > 0 && <span className="text-xs font-black text-red-500">+{seg.delayMinutes}m</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 bg-blue-50 rounded-[2rem] border border-blue-100 flex items-start gap-4">
+                                        <div className="bg-primary p-2 rounded-xl text-white">
+                                            <ShieldCheck className="h-5 w-5" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-black text-primary uppercase tracking-widest">Recommandation K-Flow</p>
+                                            <p className="text-sm text-slate-700 font-medium leading-relaxed">{summaryData.recommendation}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4">
+                                    <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-16 rounded-2xl font-black uppercase tracking-widest text-xs flex-1">
+                                        Voir sur la carte
+                                    </Button>
+                                    <Button onClick={handleStartNavigation} className="h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-sm flex-[2] shadow-2xl shadow-primary/30 gap-3">
+                                        <Navigation2 className="h-6 w-6 fill-current" />
+                                        Démarrer la navigation
+                                    </Button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Navigation Header Overlay */}
+                {isNavigating && (
+                    <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
+                        <div className="w-full max-w-xl pointer-events-auto">
+                            <motion.div 
+                                initial={{ y: -100, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                className="bg-slate-900/95 backdrop-blur-xl p-4 rounded-[2rem] shadow-2xl border border-white/10 flex justify-between items-center text-white"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-emerald-500 p-3 rounded-2xl shadow-lg shadow-emerald-500/20">
+                                        <Navigation2 className="h-6 w-6 fill-white" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-black leading-none">
+                                            {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo?.duration || '--'}
+                                        </p>
+                                        <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">
+                                            {routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || routeInfo?.distance || '--'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        onClick={() => setIs3D(!is3D)} 
+                                        className="text-white hover:bg-white/10 rounded-xl h-10 gap-2 border border-white/10"
+                                    >
+                                        {is3D ? <Layers className="h-4 w-4" /> : <Box className="h-4 w-4" />}
+                                        <span className="text-[10px] font-black uppercase">{is3D ? 'Mode 2D' : 'Mode 3D'}</span>
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); setShowDestInfo(false); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
+                                        <X />
+                                    </Button>
+                                </div>
+                            </motion.div>
+
+                            <AnimatePresence>
+                                {activeAlert && (
+                                    <motion.div
+                                        key={activeAlert.id}
+                                        initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                                        exit={{ scale: 0.8, opacity: 0 }}
+                                        className={cn(
+                                            "mt-3 p-5 rounded-[2rem] shadow-2xl border-2 flex items-center gap-4 backdrop-blur-xl relative overflow-hidden",
+                                            activeAlert.type === 'red' ? "bg-red-600/95 border-red-400 text-white" :
+                                            activeAlert.type === 'yellow' ? "bg-amber-500/95 border-amber-300 text-slate-950" :
+                                            "bg-emerald-600/95 border-emerald-400 text-white"
+                                        )}
+                                    >
+                                        <div className="p-3 bg-white/20 rounded-2xl shrink-0 shadow-inner">
+                                            {activeAlert.type === 'red' ? <AlertOctagon className="h-7 w-7" /> :
+                                            activeAlert.type === 'yellow' ? <AlertTriangle className="h-7 w-7" /> :
+                                            <CheckCircle2 className="h-7 w-7" />}
+                                        </div>
+                                        <div className="flex-1 pr-6">
+                                            <p className="text-sm font-black leading-tight uppercase tracking-tight">{activeAlert.message}</p>
+                                        </div>
+                                        <button onClick={() => setActiveAlert(null)} className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity">
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </div>
+                )}
 
                 <div className="flex-1">
                     <Map
@@ -367,7 +569,7 @@ export default function KFlowNav() {
                             latLngBounds: KINSHASA_BOUNDS,
                             strictBounds: false,
                         }}
-                        mapId="kflow_nav_map_v4"
+                        mapId="kflow_nav_map_v5"
                         className="w-full h-full"
                     >
                         <TrafficLayerComponent />
@@ -446,7 +648,7 @@ export default function KFlowNav() {
                         )}
                         
                         <IncidentMarkers incidents={incidents || []} />
-                        <MapControls onReCenter={handleReCenter} isAutoFollowing={autoFollow} />
+                        {!showSummary && <MapControls onReCenter={handleReCenter} isAutoFollowing={autoFollow} />}
                     </Map>
                 </div>
 
@@ -696,7 +898,8 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                         lat: activeLeg.end_location.lat(),
                         lng: activeLeg.end_location.lng()
                     },
-                    allRoutes: summaries
+                    allRoutes: summaries,
+                    result: result
                 });
 
                 // Recommend Smart Route

@@ -545,19 +545,20 @@ export default function KFlowNav() {
                     </div>
                 )}
 
-                {/* Overlay Résumé "Whiteboard" */}
+                {/* Overlay Résumé "Whiteboard" - Optimized for Mobile Scroll */}
                 <AnimatePresence>
                     {showSummary && summaryData && (
                         <motion.div 
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 1.05 }}
-                            className="absolute inset-0 z-50 bg-slate-900/90 backdrop-blur-xl p-4 md:p-8 flex items-center justify-center"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-50 bg-slate-900/90 backdrop-blur-xl p-0 sm:p-4 md:p-8 flex items-center justify-center overflow-y-auto"
                         >
-                            <div className="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                                <div className="bg-primary p-8 text-white relative">
+                            <div className="w-full max-w-2xl bg-white sm:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col my-auto min-h-full sm:min-h-0 sm:max-h-[95vh]">
+                                {/* Header - Mobile friendly */}
+                                <div className="bg-primary p-6 sm:p-8 text-white relative flex-shrink-0">
                                     <div className="absolute top-[-30%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-                                    <button onClick={() => setShowSummary(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
+                                    <button onClick={() => setShowSummary(false)} className="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/50 hover:text-white transition-colors z-20">
                                         <X className="h-6 w-6" />
                                     </button>
                                     <div className="space-y-2 relative z-10">
@@ -565,22 +566,22 @@ export default function KFlowNav() {
                                             <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">SYNTHÈSE STRATÉGIQUE</Badge>
                                             <button onClick={() => setDebugMode(!debugMode)} className="text-white/20 hover:text-white transition-all"><Bug className="h-4 w-4"/></button>
                                         </div>
-                                        <h2 className="text-2xl md:text-3xl font-black tracking-tight leading-tight">{summaryData.destination}</h2>
+                                        <h2 className="text-xl sm:text-3xl font-black tracking-tight leading-tight mb-4">{summaryData.destination}</h2>
                                         
-                                        {/* Route Selector inside Whiteboard */}
+                                        {/* Route Selector */}
                                         {summaryData.allRoutes && summaryData.allRoutes.length > 1 && (
-                                            <div className="flex gap-2 pt-4">
+                                            <div className="flex gap-2 pt-2">
                                                 {summaryData.allRoutes.map((route: any, i: number) => (
                                                     <button
                                                         key={i}
                                                         onClick={() => setSelectedRouteIndex(i)}
                                                         className={cn(
-                                                            "flex-1 p-3 rounded-xl border-2 transition-all text-left relative",
+                                                            "flex-1 p-2 sm:p-3 rounded-xl border-2 transition-all text-left relative",
                                                             selectedRouteIndex === i ? "bg-white/20 border-white" : "bg-black/10 border-white/10 hover:bg-black/20"
                                                         )}
                                                     >
-                                                        <p className="text-[9px] font-black uppercase mb-1 opacity-70">{route.isSmart ? "K-Flow" : "Standard"}</p>
-                                                        <p className="text-lg font-black">{route.durationInTraffic}</p>
+                                                        <p className="text-[8px] sm:text-[9px] font-black uppercase mb-1 opacity-70">{route.isSmart ? "K-Flow" : "Standard"}</p>
+                                                        <p className="text-sm sm:text-lg font-black">{route.durationInTraffic}</p>
                                                         {selectedRouteIndex === i && <CheckCircle2 className="absolute top-2 right-2 h-3 w-3" />}
                                                     </button>
                                                 ))}
@@ -589,7 +590,8 @@ export default function KFlowNav() {
                                     </div>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
+                                {/* Body - Scrollable */}
+                                <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 bg-white">
                                     <div className="space-y-4">
                                         <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] flex items-center gap-2">
                                             <Activity className="h-4 w-4" /> État des tronçons routiers
@@ -617,7 +619,7 @@ export default function KFlowNav() {
                                     </div>
 
                                     <div className="p-6 bg-blue-50 rounded-[2rem] border border-blue-100 flex items-start gap-4">
-                                        <div className="bg-primary p-2 rounded-xl text-white">
+                                        <div className="bg-primary p-2 rounded-xl text-white shrink-0">
                                             <ShieldCheck className="h-5 w-5" />
                                         </div>
                                         <div className="space-y-1">
@@ -625,13 +627,25 @@ export default function KFlowNav() {
                                             <p className="text-sm text-slate-700 font-bold leading-relaxed">{summaryData.recommendation}</p>
                                         </div>
                                     </div>
+
+                                    {debugMode && (
+                                        <div className="p-4 bg-slate-900 rounded-2xl text-[10px] font-mono text-emerald-400 space-y-1">
+                                            <p className="text-white font-bold mb-2 uppercase tracking-widest">Debug Stats</p>
+                                            {summaryData.segments.map((s, idx) => (
+                                                <div key={idx} className="border-b border-white/10 pb-1">
+                                                    Seg {idx}: Ratio {s.debugRatio?.toFixed(2)} | Delay {s.delayMinutes}m
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
-                                <div className="p-6 md:p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4">
-                                    <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-14 md:h-16 rounded-2xl font-black uppercase tracking-widest text-xs flex-1">
+                                {/* Footer - Stacked on Mobile */}
+                                <div className="p-6 sm:p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4 flex-shrink-0">
+                                    <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-14 sm:h-16 rounded-2xl font-black uppercase tracking-widest text-xs flex-1">
                                         Annuler
                                     </Button>
-                                    <Button onClick={handleStartNavigation} className="h-14 md:h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-sm flex-[2] shadow-2xl shadow-primary/30 gap-3">
+                                    <Button onClick={handleStartNavigation} className="h-14 sm:h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-sm flex-[2] shadow-2xl shadow-primary/30 gap-3">
                                         <Navigation2 className="h-6 w-6 fill-current" />
                                         Démarrer Guidage
                                     </Button>
@@ -671,7 +685,7 @@ export default function KFlowNav() {
                                         className="text-white hover:bg-white/10 rounded-xl h-10 gap-1.5 border border-white/10"
                                     >
                                         {is3D ? <Layers className="h-3.5 w-3.5" /> : <Box className="h-3.5 w-3.5" />}
-                                        <span className="text-[9px] font-black uppercase">{is3D ? '2D' : '3D'}</span>
+                                        <span className="text-[9px] font-black uppercase">{is3D ? 'Mode 3D' : 'Mode 2D'}</span>
                                     </Button>
                                     <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); setShowDestInfo(false); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
                                         <X className="h-5 w-5" />
@@ -743,7 +757,7 @@ export default function KFlowNav() {
                                     strokeWeight: 2,
                                     scale: 2,
                                     rotation: heading,
-                                    anchor: (window as any).google?.maps?.Point ? new (window as any).google.maps.Point(12, 12) : { x: 12, y: 12 }
+                                    anchor: (window as any).google?.maps?.Point ? new (window as any).google.maps.Point(12, 12) : undefined
                                 } as google.maps.Symbol}
                             />
                         )}
@@ -770,7 +784,7 @@ export default function KFlowNav() {
                                         strokeColor: '#000000',
                                         strokeWeight: 2,
                                         scale: 1.5,
-                                        anchor: (window as any).google?.maps?.Point ? new (window as any).google.maps.Point(12, 22) : { x: 12, y: 22 }
+                                        anchor: (window as any).google?.maps?.Point ? new (window as any).google.maps.Point(12, 22) : undefined
                                     } as google.maps.Symbol}
                                 />
                                 {showDestInfo && (

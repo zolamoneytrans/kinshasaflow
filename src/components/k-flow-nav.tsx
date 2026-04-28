@@ -21,7 +21,10 @@ import {
   MapPin,
   CheckCircle2,
   AlertOctagon,
-  Volume2
+  Volume2,
+  Plus,
+  Minus,
+  LocateFixed
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -63,6 +66,8 @@ export default function KFlowNav() {
     const [isUnlocking, setIsUnlocking] = useState(false);
     const [routeInfo, setRouteInfo] = useState<{distance: string, duration: string, durationInTraffic?: string} | null>(null);
     const [activeAlert, setActiveAlert] = useState<TrafficAlert | null>(null);
+    const [autoFollow, setAutoFollow] = useState(true);
+    const [mapCenter, setMapCenter] = useState<{lat: number, lng: number}>(KINSHASA_CENTER);
     
     // Ref for tracking GPS distance to stabilize UI
     const lastUpdatePos = useRef<{lat: number, lng: number} | null>(null);
@@ -70,7 +75,10 @@ export default function KFlowNav() {
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
     const { data: profile } = useDoc<UserProfile>(userRef);
 
-    const incidentsQuery = useMemoFirebase(() => query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(15)), [firestore]);
+    const incidentsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(15));
+    }, [firestore]);
     const { data: incidents } = useCollection<EventReport>(incidentsQuery);
 
     // Watch location
@@ -80,13 +88,16 @@ export default function KFlowNav() {
                 (pos) => {
                     const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                     setUserLocation(newPos);
+                    if (autoFollow) {
+                        setMapCenter(newPos);
+                    }
                 },
                 (err) => console.warn("GPS Access Denied", err),
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
             return () => navigator.geolocation.clearWatch(watchId);
         }
-    }, []);
+    }, [autoFollow]);
 
     // Play sound for critical alerts
     useEffect(() => {
@@ -138,6 +149,7 @@ export default function KFlowNav() {
             });
             
             setIsNavigating(true);
+            setAutoFollow(true);
             toast({ title: "Navigation active", description: "K-Flow analyse votre itinéraire en temps réel." });
         } catch (error) {
             toast({ title: "Erreur", description: "Impossible de valider la session.", variant: "destructive" });
@@ -147,6 +159,15 @@ export default function KFlowNav() {
     };
 
     const handleDismissAlert = () => setActiveAlert(null);
+
+    const handleReCenter = () => {
+        if (!userLocation) {
+            toast({ title: "Localisation impossible", description: "Vérifiez vos paramètres GPS.", variant: "destructive" });
+            return;
+        }
+        setAutoFollow(true);
+        setMapCenter(userLocation);
+    };
 
     return (
         <div className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-slate-950 flex flex-col border border-slate-800">
@@ -265,11 +286,13 @@ export default function KFlowNav() {
                 <div className="flex-1">
                     <Map
                         defaultCenter={KINSHASA_CENTER}
-                        center={userLocation || KINSHASA_CENTER}
+                        center={mapCenter}
                         defaultZoom={13}
-                        zoom={isNavigating ? 17 : 14}
+                        zoom={isNavigating && autoFollow ? 17 : undefined}
                         gestureHandling={'greedy'}
                         disableDefaultUI={true}
+                        onDragstart={() => setAutoFollow(false)}
+                        onCenterChanged={(e) => setMapCenter(e.detail.center)}
                         restriction={{
                             latLngBounds: KINSHASA_BOUNDS,
                             strictBounds: false,
@@ -301,7 +324,8 @@ export default function KFlowNav() {
                             onAlertUpdate={setActiveAlert}
                         />
                         
-                        {incidents && <IncidentMarkers incidents={incidents} />}
+                        <IncidentMarkers incidents={incidents || []} />
+                        <MapControls onReCenter={handleReCenter} isAutoFollowing={autoFollow} />
                     </Map>
                 </div>
 
@@ -312,9 +336,9 @@ export default function KFlowNav() {
                             initial={{ y: 100 }}
                             animate={{ y: 0 }}
                             exit={{ y: 100 }}
-                            className="absolute bottom-8 left-0 right-0 flex justify-center px-4 z-30"
+                            className="absolute bottom-8 left-0 right-0 flex justify-center px-4 z-30 pointer-events-none"
                         >
-                            <div className="w-full max-w-sm bg-white rounded-[2.5rem] p-5 shadow-2xl border border-slate-100 flex items-center justify-between">
+                            <div className="w-full max-w-sm bg-white rounded-[2.5rem] p-5 shadow-2xl border border-slate-100 flex items-center justify-between pointer-events-auto">
                                 <div className="flex items-center gap-4">
                                     <div className="h-3.5 w-3.5 bg-emerald-500 rounded-full animate-ping shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
                                     <div className="flex flex-col">
@@ -339,6 +363,57 @@ export default function KFlowNav() {
                     )}
                 </AnimatePresence>
             </APIProvider>
+        </div>
+    );
+}
+
+// ─── Custom Map Controls Component ──────────────────────────────────────────
+
+function MapControls({ onReCenter, isAutoFollowing }: { onReCenter: () => void, isAutoFollowing: boolean }) {
+    const map = useMap();
+
+    const handleZoomIn = () => {
+        if (map) map.setZoom((map.getZoom() || 13) + 1);
+    };
+
+    const handleZoomOut = () => {
+        if (map) map.setZoom((map.getZoom() || 13) - 1);
+    };
+
+    return (
+        <div className="absolute bottom-24 right-4 z-30 flex flex-col gap-3">
+            {/* Re-center Button */}
+            <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={onReCenter}
+                title="Recentrer la carte"
+                className={cn(
+                    "h-12 w-12 rounded-2xl flex items-center justify-center shadow-2xl border-2 transition-all",
+                    isAutoFollowing 
+                        ? "bg-primary border-primary text-white" 
+                        : "bg-white border-slate-100 text-slate-600 hover:bg-slate-50"
+                )}
+            >
+                <LocateFixed className="h-6 w-6" />
+            </motion.button>
+
+            {/* Zoom Controls */}
+            <div className="flex flex-col rounded-2xl overflow-hidden border-2 border-slate-100 bg-white shadow-2xl">
+                <button
+                    onClick={handleZoomIn}
+                    title="Zoom avant"
+                    className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 border-b border-slate-100 transition-colors"
+                >
+                    <Plus className="h-6 w-6" />
+                </button>
+                <button
+                    onClick={handleZoomOut}
+                    title="Zoom arrière"
+                    className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                    <Minus className="h-6 w-6" />
+                </button>
+            </div>
         </div>
     );
 }
@@ -402,7 +477,8 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
     // Initialisation du renderer
     useEffect(() => {
         if (!routesLibrary || !map) return;
-        const renderer = new google.maps.DirectionsRenderer({
+        const g = (window as any).google;
+        const renderer = new g.maps.DirectionsRenderer({
             map,
             suppressMarkers: true,
             polylineOptions: {
@@ -419,20 +495,23 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
     useEffect(() => {
         if (!isNavigating || !origin || !destination || !routesLibrary || !directionsRenderer) return;
 
-        const service = new google.maps.DirectionsService();
+        const g = (window as any).google;
+        if (!g?.maps) return;
+
+        const service = new g.maps.DirectionsService();
 
         const calculateAndAnalyze = () => {
             service.route({
                 origin: origin,
                 destination: destination,
-                travelMode: google.maps.TravelMode.DRIVING,
+                travelMode: g.maps.TravelMode.DRIVING,
                 provideRouteAlternatives: true,
                 drivingOptions: {
                     departureTime: new Date(),
-                    trafficModel: google.maps.TrafficModel.BEST_GUESS
+                    trafficModel: g.maps.TrafficModel.BEST_GUESS
                 }
-            }, (result, status) => {
-                if (status === google.maps.DirectionsStatus.OK && result) {
+            }, (result: any, status: any) => {
+                if (status === g.maps.DirectionsStatus.OK && result) {
                     directionsRenderer.setDirections(result);
                     const route = result.routes[0].legs[0];
                     
@@ -513,7 +592,8 @@ const TrafficLayerComponent = () => {
     const map = useMap();
     useEffect(() => {
         if (!map) return;
-        const layer = new google.maps.TrafficLayer();
+        const g = (window as any).google;
+        const layer = new g.maps.TrafficLayer();
         layer.setMap(map);
         return () => layer.setMap(null);
     }, [map]);
@@ -524,6 +604,9 @@ const IncidentMarkers = ({ incidents }: { incidents: WithId<EventReport>[] }) =>
     const map = useMap();
     if (!map) return null;
 
+    const g = (window as any).google;
+    if (!g?.maps) return null;
+
     return (
         <>
             {incidents.map((incident) => (
@@ -532,7 +615,7 @@ const IncidentMarkers = ({ incidents }: { incidents: WithId<EventReport>[] }) =>
                     position={(incident as any).coords || KINSHASA_CENTER} 
                     icon={{
                         url: incident.severity === 'high' ? 'https://maps.google.com/mapfiles/ms/icons/red-pushpin.png' : 'https://maps.google.com/mapfiles/ms/icons/yellow-pushpin.png',
-                        scaledSize: new google.maps.Size(32, 32)
+                        scaledSize: new g.maps.Size(32, 32)
                     }}
                 />
             ))}

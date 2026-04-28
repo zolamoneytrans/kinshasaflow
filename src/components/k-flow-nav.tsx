@@ -26,7 +26,9 @@ import {
   LocateFixed,
   Box,
   Layers,
-  Flag
+  Flag,
+  ArrowRightLeft,
+  Clock
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -59,11 +61,21 @@ interface TrafficAlert {
     timestamp: number;
 }
 
+interface RouteSummary {
+    index: number;
+    distance: string;
+    duration: string;
+    durationInTraffic: string;
+    delayMinutes: number;
+    isSmart: boolean;
+}
+
 interface RouteInfo {
     distance: string;
     duration: string;
     durationInTraffic?: string;
     destinationCoords?: { lat: number, lng: number };
+    allRoutes?: RouteSummary[];
 }
 
 /**
@@ -135,6 +147,7 @@ export default function KFlowNav() {
     const [activeAlert, setActiveAlert] = useState<TrafficAlert | null>(null);
     const [autoFollow, setAutoFollow] = useState(true);
     const [showDestInfo, setShowDestInfo] = useState(false);
+    const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
     
     const map = useMap();
 
@@ -284,8 +297,12 @@ export default function KFlowNav() {
                                                 <Navigation2 className="h-6 w-6 fill-white" />
                                             </div>
                                             <div>
-                                                <p className="text-2xl font-black leading-none">{routeInfo?.durationInTraffic || routeInfo?.duration || '--'}</p>
-                                                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">{routeInfo?.distance || '--'}</p>
+                                                <p className="text-2xl font-black leading-none">
+                                                    {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo?.duration || '--'}
+                                                </p>
+                                                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">
+                                                    {routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || routeInfo?.distance || '--'}
+                                                </p>
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
@@ -349,7 +366,7 @@ export default function KFlowNav() {
                             latLngBounds: KINSHASA_BOUNDS,
                             strictBounds: false,
                         }}
-                        mapId="kflow_nav_map_v3"
+                        mapId="kflow_nav_map_v4"
                         className="w-full h-full"
                     >
                         <TrafficLayerComponent />
@@ -365,7 +382,7 @@ export default function KFlowNav() {
                                     strokeWeight: 2,
                                     scale: 2,
                                     rotation: heading,
-                                    anchor: (window as any).google ? new (window as any).google.maps.Point(12, 12) : { x: 12, y: 12 } as any
+                                    anchor: (window as any).google ? new (window as any).google.maps.Point(12, 12) : undefined
                                 }}
                             />
                         )}
@@ -374,8 +391,10 @@ export default function KFlowNav() {
                             origin={smoothLocation} 
                             destination={destination} 
                             isNavigating={isNavigating}
+                            selectedRouteIndex={selectedRouteIndex}
                             onRouteUpdate={setRouteInfo}
                             onAlertUpdate={setActiveAlert}
+                            onRouteSelect={setSelectedRouteIndex}
                         />
 
                         {isNavigating && routeInfo?.destinationCoords && (
@@ -385,13 +404,13 @@ export default function KFlowNav() {
                                     animation={(window as any).google?.maps?.Animation?.DROP}
                                     onClick={() => setShowDestInfo(true)}
                                     icon={{
-                                        path: "M14.5 2H6v20h2v-7h11l-2-6.5 2-6.5h-4.5z", // Custom checkered flag path
+                                        path: "M14.5 2H6v20h2v-7h11l-2-6.5 2-6.5h-4.5z",
                                         fillColor: '#f59e0b',
                                         fillOpacity: 1,
                                         strokeColor: '#000000',
                                         strokeWeight: 2,
                                         scale: 1.5,
-                                        anchor: (window as any).google ? new (window as any).google.maps.Point(12, 22) : { x: 12, y: 22 } as any
+                                        anchor: (window as any).google ? new (window as any).google.maps.Point(12, 22) : undefined
                                     }}
                                 />
                                 {showDestInfo && (
@@ -408,11 +427,15 @@ export default function KFlowNav() {
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-[10px]">
                                                     <span className="text-slate-400 font-bold">TEMPS ESTIMÉ</span>
-                                                    <span className="text-emerald-600 font-black">{routeInfo.durationInTraffic || routeInfo.duration}</span>
+                                                    <span className="text-emerald-600 font-black">
+                                                        {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo.duration}
+                                                    </span>
                                                 </div>
                                                 <div className="flex justify-between text-[10px]">
                                                     <span className="text-slate-400 font-bold">DISTANCE</span>
-                                                    <span className="text-slate-700 font-black">{routeInfo.distance}</span>
+                                                    <span className="text-slate-700 font-black">
+                                                        {routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || routeInfo.distance}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -427,29 +450,57 @@ export default function KFlowNav() {
                 </div>
 
                 <AnimatePresence>
-                    {isNavigating && (
+                    {isNavigating && routeInfo?.allRoutes && routeInfo.allRoutes.length > 0 && (
                         <motion.div 
-                            initial={{ y: 100 }}
+                            initial={{ y: 200 }}
                             animate={{ y: 0 }}
-                            exit={{ y: 100 }}
-                            className="absolute bottom-8 left-0 right-0 flex justify-center px-4 z-30 pointer-events-none"
+                            exit={{ y: 200 }}
+                            className="absolute bottom-6 left-0 right-0 flex justify-center px-4 z-30 pointer-events-none"
                         >
-                            <div className="w-full max-w-sm bg-white rounded-[2.5rem] p-5 shadow-2xl border border-slate-100 flex items-center justify-between pointer-events-auto">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-3.5 w-3.5 bg-emerald-500 rounded-full animate-ping shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
-                                    <div className="flex flex-col">
-                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] leading-none">Guidage Actif</p>
-                                        <p className="text-sm font-black text-slate-800 mt-1.5 truncate max-w-[140px]">{destination}</p>
-                                    </div>
+                            <div className="w-full max-w-2xl bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-4 shadow-2xl border border-slate-100 flex flex-col gap-3 pointer-events-auto overflow-hidden">
+                                <div className="flex items-center justify-between px-2">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                                        <ArrowRightLeft className="h-3 w-3" />
+                                        Comparaison d'itinéraires
+                                    </p>
+                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 font-black text-[9px]">TRAFIC LIVE</Badge>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Button 
-                                        variant="destructive" 
-                                        onClick={() => { setIsNavigating(false); setActiveAlert(null); setShowDestInfo(false); }}
-                                        className="rounded-2xl font-black text-[10px] uppercase px-5 h-11 shadow-lg shadow-red-200"
-                                    >
-                                        Quitter
-                                    </Button>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    {routeInfo.allRoutes.map((route, i) => (
+                                        <button 
+                                            key={i}
+                                            onClick={() => setSelectedRouteIndex(i)}
+                                            className={cn(
+                                                "flex flex-col p-4 rounded-[1.5rem] border-2 transition-all text-left relative overflow-hidden group",
+                                                selectedRouteIndex === i 
+                                                    ? (route.isSmart ? "border-purple-500 bg-purple-50" : "border-blue-500 bg-blue-50")
+                                                    : "border-slate-100 bg-white hover:border-slate-200"
+                                            )}
+                                        >
+                                            <div className="flex justify-between items-start mb-2 relative z-10">
+                                                <Badge className={cn(
+                                                    "font-black text-[9px] uppercase px-2",
+                                                    route.isSmart ? "bg-purple-600 text-white" : "bg-blue-600 text-white"
+                                                )}>
+                                                    {route.isSmart ? "Intelligent" : "Normal"}
+                                                </Badge>
+                                                {selectedRouteIndex === i && <CheckCircle2 className={cn("h-4 w-4", route.isSmart ? "text-purple-600" : "text-blue-600")} />}
+                                            </div>
+                                            <p className="text-xl font-black text-slate-900 leading-none relative z-10">{route.durationInTraffic}</p>
+                                            <div className="flex justify-between items-center mt-1 relative z-10">
+                                                <p className="text-[10px] font-bold text-slate-400">{route.distance}</p>
+                                                {route.delayMinutes > 0 && (
+                                                    <p className="text-[9px] font-black text-red-500">+{route.delayMinutes}m retard</p>
+                                                )}
+                                            </div>
+                                            {route.isSmart && (
+                                                <div className="absolute -bottom-2 -right-2 opacity-5 group-hover:opacity-10 transition-opacity">
+                                                    <Zap className="h-12 w-12 text-purple-600 fill-current" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         </motion.div>
@@ -466,7 +517,7 @@ function MapControls({ onReCenter, isAutoFollowing }: { onReCenter: () => void, 
     const handleZoomOut = () => { if (map) map.setZoom((map.getZoom() || 13) - 1); };
 
     return (
-        <div className="absolute bottom-24 right-4 z-30 flex flex-col gap-3">
+        <div className="absolute bottom-40 right-4 z-30 flex flex-col gap-3">
             <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={onReCenter}
@@ -520,33 +571,63 @@ function AutocompleteInput({ value, onChange, onSearch, isLoading }: { value: st
     );
 }
 
-function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, onAlertUpdate }: { 
+function DirectionsHandler({ origin, destination, isNavigating, selectedRouteIndex, onRouteUpdate, onAlertUpdate, onRouteSelect }: { 
     origin: {lat: number, lng: number} | null, 
     destination: string, 
     isNavigating: boolean,
+    selectedRouteIndex: number,
     onRouteUpdate: (info: RouteInfo) => void,
-    onAlertUpdate: (alert: TrafficAlert | null) => void
+    onAlertUpdate: (alert: TrafficAlert | null) => void,
+    onRouteSelect: (idx: number) => void
 }) {
     const map = useMap();
     const routesLibrary = useMapsLibrary('routes');
-    const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
+    const [renderers, setRenderers] = useState<google.maps.DirectionsRenderer[]>([]);
     const lastPosUpdate = useRef<{lat: number, lng: number} | null>(null);
     const lastAlertTime = useRef<number>(0);
     const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const { toast } = useToast();
 
+    // Init Renderers (Max 2 routes for comparison)
     useEffect(() => {
         if (!routesLibrary || !map) return;
-        const renderer = new google.maps.DirectionsRenderer({
+        
+        const rendererNormal = new google.maps.DirectionsRenderer({
             map,
             suppressMarkers: true,
-            polylineOptions: { strokeColor: '#248eeb', strokeWeight: 8, strokeOpacity: 0.9 }
+            polylineOptions: { 
+                strokeColor: '#3b82f6', 
+                strokeWeight: 6, 
+                strokeOpacity: 0.6,
+                zIndex: 10
+            }
         });
-        setDirectionsRenderer(renderer);
-        return () => renderer.setMap(null);
-    }, [routesLibrary, map]);
+
+        const rendererSmart = new google.maps.DirectionsRenderer({
+            map,
+            suppressMarkers: true,
+            polylineOptions: { 
+                strokeColor: '#a855f7', 
+                strokeWeight: 10, 
+                strokeOpacity: 0.9,
+                zIndex: 20
+            }
+        });
+
+        // Add listeners to select routes by clicking on them
+        google.maps.event.addListener(rendererNormal, 'routeindex_changed', () => onRouteSelect(0));
+        google.maps.event.addListener(rendererSmart, 'routeindex_changed', () => onRouteSelect(1));
+
+        setRenderers([rendererNormal, rendererSmart]);
+
+        return () => {
+            rendererNormal.setMap(null);
+            rendererSmart.setMap(null);
+        };
+    }, [routesLibrary, map, onRouteSelect]);
 
     useEffect(() => {
-        if (!isNavigating || !origin || !destination || !routesLibrary || !directionsRenderer) return;
+        if (!isNavigating || !origin || !destination || !routesLibrary || renderers.length === 0) return;
 
         const g = (window as any).google;
         if (lastPosUpdate.current && g?.maps?.geometry?.spherical) {
@@ -562,30 +643,81 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
             origin: origin,
             destination: destination,
             travelMode: google.maps.TravelMode.DRIVING,
+            provideRouteAlternatives: true,
             drivingOptions: { 
                 departureTime: new Date(), 
                 trafficModel: g?.maps?.TrafficModel?.BEST_GUESS || 'best_guess' as any 
             }
         }, (result, status) => {
             if (status === google.maps.DirectionsStatus.OK && result) {
-                directionsRenderer.setDirections(result);
-                lastPosUpdate.current = origin;
-                const route = result.routes[0].legs[0];
+                // Handle routes
+                const routes = result.routes;
                 
-                onRouteUpdate({ 
-                    distance: route.distance?.text || '', 
-                    duration: route.duration?.text || '', 
-                    durationInTraffic: route.duration_in_traffic?.text,
-                    destinationCoords: {
-                        lat: route.end_location.lat(),
-                        lng: route.end_location.lng()
+                // We show up to 2 routes
+                renderers.forEach((r, idx) => {
+                    if (routes[idx]) {
+                        r.setDirections(result);
+                        r.setRouteIndex(idx);
+                        
+                        // Highlight selected
+                        r.setOptions({
+                            polylineOptions: {
+                                ...r.get('polylineOptions'),
+                                strokeOpacity: selectedRouteIndex === idx ? 0.9 : 0.3,
+                                strokeWeight: selectedRouteIndex === idx ? 12 : 6,
+                                zIndex: selectedRouteIndex === idx ? 30 : 10
+                            }
+                        });
+                    } else {
+                        r.setMap(null);
                     }
                 });
 
-                const now = Date.now();
-                const ratio = (route.duration_in_traffic?.value || 0) / (route.duration?.value || 1);
+                const summaries: RouteSummary[] = routes.slice(0, 2).map((r, i) => {
+                    const leg = r.legs[0];
+                    const dur = leg.duration?.value || 0;
+                    const durT = leg.duration_in_traffic?.value || dur;
+                    return {
+                        index: i,
+                        distance: leg.distance?.text || '',
+                        duration: leg.duration?.text || '',
+                        durationInTraffic: leg.duration_in_traffic?.text || leg.duration?.text || '',
+                        delayMinutes: Math.max(0, Math.round((durT - dur) / 60)),
+                        isSmart: i > 0 || (routes.length > 1 && durT < (routes[1]?.legs[0].duration_in_traffic?.value || Infinity))
+                    };
+                });
+
+                lastPosUpdate.current = origin;
+                const activeLeg = routes[selectedRouteIndex].legs[0];
                 
-                if (now - lastAlertTime.current > 20000) {
+                onRouteUpdate({ 
+                    distance: activeLeg.distance?.text || '', 
+                    duration: activeLeg.duration?.text || '', 
+                    durationInTraffic: activeLeg.duration_in_traffic?.text,
+                    destinationCoords: {
+                        lat: activeLeg.end_location.lat(),
+                        lng: activeLeg.end_location.lng()
+                    },
+                    allRoutes: summaries
+                });
+
+                // Recommendation Logic
+                if (summaries.length > 1 && summaries[1].isSmart) {
+                    const gain = (routes[0].legs[0].duration_in_traffic?.value || 0) - (routes[1].legs[0].duration_in_traffic?.value || 0);
+                    if (gain > 120 && selectedRouteIndex === 0) { // If smart is 2+ mins faster
+                        toast({
+                            title: "Itinéraire plus rapide !",
+                            description: "Un trajet intelligent est disponible pour éviter les bouchons.",
+                            action: <Button variant="outline" size="sm" onClick={() => onRouteSelect(1)}>Changer</Button>
+                        });
+                    }
+                }
+
+                // Standard Alert Logic
+                const now = Date.now();
+                const ratio = (activeLeg.duration_in_traffic?.value || 0) / (activeLeg.duration?.value || 1);
+                
+                if (now - lastAlertTime.current > 30000) {
                     if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
                     
                     let newAlert: TrafficAlert | null = null;
@@ -593,21 +725,19 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
                         newAlert = { id: `a-${now}`, message: "Route bloquée dans moins de 1 km, veuillez changer d’itinéraire", type: 'red', timestamp: now };
                     } else if (ratio > 1.25) {
                         newAlert = { id: `a-${now}`, message: "Embouteillage détecté à 2 km devant vous", type: 'yellow', timestamp: now };
-                    } else if (ratio < 1.1 && isNavigating) {
-                        newAlert = { id: `a-${now}`, message: "Circulation fluide à 1 km devant vous", type: 'green', timestamp: now };
                     }
 
                     if (newAlert) {
                         onAlertUpdate(newAlert);
                         lastAlertTime.current = now;
-                        alertTimeoutRef.current = setTimeout(() => onAlertUpdate(null), 8000);
+                        alertTimeoutRef.current = setTimeout(() => onAlertUpdate(null), 10000);
                     }
                 }
             }
         });
 
         return () => { if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current); };
-    }, [isNavigating, origin, destination, routesLibrary, directionsRenderer, onAlertUpdate, onRouteUpdate]);
+    }, [isNavigating, origin, destination, routesLibrary, renderers, selectedRouteIndex, onAlertUpdate, onRouteUpdate, toast, onRouteSelect]);
 
     return null;
 }

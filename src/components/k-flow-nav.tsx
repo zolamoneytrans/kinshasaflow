@@ -35,7 +35,9 @@ import {
   TrendingUp,
   Map as MapIcon,
   Activity,
-  Bug
+  Bug,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -104,6 +106,7 @@ interface SummaryData {
     segments: TrafficSegment[];
     recommendation: string;
     bestRouteIndex: number;
+    allRoutes?: RouteSummary[];
 }
 
 // Helper pour traduire les instructions brutes si l'API renvoie de l'anglais
@@ -249,7 +252,9 @@ export default function KFlowNav() {
     const [showDestInfo, setShowDestInfo] = useState(false);
     const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
     const [debugMode, setDebugMode] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     
+    const containerRef = useRef<HTMLDivElement>(null);
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
     const { data: profile } = useDoc<UserProfile>(userRef);
 
@@ -272,6 +277,25 @@ export default function KFlowNav() {
             return () => navigator.geolocation.clearWatch(watchId);
         }
     }, []);
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
+
+    const toggleFullscreen = () => {
+        if (!containerRef.current) return;
+        if (!document.fullscreenElement) {
+            containerRef.current.requestFullscreen().catch(err => {
+                toast({ title: "Erreur Plein Écran", description: "Votre navigateur ne supporte pas cette option.", variant: "destructive" });
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    };
 
     const handleAnalyzeRoute = async () => {
         if (!user || !profile) return;
@@ -337,7 +361,6 @@ export default function KFlowNav() {
                     congestedCount++;
                 }
                 
-                // Nettoyage et traduction de l'instruction
                 const rawName = step.instructions.replace(/<[^>]*>?/gm, '').split(',')[0];
                 const name = translateInstruction(rawName);
 
@@ -369,11 +392,23 @@ export default function KFlowNav() {
 
             const globalDelay = Math.max(0, Math.round((legDurationTraffic - legDurationTypical) / 60));
             
-            // --- MOTEUR DE RECOMMANDATION STATISTIQUE ---
+            const summaries: RouteSummary[] = result.routes.slice(0, 2).map((r, i) => {
+                const leg = r.legs[0];
+                const dur = leg.duration?.value || 0;
+                const durT = leg.duration_in_traffic?.value || dur;
+                return {
+                    index: i,
+                    distance: leg.distance?.text || '',
+                    duration: leg.duration?.text || '',
+                    durationInTraffic: leg.duration_in_traffic?.text || leg.duration?.text || '',
+                    delayMinutes: Math.max(0, Math.round((durT - dur) / 60)),
+                    isSmart: i > 0 || (result.routes.length > 1 && durT < (result.routes[1]?.legs[0].duration_in_traffic?.value || Infinity))
+                };
+            });
+
             let bestIdx = 0;
-            const totalSegments = mergedSegments.length;
             const problematicSegments = mergedSegments.filter(s => s.status !== 'fluide').length;
-            const congestionPerc = Math.round((problematicSegments / totalSegments) * 100);
+            const congestionPerc = Math.round((problematicSegments / mergedSegments.length) * 100);
 
             let rec = `Conditions excellentes : le flux est fluide sur l'ensemble de votre trajet.`;
             
@@ -424,7 +459,8 @@ export default function KFlowNav() {
                 delayMinutes: globalDelay,
                 segments: mergedSegments.filter(s => s.status !== 'fluide' || mergedSegments.length < 5),
                 recommendation: rec,
-                bestRouteIndex: bestIdx
+                bestRouteIndex: bestIdx,
+                allRoutes: summaries
             });
             
             setSelectedRouteIndex(bestIdx);
@@ -464,7 +500,10 @@ export default function KFlowNav() {
     };
 
     return (
-        <div className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-slate-950 flex flex-col border border-slate-800">
+        <div 
+            ref={containerRef}
+            className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-slate-950 flex flex-col border border-slate-800"
+        >
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="fr">
                 {/* Overlay Barre de Recherche */}
                 {!isNavigating && !showSummary && (
@@ -526,31 +565,33 @@ export default function KFlowNav() {
                                             <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">SYNTHÈSE STRATÉGIQUE</Badge>
                                             <button onClick={() => setDebugMode(!debugMode)} className="text-white/20 hover:text-white transition-all"><Bug className="h-4 w-4"/></button>
                                         </div>
-                                        <h2 className="text-3xl font-black tracking-tight leading-tight">{summaryData.destination}</h2>
-                                        <div className="flex items-center gap-6 pt-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Distance</span>
-                                                <span className="text-xl font-black">{summaryData.distance}</span>
+                                        <h2 className="text-2xl md:text-3xl font-black tracking-tight leading-tight">{summaryData.destination}</h2>
+                                        
+                                        {/* Route Selector inside Whiteboard */}
+                                        {summaryData.allRoutes && summaryData.allRoutes.length > 1 && (
+                                            <div className="flex gap-2 pt-4">
+                                                {summaryData.allRoutes.map((route, i) => (
+                                                    <button
+                                                        key={i}
+                                                        onClick={() => setSelectedRouteIndex(i)}
+                                                        className={cn(
+                                                            "flex-1 p-3 rounded-xl border-2 transition-all text-left relative",
+                                                            selectedRouteIndex === i ? "bg-white/20 border-white" : "bg-black/10 border-white/10 hover:bg-black/20"
+                                                        )}
+                                                    >
+                                                        <p className="text-[9px] font-black uppercase mb-1 opacity-70">{route.isSmart ? "K-Flow" : "Standard"}</p>
+                                                        <p className="text-lg font-black">{route.durationInTraffic}</p>
+                                                        {selectedRouteIndex === i && <CheckCircle2 className="absolute top-2 right-2 h-3 w-3" />}
+                                                    </button>
+                                                ))}
                                             </div>
-                                            <div className="w-px h-8 bg-white/20"></div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Arrivée Prévue</span>
-                                                <span className="text-xl font-black">{summaryData.duration}</span>
-                                            </div>
-                                            <div className="w-px h-8 bg-white/20"></div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase text-white/60 tracking-widest">Retard Trafic</span>
-                                                <span className={cn("text-xl font-black", summaryData.delayMinutes > 5 ? "text-amber-300" : "text-emerald-300")}>
-                                                    {summaryData.delayMinutes > 0 ? `+${summaryData.delayMinutes} min` : "Fluide"}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                                <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
                                     <div className="space-y-4">
-                                        <h3 className="text-xs font-black uppercase text-slate-400 tracking-[0.2em] flex items-center gap-2">
+                                        <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] flex items-center gap-2">
                                             <Activity className="h-4 w-4" /> État des tronçons routiers
                                         </h3>
                                         <div className="space-y-3">
@@ -563,12 +604,10 @@ export default function KFlowNav() {
                                                             seg.status === 'congestionné' ? "bg-amber-500" : "bg-red-500"
                                                         )} />
                                                         <div>
-                                                            <p className="font-bold text-slate-800 text-sm">{seg.from} {seg.to ? `→ ${seg.to}` : ''}</p>
-                                                            <div className="flex items-center gap-2">
-                                                                <p className="text-[10px] font-bold text-slate-400 uppercase">
-                                                                    {seg.status} • {seg.distanceText}
-                                                                </p>
-                                                            </div>
+                                                            <p className="font-bold text-slate-800 text-sm">{seg.from}</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                                                {seg.status} • {seg.distanceText}
+                                                            </p>
                                                         </div>
                                                     </div>
                                                     {seg.delayMinutes > 0 && <span className="text-xs font-black text-red-500">+{seg.delayMinutes}m</span>}
@@ -588,13 +627,13 @@ export default function KFlowNav() {
                                     </div>
                                 </div>
 
-                                <div className="p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4">
-                                    <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-16 rounded-2xl font-black uppercase tracking-widest text-xs flex-1">
-                                        Retour
+                                <div className="p-6 md:p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4">
+                                    <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-14 md:h-16 rounded-2xl font-black uppercase tracking-widest text-xs flex-1">
+                                        Annuler
                                     </Button>
-                                    <Button onClick={handleStartNavigation} className="h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-sm flex-[2] shadow-2xl shadow-primary/30 gap-3">
+                                    <Button onClick={handleStartNavigation} className="h-14 md:h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-sm flex-[2] shadow-2xl shadow-primary/30 gap-3">
                                         <Navigation2 className="h-6 w-6 fill-current" />
-                                        Lancer Guidage
+                                        Démarrer Guidage
                                     </Button>
                                 </div>
                             </div>
@@ -602,24 +641,24 @@ export default function KFlowNav() {
                     )}
                 </AnimatePresence>
 
-                {/* Overlay Header Navigation */}
+                {/* Overlay Header Navigation (Slimmer) */}
                 {isNavigating && (
                     <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
                         <div className="w-full max-w-xl pointer-events-auto">
                             <motion.div 
                                 initial={{ y: -100, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
-                                className="bg-slate-900/95 backdrop-blur-xl p-4 rounded-[2rem] shadow-2xl border border-white/10 flex justify-between items-center text-white"
+                                className="bg-slate-900/95 backdrop-blur-xl p-3 rounded-[2rem] shadow-2xl border border-white/10 flex justify-between items-center text-white"
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-emerald-500 p-3 rounded-2xl shadow-lg shadow-emerald-500/20">
-                                        <Navigation2 className="h-6 w-6 fill-white" />
+                                <div className="flex items-center gap-3 ml-2">
+                                    <div className="bg-emerald-500 p-2 rounded-xl shadow-lg">
+                                        <Navigation2 className="h-5 w-5 fill-white" />
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-black leading-none">
+                                        <p className="text-xl font-black leading-none">
                                             {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo?.duration || '--'}
                                         </p>
-                                        <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">
+                                        <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mt-0.5">
                                             {routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || routeInfo?.distance || '--'}
                                         </p>
                                     </div>
@@ -629,13 +668,13 @@ export default function KFlowNav() {
                                         variant="ghost" 
                                         size="sm" 
                                         onClick={() => setIs3D(!is3D)} 
-                                        className="text-white hover:bg-white/10 rounded-xl h-10 gap-2 border border-white/10"
+                                        className="text-white hover:bg-white/10 rounded-xl h-10 gap-1.5 border border-white/10"
                                     >
-                                        {is3D ? <Layers className="h-4 w-4" /> : <Box className="h-4 w-4" />}
-                                        <span className="text-[10px] font-black uppercase">{is3D ? '2D' : '3D'}</span>
+                                        {is3D ? <Layers className="h-3.5 w-3.5" /> : <Box className="h-3.5 w-3.5" />}
+                                        <span className="text-[9px] font-black uppercase">{is3D ? '2D' : '3D'}</span>
                                     </Button>
                                     <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); setShowDestInfo(false); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
-                                        <X />
+                                        <X className="h-5 w-5" />
                                     </Button>
                                 </div>
                             </motion.div>
@@ -648,23 +687,19 @@ export default function KFlowNav() {
                                         animate={{ scale: 1, opacity: 1, y: 0 }}
                                         exit={{ scale: 0.8, opacity: 0 }}
                                         className={cn(
-                                            "mt-3 p-5 rounded-[2rem] shadow-2xl border-2 flex items-center gap-4 backdrop-blur-xl relative overflow-hidden",
+                                            "mt-3 p-4 rounded-[2rem] shadow-2xl border-2 flex items-center gap-3 backdrop-blur-xl relative overflow-hidden",
                                             activeAlert.type === 'red' ? "bg-red-600/95 border-red-400 text-white" :
                                             activeAlert.type === 'yellow' ? "bg-amber-500/95 border-amber-300 text-slate-950" :
                                             "bg-emerald-600/95 border-emerald-400 text-white"
                                         )}
                                     >
-                                        <div className="p-3 bg-white/20 rounded-2xl shrink-0 shadow-inner">
-                                            {activeAlert.type === 'red' ? <AlertOctagon className="h-7 w-7" /> :
-                                            activeAlert.type === 'yellow' ? <AlertTriangle className="h-7 w-7" /> :
-                                            <CheckCircle2 className="h-7 w-7" />}
+                                        <div className="p-2 bg-white/20 rounded-xl shrink-0">
+                                            {activeAlert.type === 'red' ? <AlertOctagon className="h-6 w-6" /> :
+                                            activeAlert.type === 'yellow' ? <AlertTriangle className="h-6 w-6" /> :
+                                            <CheckCircle2 className="h-6 w-6" />}
                                         </div>
-                                        <div className="flex-1 pr-6">
-                                            <p className="text-sm font-black leading-tight uppercase tracking-tight">{activeAlert.message}</p>
-                                        </div>
-                                        <button onClick={() => setActiveAlert(null)} className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity">
-                                            <X className="h-4 w-4" />
-                                        </button>
+                                        <p className="text-xs font-black leading-tight uppercase flex-1">{activeAlert.message}</p>
+                                        <button onClick={() => setActiveAlert(null)} className="opacity-50 hover:opacity-100"><X className="h-4 w-4" /></button>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -672,7 +707,7 @@ export default function KFlowNav() {
                     </div>
                 )}
 
-                <div className="flex-1">
+                <div className="flex-1 relative">
                     <Map
                         defaultCenter={KINSHASA_CENTER}
                         defaultZoom={13}
@@ -683,7 +718,7 @@ export default function KFlowNav() {
                             latLngBounds: KINSHASA_BOUNDS,
                             strictBounds: false,
                         }}
-                        mapId="kflow_nav_map_v5"
+                        mapId="kflow_nav_map_v6"
                         className="w-full h-full"
                     >
                         <TrafficLayerComponent />
@@ -720,7 +755,6 @@ export default function KFlowNav() {
                             selectedRouteIndex={selectedRouteIndex}
                             onRouteUpdate={onRouteUpdate}
                             onAlertUpdate={onAlertUpdate}
-                            onRouteSelect={setSelectedRouteIndex}
                         />
 
                         {isNavigating && routeInfo?.destinationCoords && (
@@ -757,12 +791,6 @@ export default function KFlowNav() {
                                                         {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo.duration}
                                                     </span>
                                                 </div>
-                                                <div className="flex justify-between text-[10px]">
-                                                    <span className="text-slate-400 font-bold uppercase">Distance</span>
-                                                    <span className="text-slate-700 font-black">
-                                                        {routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || routeInfo.distance}
-                                                    </span>
-                                                </div>
                                             </div>
                                         </div>
                                     </InfoWindow>
@@ -771,79 +799,41 @@ export default function KFlowNav() {
                         )}
                         
                         <IncidentMarkers incidents={incidents || []} />
-                        {!showSummary && <MapControls onReCenter={handleReCenter} isAutoFollowing={autoFollow} />}
+                        
+                        <MapControls 
+                            onReCenter={handleReCenter} 
+                            isAutoFollowing={autoFollow} 
+                            toggleFullscreen={toggleFullscreen}
+                            isFullscreen={isFullscreen}
+                        />
                     </Map>
                 </div>
-
-                <AnimatePresence>
-                    {isNavigating && routeInfo?.allRoutes && routeInfo.allRoutes.length > 0 && (
-                        <motion.div 
-                            initial={{ y: 200 }}
-                            animate={{ y: 0 }}
-                            exit={{ y: 200 }}
-                            className="absolute bottom-6 left-0 right-0 flex justify-center px-4 z-30 pointer-events-none"
-                        >
-                            <div className="w-full max-w-2xl bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-4 shadow-2xl border border-slate-100 flex flex-col gap-3 pointer-events-auto overflow-hidden">
-                                <div className="flex items-center justify-between px-2">
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                                        <ArrowRightLeft className="h-3 w-3" />
-                                        Optimisation de trajet
-                                    </p>
-                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 font-black text-[9px]">TRAFIC LIVE</Badge>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    {routeInfo.allRoutes.map((route, i) => (
-                                        <button 
-                                            key={i}
-                                            onClick={() => setSelectedRouteIndex(i)}
-                                            className={cn(
-                                                "flex flex-col p-4 rounded-[1.5rem] border-2 transition-all text-left relative overflow-hidden group",
-                                                selectedRouteIndex === i 
-                                                    ? (route.isSmart ? "border-purple-500 bg-purple-50" : "border-blue-500 bg-blue-50")
-                                                    : "border-slate-100 bg-white hover:border-slate-200"
-                                            )}
-                                        >
-                                            <div className="flex justify-between items-start mb-2 relative z-10">
-                                                <Badge className={cn(
-                                                    "font-black text-[9px] uppercase px-2",
-                                                    route.isSmart ? "bg-purple-600 text-white" : "bg-blue-600 text-white"
-                                                )}>
-                                                    {route.isSmart ? "Intelligent" : "Standard"}
-                                                </Badge>
-                                                {selectedRouteIndex === i && <CheckCircle2 className={cn("h-4 w-4", route.isSmart ? "text-purple-600" : "text-blue-600")} />}
-                                            </div>
-                                            <p className="text-xl font-black text-slate-900 leading-none relative z-10">{route.durationInTraffic}</p>
-                                            <div className="flex justify-between items-center mt-1 relative z-10">
-                                                <p className="text-[10px] font-bold text-slate-400">{route.distance}</p>
-                                                {route.delayMinutes > 0 && (
-                                                    <p className="text-[9px] font-black text-red-500">+{route.delayMinutes}m</p>
-                                                )}
-                                            </div>
-                                            {route.isSmart && (
-                                                <div className="absolute -bottom-2 -right-2 opacity-5 group-hover:opacity-10 transition-opacity">
-                                                    <Zap className="h-12 w-12 text-purple-600 fill-current" />
-                                                </div>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </APIProvider>
         </div>
     );
 }
 
-function MapControls({ onReCenter, isAutoFollowing }: { onReCenter: () => void, isAutoFollowing: boolean }) {
+function MapControls({ onReCenter, isAutoFollowing, toggleFullscreen, isFullscreen }: { 
+    onReCenter: () => void, 
+    isAutoFollowing: boolean,
+    toggleFullscreen: () => void,
+    isFullscreen: boolean
+}) {
     const map = useMap();
     const handleZoomIn = () => { if (map) map.setZoom((map.getZoom() || 13) + 1); };
     const handleZoomOut = () => { if (map) map.setZoom((map.getZoom() || 13) - 1); };
 
     return (
-        <div className="absolute bottom-40 right-4 z-30 flex flex-col gap-3">
+        <div className="absolute bottom-10 right-4 z-30 flex flex-col gap-3">
+            <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Réduire" : "Plein écran"}
+                className="h-12 w-12 rounded-2xl flex items-center justify-center shadow-2xl border-2 bg-white border-slate-100 text-slate-600 hover:bg-slate-50 transition-all"
+            >
+                {isFullscreen ? <Minimize2 className="h-6 w-6" /> : <Maximize2 className="h-6 w-6" />}
+            </motion.button>
+
             <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={onReCenter}
@@ -898,14 +888,13 @@ function AutocompleteInput({ value, onChange, onSearch, isLoading }: { value: st
     );
 }
 
-function DirectionsHandler({ origin, destination, isNavigating, selectedRouteIndex, onRouteUpdate, onAlertUpdate, onRouteSelect }: { 
+function DirectionsHandler({ origin, destination, isNavigating, selectedRouteIndex, onRouteUpdate, onAlertUpdate }: { 
     origin: {lat: number; lng: number} | null, 
     destination: string, 
     isNavigating: boolean,
     selectedRouteIndex: number,
     onRouteUpdate: (info: RouteInfo) => void,
-    onAlertUpdate: (alert: TrafficAlert | null) => void,
-    onRouteSelect: (idx: number) => void
+    onAlertUpdate: (alert: TrafficAlert | null) => void
 }) {
     const map = useMap();
     const routesLibrary = useMapsLibrary('routes');
@@ -913,7 +902,6 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
     const lastPosUpdate = useRef<{lat: number, lng: number} | null>(null);
     const lastAlertTime = useRef<number>(0);
     const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const { toast } = useToast();
 
     // Init Traceurs
     useEffect(() => {
@@ -986,7 +974,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                         r.setOptions({
                             polylineOptions: {
                                 ...r.get('polylineOptions'),
-                                strokeOpacity: isSelected ? 0.9 : 0.25,
+                                strokeOpacity: isSelected ? 0.9 : 0.2,
                                 strokeWeight: isSelected ? 12 : 6,
                                 zIndex: isSelected ? 30 : 10
                             }
@@ -1052,7 +1040,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
         });
 
         return () => { if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current); };
-    }, [isNavigating, origin, destination, routesLibrary, renderers, selectedRouteIndex, onAlertUpdate, onRouteUpdate, toast, onRouteSelect, map]);
+    }, [isNavigating, origin, destination, routesLibrary, renderers, selectedRouteIndex, onAlertUpdate, onRouteUpdate, map]);
 
     return null;
 }

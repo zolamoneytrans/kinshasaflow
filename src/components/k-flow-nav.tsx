@@ -197,6 +197,40 @@ function useInterpolatedLocation(rawLocation: {lat: number, lng: number} | null)
     return { smoothLocation, heading };
 }
 
+/**
+ * Sous-composant pour gérer les mouvements de caméra
+ */
+function MapCameraHandler({ 
+  smoothLocation, 
+  autoFollow, 
+  showSummary, 
+  isNavigating, 
+  is3D, 
+  heading 
+}: { 
+  smoothLocation: {lat: number, lng: number} | null,
+  autoFollow: boolean,
+  showSummary: boolean,
+  isNavigating: boolean,
+  is3D: boolean,
+  heading: number
+}) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (map && smoothLocation && autoFollow && !showSummary) {
+            map.moveCamera({
+                center: smoothLocation,
+                heading: isNavigating && is3D ? heading : 0,
+                tilt: isNavigating && is3D ? 45 : 0,
+                zoom: isNavigating ? 18 : 15
+            });
+        }
+    }, [map, smoothLocation, autoFollow, heading, isNavigating, is3D, showSummary]);
+
+    return null;
+}
+
 export default function KFlowNav() {
     const { user, firestore } = useFirebase();
     const { toast } = useToast();
@@ -216,8 +250,6 @@ export default function KFlowNav() {
     const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
     const [debugMode, setDebugMode] = useState(false);
     
-    const map = useMap();
-
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
     const { data: profile } = useDoc<UserProfile>(userRef);
 
@@ -240,17 +272,6 @@ export default function KFlowNav() {
             return () => navigator.geolocation.clearWatch(watchId);
         }
     }, []);
-
-    useEffect(() => {
-        if (map && smoothLocation && autoFollow && !showSummary) {
-            map.moveCamera({
-                center: smoothLocation,
-                heading: isNavigating && is3D ? heading : 0,
-                tilt: isNavigating && is3D ? 45 : 0,
-                zoom: isNavigating ? 18 : 15
-            });
-        }
-    }, [map, smoothLocation, autoFollow, heading, isNavigating, is3D, showSummary]);
 
     const handleAnalyzeRoute = async () => {
         if (!user || !profile) return;
@@ -432,6 +453,14 @@ export default function KFlowNav() {
             return;
         }
         setAutoFollow(true);
+    };
+
+    const onRouteUpdate = (info: RouteInfo) => {
+        setRouteInfo(info);
+    };
+
+    const onAlertUpdate = (alert: TrafficAlert | null) => {
+        setActiveAlert(alert);
     };
 
     return (
@@ -659,6 +688,15 @@ export default function KFlowNav() {
                     >
                         <TrafficLayerComponent />
                         
+                        <MapCameraHandler 
+                          smoothLocation={smoothLocation}
+                          autoFollow={autoFollow}
+                          showSummary={showSummary}
+                          isNavigating={isNavigating}
+                          is3D={is3D}
+                          heading={heading}
+                        />
+
                         {smoothLocation && (
                             <Marker
                                 position={smoothLocation}
@@ -797,10 +835,6 @@ export default function KFlowNav() {
             </APIProvider>
         </div>
     );
-
-    function onRouteUpdate(info: RouteInfo) {
-        setRouteInfo(info);
-    }
 }
 
 function MapControls({ onReCenter, isAutoFollowing }: { onReCenter: () => void, isAutoFollowing: boolean }) {

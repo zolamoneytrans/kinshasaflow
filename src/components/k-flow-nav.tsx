@@ -346,7 +346,7 @@ export default function KFlowNav() {
             let blockedCount = 0;
             let congestedCount = 0;
 
-            const rawSegments: TrafficSegment[] = leg.steps.map(step => {
+            const rawSegments: TrafficSegment[] = leg.steps.map((step: any) => {
                 const currentDuration = step.duration?.value || 0;
                 const typicalDuration = (step.distance?.value / legDistanceTotal) * legDurationTypical;
                 const ratio = typicalDuration > 0 ? currentDuration / typicalDuration : 1;
@@ -392,15 +392,15 @@ export default function KFlowNav() {
 
             const globalDelay = Math.max(0, Math.round((legDurationTraffic - legDurationTypical) / 60));
             
-            const summaries: RouteSummary[] = result.routes.slice(0, 2).map((r, i) => {
-                const leg = r.legs[0];
-                const dur = leg.duration?.value || 0;
-                const durT = leg.duration_in_traffic?.value || dur;
+            const summaries: RouteSummary[] = result.routes.slice(0, 2).map((r: any, i: number) => {
+                const l = r.legs[0];
+                const dur = l.duration?.value || 0;
+                const durT = l.duration_in_traffic?.value || dur;
                 return {
                     index: i,
-                    distance: leg.distance?.text || '',
-                    duration: leg.duration?.text || '',
-                    durationInTraffic: leg.duration_in_traffic?.text || leg.duration?.text || '',
+                    distance: l.distance?.text || '',
+                    duration: l.duration?.text || '',
+                    durationInTraffic: l.duration_in_traffic?.text || l.duration?.text || '',
                     delayMinutes: Math.max(0, Math.round((durT - dur) / 60)),
                     isSmart: i > 0 || (result.routes.length > 1 && durT < (result.routes[1]?.legs[0].duration_in_traffic?.value || Infinity))
                 };
@@ -570,7 +570,7 @@ export default function KFlowNav() {
                                         {/* Route Selector inside Whiteboard */}
                                         {summaryData.allRoutes && summaryData.allRoutes.length > 1 && (
                                             <div className="flex gap-2 pt-4">
-                                                {summaryData.allRoutes.map((route, i) => (
+                                                {summaryData.allRoutes.map((route: any, i: number) => (
                                                     <button
                                                         key={i}
                                                         onClick={() => setSelectedRouteIndex(i)}
@@ -964,7 +964,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
             if (status === g.maps.DirectionsStatus.OK && result) {
                 const routes = result.routes;
                 
-                renderers.forEach((r, idx) => {
+                renderers.forEach((r: any, idx: number) => {
                     if (routes[idx]) {
                         r.setMap(map);
                         r.setDirections(result);
@@ -984,15 +984,15 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                     }
                 });
 
-                const summaries: RouteSummary[] = routes.slice(0, 2).map((r, i) => {
-                    const leg = r.legs[0];
-                    const dur = leg.duration?.value || 0;
-                    const durT = leg.duration_in_traffic?.value || dur;
+                const summaries: RouteSummary[] = routes.slice(0, 2).map((r: any, i: number) => {
+                    const l = r.legs[0];
+                    const dur = l.duration?.value || 0;
+                    const durT = l.duration_in_traffic?.value || dur;
                     return {
                         index: i,
-                        distance: leg.distance?.text || '',
-                        duration: leg.duration?.text || '',
-                        durationInTraffic: leg.duration_in_traffic?.text || leg.duration?.text || '',
+                        distance: l.distance?.text || '',
+                        duration: l.duration?.text || '',
+                        durationInTraffic: l.duration_in_traffic?.text || l.duration?.text || '',
                         delayMinutes: Math.max(0, Math.round((durT - dur) / 60)),
                         isSmart: i > 0 || (routes.length > 1 && durT < (routes[1]?.legs[0].duration_in_traffic?.value || Infinity))
                     };

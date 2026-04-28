@@ -106,6 +106,41 @@ interface SummaryData {
     bestRouteIndex: number;
 }
 
+// Helper pour traduire les instructions brutes si l'API renvoie de l'anglais
+const translateInstruction = (text: string) => {
+    let t = text;
+    const map: Record<string, string> = {
+        "At the roundabout": "Au rond-point",
+        "Continue onto": "Continuer sur",
+        "Turn right": "Tourner à droite",
+        "Turn left": "Tourner à gauche",
+        "Head south": "Dirigez-vous vers le sud",
+        "Head north": "Dirigez-vous vers le nord",
+        "Head east": "Dirigez-vous vers l'est",
+        "Head west": "Dirigez-vous vers l'ouest",
+        "Merge onto": "Rejoindre",
+        "Take the exit": "Prendre la sortie",
+        "Keep left": "Rester à gauche",
+        "Keep right": "Rester à droite",
+        "Slight right": "Légèrement à droite",
+        "Slight left": "Légèrement à gauche",
+        "Take the 1st exit": "Prendre la 1ère sortie",
+        "Take the 2nd exit": "Prendre la 2ème sortie",
+        "Take the 3rd exit": "Prendre la 3ème sortie",
+        "Take the 4th exit": "Prendre la 4ème sortie",
+        "onto": "sur",
+        "way": "voie",
+        "Road": "Route",
+        "Street": "Rue",
+        "Blvd": "Boulevard"
+    };
+    Object.keys(map).forEach(key => {
+        const regex = new RegExp(`\\b${key}\\b`, 'gi');
+        t = t.replace(regex, map[key]);
+    });
+    return t;
+};
+
 /**
  * Hook personnalisé pour lisser la position GPS et calculer l'orientation
  */
@@ -281,7 +316,9 @@ export default function KFlowNav() {
                     congestedCount++;
                 }
                 
-                const name = step.instructions.replace(/<[^>]*>?/gm, '').split(',')[0];
+                // Nettoyage et traduction de l'instruction
+                const rawName = step.instructions.replace(/<[^>]*>?/gm, '').split(',')[0];
+                const name = translateInstruction(rawName);
 
                 return {
                     from: name,
@@ -310,24 +347,30 @@ export default function KFlowNav() {
             }
 
             const globalDelay = Math.max(0, Math.round((legDurationTraffic - legDurationTypical) / 60));
-            const delayRatio = globalDelay / (legDurationTypical / 60);
-
-            // --- RECOMMANDATION BASÉE SUR LES STATS DU FLUX ---
-            let bestIdx = 0;
-            let rec = "Le flux est globalement fluide. Profitez d'un trajet sans encombre.";
             
-            if (delayRatio > 0.4 || blockedCount > 0) {
-                rec = "Flux critique détecté : plusieurs zones rouges ralentissent ce trajet. Prudence recommandée.";
-            } else if (delayRatio > 0.15 || congestedCount > 2) {
-                rec = "Flux ralenti : prévoyez quelques minutes supplémentaires sur les axes chargés.";
+            // --- MOTEUR DE RECOMMANDATION STATISTIQUE ---
+            let bestIdx = 0;
+            const totalSegments = mergedSegments.length;
+            const problematicSegments = mergedSegments.filter(s => s.status !== 'fluide').length;
+            const congestionPerc = Math.round((problematicSegments / totalSegments) * 100);
+
+            let rec = `Conditions excellentes : le flux est fluide sur l'ensemble de votre trajet.`;
+            
+            if (blockedCount > 0) {
+                rec = `Flux critique : ${blockedCount} zone(s) de blocage total détectée(s). Retard estimé de ${globalDelay} min.`;
+            } else if (congestedCount > 1) {
+                rec = `Ralentissements détectés sur ${congestionPerc}% du parcours. Prévoyez environ ${globalDelay} min de retard.`;
+            } else if (globalDelay > 2) {
+                rec = `Flux modéré : quelques ralentissements mineurs (+${globalDelay} min). Itinéraire K-Flow recommandé.`;
             }
 
             if (result.routes.length > 1) {
                 const dur0 = result.routes[0].legs[0].duration_in_traffic?.value || result.routes[0].legs[0].duration?.value || 0;
                 const dur1 = result.routes[1].legs[0].duration_in_traffic?.value || result.routes[1].legs[0].duration?.value || 0;
-                if (dur1 < dur0 - 120) {
+                const gain = Math.round((dur0 - dur1) / 60);
+                if (gain >= 2) {
                     bestIdx = 1;
-                    rec = `L'itinéraire intelligent K-Flow permet de gagner ${Math.round((dur0-dur1)/60)} min en contournant les zones saturées.`;
+                    rec = `Optimisation majeure : l'itinéraire K-Flow intelligent permet de gagner ${gain} min en contournant les bouchons.`;
                 }
             }
 
@@ -393,7 +436,7 @@ export default function KFlowNav() {
 
     return (
         <div className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-slate-950 flex flex-col border border-slate-800">
-            <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+            <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="fr">
                 {/* Overlay Barre de Recherche */}
                 {!isNavigating && !showSummary && (
                     <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4">
@@ -638,7 +681,7 @@ export default function KFlowNav() {
                             isNavigating={isNavigating}
                             selectedRouteIndex={selectedRouteIndex}
                             onRouteUpdate={onRouteUpdate}
-                            onAlertUpdate={setActiveAlert}
+                            onAlertUpdate={onAlertUpdate}
                             onRouteSelect={setSelectedRouteIndex}
                         />
 

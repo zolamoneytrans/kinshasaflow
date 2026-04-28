@@ -743,8 +743,8 @@ export default function KFlowNav() {
                                     strokeWeight: 2,
                                     scale: 2,
                                     rotation: heading,
-                                    anchor: (window as any).google ? new (window as any).google.maps.Point(12, 12) : undefined
-                                }}
+                                    anchor: (window as any).google?.maps?.Point ? new (window as any).google.maps.Point(12, 12) : { x: 12, y: 12 }
+                                } as google.maps.Symbol}
                             />
                         )}
 
@@ -770,8 +770,8 @@ export default function KFlowNav() {
                                         strokeColor: '#000000',
                                         strokeWeight: 2,
                                         scale: 1.5,
-                                        anchor: (window as any).google ? new (window as any).google.maps.Point(12, 22) : undefined
-                                    }}
+                                        anchor: (window as any).google?.maps?.Point ? new (window as any).google.maps.Point(12, 22) : { x: 12, y: 22 }
+                                    } as google.maps.Symbol}
                                 />
                                 {showDestInfo && (
                                     <InfoWindow 
@@ -1061,7 +1061,7 @@ const TrafficLayerComponent = () => {
 const IncidentMarkers = ({ incidents }: { incidents: WithId<EventReport>[] }) => {
     const map = useMap();
     const g = (window as any).google;
-    if (!map || !g) return null;
+    if (!map || !g?.maps?.Size) return null;
 
     return (
         <>

@@ -42,7 +42,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useFirebase, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection, query, orderBy, limit } from 'firebase/firestore';
 import { STAR_COSTS, UserProfile, EventReport, WithId } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -960,7 +960,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                 departureTime: new Date(), 
                 trafficModel: g?.maps?.TrafficModel?.BEST_GUESS || 'best_guess'
             }
-        }, (result, status) => {
+        }, (result: any, status: any) => {
             if (status === g.maps.DirectionsStatus.OK && result) {
                 const routes = result.routes;
                 

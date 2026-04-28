@@ -24,7 +24,9 @@ import {
   Volume2,
   Plus,
   Minus,
-  LocateFixed
+  LocateFixed,
+  Box,
+  Layers
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -57,20 +59,79 @@ interface TrafficAlert {
     timestamp: number;
 }
 
+/**
+ * Hook personnalisé pour lisser la position GPS
+ */
+function useInterpolatedLocation(rawLocation: {lat: number, lng: number} | null) {
+    const [smoothLocation, setSmoothLocation] = useState<{lat: number, lng: number} | null>(null);
+    const [heading, setHeading] = useState(0);
+    const lastPos = useRef<{lat: number, lng: number} | null>(null);
+    const animationFrame = useRef<number>(0);
+
+    useEffect(() => {
+        if (!rawLocation) return;
+
+        if (!lastPos.current) {
+            setSmoothLocation(rawLocation);
+            lastPos.current = rawLocation;
+            return;
+        }
+
+        // Calcul du heading (direction)
+        const g = (window as any).google;
+        if (g?.maps?.geometry?.spherical) {
+            const newHeading = g.maps.geometry.spherical.computeHeading(
+                new g.maps.LatLng(lastPos.current.lat, lastPos.current.lng),
+                new g.maps.LatLng(rawLocation.lat, rawLocation.lng)
+            );
+            if (Math.abs(newHeading) > 1) { // Éviter les micro-rotations
+                setHeading(newHeading);
+            }
+        }
+
+        // Animation de transition douce
+        let startTime: number;
+        const duration = 1000; // 1 seconde de transition entre les points
+        const startPos = { ...lastPos.current };
+
+        const animate = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+
+            const currentLat = startPos.lat + (rawLocation.lat - startPos.lat) * progress;
+            const currentLng = startPos.lng + (rawLocation.lng - startPos.lng) * progress;
+
+            const interpolated = { lat: currentLat, lng: currentLng };
+            setSmoothLocation(interpolated);
+            lastPos.current = interpolated;
+
+            if (progress < 1) {
+                animationFrame.current = requestAnimationFrame(animate);
+            }
+        };
+
+        animationFrame.current = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(animationFrame.current);
+    }, [rawLocation]);
+
+    return { smoothLocation, heading };
+}
+
 export default function KFlowNav() {
     const { user, firestore } = useFirebase();
     const { toast } = useToast();
-    const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+    const [rawLocation, setRawLocation] = useState<{lat: number, lng: number} | null>(null);
+    const { smoothLocation, heading } = useInterpolatedLocation(rawLocation);
     const [destination, setDestination] = useState<string>('');
     const [isNavigating, setIsNavigating] = useState(false);
+    const [is3D, setIs3D] = useState(true);
     const [isUnlocking, setIsUnlocking] = useState(false);
     const [routeInfo, setRouteInfo] = useState<{distance: string, duration: string, durationInTraffic?: string} | null>(null);
     const [activeAlert, setActiveAlert] = useState<TrafficAlert | null>(null);
     const [autoFollow, setAutoFollow] = useState(true);
     const [mapCenter, setMapCenter] = useState<{lat: number, lng: number}>(KINSHASA_CENTER);
     
-    // Ref for tracking GPS distance to stabilize UI
-    const lastUpdatePos = useRef<{lat: number, lng: number} | null>(null);
+    const map = useMap();
 
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
     const { data: profile } = useDoc<UserProfile>(userRef);
@@ -87,26 +148,26 @@ export default function KFlowNav() {
             const watchId = navigator.geolocation.watchPosition(
                 (pos) => {
                     const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                    setUserLocation(newPos);
-                    if (autoFollow) {
-                        setMapCenter(newPos);
-                    }
+                    setRawLocation(newPos);
                 },
                 (err) => console.warn("GPS Access Denied", err),
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
             return () => navigator.geolocation.clearWatch(watchId);
         }
-    }, [autoFollow]);
+    }, []);
 
-    // Play sound for critical alerts
+    // Caméra de suivi intelligente
     useEffect(() => {
-        if (activeAlert?.type === 'red') {
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-            audio.volume = 0.5;
-            audio.play().catch(() => {}); // Browsers might block autoplay
+        if (map && smoothLocation && autoFollow) {
+            map.moveCamera({
+                center: smoothLocation,
+                heading: isNavigating && is3D ? heading : 0,
+                tilt: isNavigating && is3D ? 45 : 0,
+                zoom: isNavigating ? 18 : 15
+            });
         }
-    }, [activeAlert]);
+    }, [map, smoothLocation, autoFollow, heading, isNavigating, is3D]);
 
     const handleStartNavigation = async () => {
         if (!user || !profile) return;
@@ -150,6 +211,7 @@ export default function KFlowNav() {
             
             setIsNavigating(true);
             setAutoFollow(true);
+            setIs3D(true);
             toast({ title: "Navigation active", description: "K-Flow analyse votre itinéraire en temps réel." });
         } catch (error) {
             toast({ title: "Erreur", description: "Impossible de valider la session.", variant: "destructive" });
@@ -158,15 +220,12 @@ export default function KFlowNav() {
         }
     };
 
-    const handleDismissAlert = () => setActiveAlert(null);
-
     const handleReCenter = () => {
-        if (!userLocation) {
+        if (!smoothLocation) {
             toast({ title: "Localisation impossible", description: "Vérifiez vos paramètres GPS.", variant: "destructive" });
             return;
         }
         setAutoFollow(true);
-        setMapCenter(userLocation);
     };
 
     return (
@@ -188,7 +247,7 @@ export default function KFlowNav() {
                                             <NavigationIcon className="text-white h-5 w-5" />
                                         </div>
                                         <div className="flex-1">
-                                            <h2 className="text-lg font-black text-slate-900 tracking-tight">K-Flow Nav</h2>
+                                            <h2 className="text-lg font-black text-slate-900 tracking-tight">K-Flow Nav 3D</h2>
                                             <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Navigation Temps Réel • Kinshasa</p>
                                         </div>
                                         <Badge variant="secondary" className="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full border-amber-200">
@@ -229,9 +288,20 @@ export default function KFlowNav() {
                                                 <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">{routeInfo?.distance || '--'}</p>
                                             </div>
                                         </div>
-                                        <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
-                                            <X />
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => setIs3D(!is3D)} 
+                                                className="text-white hover:bg-white/10 rounded-xl h-10 gap-2 border border-white/10"
+                                            >
+                                                {is3D ? <Layers className="h-4 w-4" /> : <Box className="h-4 w-4" />}
+                                                <span className="text-[10px] font-black uppercase">{is3D ? 'Mode 2D' : 'Mode 3D'}</span>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
+                                                <X />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}
@@ -244,38 +314,25 @@ export default function KFlowNav() {
                                     key={activeAlert.id}
                                     initial={{ scale: 0.8, opacity: 0, y: -20 }}
                                     animate={{ scale: 1, opacity: 1, y: 0 }}
-                                    exit={{ scale: 0.8, opacity: 0, transition: { duration: 0.2 } }}
+                                    exit={{ scale: 0.8, opacity: 0 }}
                                     className={cn(
-                                        "p-5 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 flex items-center gap-4 backdrop-blur-xl relative overflow-hidden",
+                                        "p-5 rounded-[2rem] shadow-2xl border-2 flex items-center gap-4 backdrop-blur-xl relative overflow-hidden",
                                         activeAlert.type === 'red' ? "bg-red-600/95 border-red-400 text-white" :
                                         activeAlert.type === 'yellow' ? "bg-amber-500/95 border-amber-300 text-slate-950" :
-                                        activeAlert.type === 'green' ? "bg-emerald-600/95 border-emerald-400 text-white" :
-                                        "bg-blue-600/95 border-blue-400 text-white"
+                                        "bg-emerald-600/95 border-emerald-400 text-white"
                                     )}
                                 >
                                     <div className="p-3 bg-white/20 rounded-2xl shrink-0 shadow-inner">
                                         {activeAlert.type === 'red' ? <AlertOctagon className="h-7 w-7" /> :
                                          activeAlert.type === 'yellow' ? <AlertTriangle className="h-7 w-7" /> :
-                                         activeAlert.type === 'green' ? <CheckCircle2 className="h-7 w-7" /> :
-                                         <NavigationIcon className="h-7 w-7" />}
+                                         <CheckCircle2 className="h-7 w-7" />}
                                     </div>
                                     <div className="flex-1 pr-6">
                                         <p className="text-sm font-black leading-tight uppercase tracking-tight">{activeAlert.message}</p>
-                                        <p className="text-[10px] font-bold opacity-70 uppercase tracking-[0.15em] mt-1.5 flex items-center gap-2">
-                                            <Zap className="h-3 w-3 fill-current" />
-                                            Analyse K-Flow Live
-                                        </p>
                                     </div>
-                                    <button onClick={handleDismissAlert} className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity">
+                                    <button onClick={() => setActiveAlert(null)} className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity">
                                         <X className="h-4 w-4" />
                                     </button>
-                                    {/* Auto-dismiss progress bar */}
-                                    <motion.div 
-                                        className="absolute bottom-0 left-0 h-1 bg-white/30" 
-                                        initial={{ width: "100%" }}
-                                        animate={{ width: "0%" }}
-                                        transition={{ duration: 7, ease: "linear" }}
-                                    />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -286,38 +343,37 @@ export default function KFlowNav() {
                 <div className="flex-1">
                     <Map
                         defaultCenter={KINSHASA_CENTER}
-                        center={mapCenter}
                         defaultZoom={13}
-                        zoom={isNavigating && autoFollow ? 17 : undefined}
                         gestureHandling={'greedy'}
                         disableDefaultUI={true}
                         onDragstart={() => setAutoFollow(false)}
-                        onCenterChanged={(e) => setMapCenter(e.detail.center)}
                         restriction={{
                             latLngBounds: KINSHASA_BOUNDS,
                             strictBounds: false,
                         }}
-                        mapId="kflow_nav_map_v2"
+                        mapId="kflow_nav_map_v3"
                         className="w-full h-full"
                     >
                         <TrafficLayerComponent />
                         
-                        {userLocation && (
+                        {smoothLocation && (
                             <Marker
-                                position={userLocation}
+                                position={smoothLocation}
+                                rotation={heading}
                                 icon={{
-                                    path: google.maps.SymbolPath.CIRCLE,
+                                    path: "M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z", // Navigation Arrow Path
                                     fillColor: '#248eeb',
                                     fillOpacity: 1,
                                     strokeColor: 'white',
-                                    strokeWeight: 4,
-                                    scale: 12,
+                                    strokeWeight: 2,
+                                    scale: 2,
+                                    anchor: { x: 12, y: 12 } as any
                                 }}
                             />
                         )}
 
                         <DirectionsHandler 
-                            origin={userLocation} 
+                            origin={smoothLocation} 
                             destination={destination} 
                             isNavigating={isNavigating}
                             onRouteUpdate={setRouteInfo}
@@ -347,9 +403,6 @@ export default function KFlowNav() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button variant="ghost" size="icon" className="text-primary rounded-full hover:bg-primary/10">
-                                        <Volume2 className="h-5 w-5" />
-                                    </Button>
                                     <Button 
                                         variant="destructive" 
                                         onClick={() => { setIsNavigating(false); setActiveAlert(null); }}
@@ -372,47 +425,26 @@ export default function KFlowNav() {
 function MapControls({ onReCenter, isAutoFollowing }: { onReCenter: () => void, isAutoFollowing: boolean }) {
     const map = useMap();
 
-    const handleZoomIn = () => {
-        if (map) map.setZoom((map.getZoom() || 13) + 1);
-    };
-
-    const handleZoomOut = () => {
-        if (map) map.setZoom((map.getZoom() || 13) - 1);
-    };
+    const handleZoomIn = () => { if (map) map.setZoom((map.getZoom() || 13) + 1); };
+    const handleZoomOut = () => { if (map) map.setZoom((map.getZoom() || 13) - 1); };
 
     return (
         <div className="absolute bottom-24 right-4 z-30 flex flex-col gap-3">
-            {/* Re-center Button */}
             <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={onReCenter}
                 title="Recentrer la carte"
                 className={cn(
                     "h-12 w-12 rounded-2xl flex items-center justify-center shadow-2xl border-2 transition-all",
-                    isAutoFollowing 
-                        ? "bg-primary border-primary text-white" 
-                        : "bg-white border-slate-100 text-slate-600 hover:bg-slate-50"
+                    isAutoFollowing ? "bg-primary border-primary text-white" : "bg-white border-slate-100 text-slate-600 hover:bg-slate-50"
                 )}
             >
                 <LocateFixed className="h-6 w-6" />
             </motion.button>
 
-            {/* Zoom Controls */}
             <div className="flex flex-col rounded-2xl overflow-hidden border-2 border-slate-100 bg-white shadow-2xl">
-                <button
-                    onClick={handleZoomIn}
-                    title="Zoom avant"
-                    className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 border-b border-slate-100 transition-colors"
-                >
-                    <Plus className="h-6 w-6" />
-                </button>
-                <button
-                    onClick={handleZoomOut}
-                    title="Zoom arrière"
-                    className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors"
-                >
-                    <Minus className="h-6 w-6" />
-                </button>
+                <button onClick={handleZoomIn} className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 border-b border-slate-100"><Plus className="h-6 w-6" /></button>
+                <button onClick={handleZoomOut} className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50"><Minus className="h-6 w-6" /></button>
             </div>
         </div>
     );
@@ -426,19 +458,15 @@ function AutocompleteInput({ value, onChange, onSearch, isLoading }: { value: st
 
     useEffect(() => {
         if (!places || !inputRef.current) return;
-
         const autocomplete = new places.Autocomplete(inputRef.current, {
             componentRestrictions: { country: 'cd' },
             bounds: KINSHASA_BOUNDS,
             fields: ['formatted_address', 'geometry', 'name'],
             strictBounds: true,
         });
-
         autocomplete.addListener('place_changed', () => {
             const place = autocomplete.getPlace();
-            if (place.formatted_address || place.name) {
-                onChange(place.formatted_address || place.name || '');
-            }
+            if (place.formatted_address || place.name) onChange(place.formatted_address || place.name || '');
         });
     }, [places, onChange]);
 
@@ -452,7 +480,7 @@ function AutocompleteInput({ value, onChange, onSearch, isLoading }: { value: st
                 onChange={e => onChange(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && onSearch()}
                 disabled={isLoading}
-                className="pl-12 h-14 rounded-2xl border-none bg-slate-100 font-bold text-slate-800 focus-visible:ring-primary shadow-inner"
+                className="pl-12 h-14 rounded-2xl border-none bg-slate-100 font-bold text-slate-800 shadow-inner"
             />
         </div>
     );
@@ -470,130 +498,69 @@ function DirectionsHandler({ origin, destination, isNavigating, onRouteUpdate, o
     const map = useMap();
     const routesLibrary = useMapsLibrary('routes');
     const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
+    const lastPosUpdate = useRef<{lat: number, lng: number} | null>(null);
     const lastAlertTime = useRef<number>(0);
-    const lastAlertType = useRef<TrafficAlertType | null>(null);
-    const alertTimeout = useRef<NodeJS.Timeout | null>(null);
 
-    // Initialisation du renderer
     useEffect(() => {
         if (!routesLibrary || !map) return;
-        const g = (window as any).google;
-        const renderer = new g.maps.DirectionsRenderer({
+        const renderer = new google.maps.DirectionsRenderer({
             map,
             suppressMarkers: true,
-            polylineOptions: {
-                strokeColor: '#248eeb',
-                strokeWeight: 8,
-                strokeOpacity: 0.9,
-            }
+            polylineOptions: { strokeColor: '#248eeb', strokeWeight: 8, strokeOpacity: 0.9 }
         });
         setDirectionsRenderer(renderer);
         return () => renderer.setMap(null);
     }, [routesLibrary, map]);
 
-    // Analyse du trafic et alertes dynamiques
     useEffect(() => {
         if (!isNavigating || !origin || !destination || !routesLibrary || !directionsRenderer) return;
 
+        // Éviter les calculs trop fréquents si la position n'a pas bougé de plus de 30m
         const g = (window as any).google;
-        if (!g?.maps) return;
+        if (lastPosUpdate.current && g?.maps?.geometry?.spherical) {
+            const dist = g.maps.geometry.spherical.computeDistanceBetween(
+                new g.maps.LatLng(lastPosUpdate.current.lat, lastPosUpdate.current.lng),
+                new g.maps.LatLng(origin.lat, origin.lng)
+            );
+            if (dist < 30) return;
+        }
 
-        const service = new g.maps.DirectionsService();
+        const service = new google.maps.DirectionsService();
+        service.route({
+            origin: origin,
+            destination: destination,
+            travelMode: google.maps.TravelMode.DRIVING,
+            drivingOptions: { departureTime: new Date(), trafficModel: google.maps.TrafficModel.BEST_GUESS }
+        }, (result, status) => {
+            if (status === google.maps.DirectionsStatus.OK && result) {
+                directionsRenderer.setDirections(result);
+                lastPosUpdate.current = origin;
+                const route = result.routes[0].legs[0];
+                onRouteUpdate({ distance: route.distance?.text || '', duration: route.duration?.text || '', durationInTraffic: route.duration_in_traffic?.text });
 
-        const calculateAndAnalyze = () => {
-            service.route({
-                origin: origin,
-                destination: destination,
-                travelMode: g.maps.TravelMode.DRIVING,
-                provideRouteAlternatives: true,
-                drivingOptions: {
-                    departureTime: new Date(),
-                    trafficModel: g.maps.TrafficModel.BEST_GUESS
+                // Analyse de trafic pour alertes
+                const now = Date.now();
+                const ratio = (route.duration_in_traffic?.value || 0) / (route.duration?.value || 1);
+                if (now - lastAlertTime.current > 30000) { // Max une alerte toutes les 30s
+                    if (ratio > 1.5) {
+                        onAlertUpdate({ id: `a-${now}`, message: "Route bloquée dans moins de 1 km, veuillez changer d’itinéraire", type: 'red', timestamp: now });
+                    } else if (ratio > 1.25) {
+                        onAlertUpdate({ id: `a-${now}`, message: "Embouteillage détecté à 2 km devant vous", type: 'yellow', timestamp: now });
+                    }
+                    lastAlertTime.current = now;
                 }
-            }, (result: any, status: any) => {
-                if (status === g.maps.DirectionsStatus.OK && result) {
-                    directionsRenderer.setDirections(result);
-                    const route = result.routes[0].legs[0];
-                    
-                    onRouteUpdate({
-                        distance: route.distance?.text || '',
-                        duration: route.duration?.text || '',
-                        durationInTraffic: route.duration_in_traffic?.text
-                    });
-
-                    // Logic de déclenchement des notifications
-                    const duration = route.duration?.value || 0;
-                    const trafficDuration = route.duration_in_traffic?.value || duration;
-                    const delayRatio = trafficDuration / duration;
-
-                    const now = Date.now();
-                    const throttleTime = 15000; // 15 sec minimum entre deux alertes du même type
-
-                    let newAlert: TrafficAlert | null = null;
-
-                    // 1. Détection de Route Bloquée (Critique)
-                    if (delayRatio >= 1.5) {
-                        newAlert = {
-                            id: `red-${now}`,
-                            message: "Route bloquée dans moins de 1 km, veuillez changer d’itinéraire",
-                            type: 'red',
-                            timestamp: now
-                        };
-                    } 
-                    // 2. Détection de Congestion
-                    else if (delayRatio >= 1.25) {
-                        newAlert = {
-                            id: `yellow-${now}`,
-                            message: "Embouteillage détecté à 2 km devant vous",
-                            type: 'yellow',
-                            timestamp: now
-                        };
-                    }
-                    // 3. Détection de Fluidité (Seulement si on sortait d'un bouchon)
-                    else if (delayRatio < 1.1 && lastAlertType.current && lastAlertType.current !== 'green') {
-                        newAlert = {
-                            id: `green-${now}`,
-                            message: "Circulation fluide à 1 km devant vous",
-                            type: 'green',
-                            timestamp: now
-                        };
-                    }
-
-                    // Smart rules pour éviter le spam
-                    if (newAlert && (newAlert.type !== lastAlertType.current || now - lastAlertTime.current > throttleTime)) {
-                        onAlertUpdate(newAlert);
-                        lastAlertTime.current = now;
-                        lastAlertType.current = newAlert.type;
-
-                        // Auto-dismiss logic for the nav component
-                        if (alertTimeout.current) clearTimeout(alertTimeout.current);
-                        alertTimeout.current = setTimeout(() => {
-                            onAlertUpdate(null);
-                        }, 7000);
-                    }
-                }
-            });
-        };
-
-        calculateAndAnalyze();
-        const interval = setInterval(calculateAndAnalyze, 20000); // Analyse toutes les 20s
-        return () => {
-            clearInterval(interval);
-            if (alertTimeout.current) clearTimeout(alertTimeout.current);
-        };
-    }, [isNavigating, origin, destination, routesLibrary, directionsRenderer, onRouteUpdate, onAlertUpdate]);
+            }
+        });
+    }, [isNavigating, origin, destination, routesLibrary, directionsRenderer]);
 
     return null;
 }
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const TrafficLayerComponent = () => {
     const map = useMap();
     useEffect(() => {
         if (!map) return;
-        const g = (window as any).google;
-        const layer = new g.maps.TrafficLayer();
+        const layer = new google.maps.TrafficLayer();
         layer.setMap(map);
         return () => layer.setMap(null);
     }, [map]);
@@ -603,10 +570,6 @@ const TrafficLayerComponent = () => {
 const IncidentMarkers = ({ incidents }: { incidents: WithId<EventReport>[] }) => {
     const map = useMap();
     if (!map) return null;
-
-    const g = (window as any).google;
-    if (!g?.maps) return null;
-
     return (
         <>
             {incidents.map((incident) => (
@@ -615,7 +578,7 @@ const IncidentMarkers = ({ incidents }: { incidents: WithId<EventReport>[] }) =>
                     position={(incident as any).coords || KINSHASA_CENTER} 
                     icon={{
                         url: incident.severity === 'high' ? 'https://maps.google.com/mapfiles/ms/icons/red-pushpin.png' : 'https://maps.google.com/mapfiles/ms/icons/yellow-pushpin.png',
-                        scaledSize: new g.maps.Size(32, 32)
+                        scaledSize: new google.maps.Size(32, 32)
                     }}
                 />
             ))}

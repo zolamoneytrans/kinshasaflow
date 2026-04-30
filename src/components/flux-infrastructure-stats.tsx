@@ -128,7 +128,7 @@ export default function FluxInfrastructureStats() {
           <StatCard 
             title="Zones de Risque Réel" 
             value="3" 
-            subValue="Tronçons où Volume > Capacité + Incidents" 
+            subValue="Tronçons où Volume &gt; Capacité + Incidents" 
             icon={AlertTriangle} 
             color="bg-red-500" 
           />

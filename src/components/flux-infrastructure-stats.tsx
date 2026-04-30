@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -29,7 +28,8 @@ import {
   Route,
   Activity,
   Coins,
-  History
+  History,
+  BarChart3
 } from 'lucide-react';
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -225,7 +225,7 @@ export default function FluxInfrastructureStats() {
           </Card>
         </div>
 
-        {/* Decision Support Features (The core logic from user request) */}
+        {/* Decision Support Features */}
         <div className="grid md:grid-cols-3 gap-8">
           
           {/* Feature 1: Evaluate Capital Projects */}
@@ -298,7 +298,7 @@ export default function FluxInfrastructureStats() {
                     <p className="text-xs font-black text-red-700 uppercase">Alerte : Blvd Lumumba</p>
                   </div>
                   <p className="text-[10px] font-bold text-red-600/70">
-                    Ratio volume/sécurité critique détecté (Volume > 8000 v/h + 12 incidents/mois). 
+                    Ratio volume/sécurité critique détecté (Volume &gt; 8000 v/h + 12 incidents/mois). 
                     Installation prioritaire de radars ou signalisation recommandée.
                   </p>
                 </div>

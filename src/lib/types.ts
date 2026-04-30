@@ -18,7 +18,7 @@ export const STAR_COSTS = {
 export const navFeatures = [
   'reports', 'liveTraffic', 'map', 'assistant', 'notifications', 'myStars', 'report', 'police', 
   'routes', 'announcements', 'logement', 'transport', 'carRental', 'tourism', 
-  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share', 'kFlowNav'
+  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share', 'kFlowNav', 'fluxInfrastructure'
 ] as const;
 export type NavFeature = typeof navFeatures[number];
 
@@ -44,6 +44,7 @@ export const appNavigationSettingsSchema = z.object({
   contact: z.boolean().default(true),
   share: z.boolean().default(true),
   kFlowNav: z.boolean().default(true),
+  fluxInfrastructure: z.boolean().default(true),
 });
 export type AppNavigationSettings = z.infer<typeof appNavigationSettingsSchema>;
 
@@ -440,4 +441,15 @@ export interface Restaurant {
   coords: { lat: number; lng: number };
   cuisine: string;
   priceRange: '$' | '$$' | '$$$' | '$$$$';
+}
+
+export interface TrafficInsight {
+  userId: string;
+  destination: string;
+  distance: string;
+  duration: string;
+  delayMinutes: number;
+  riskLevel: 'low' | 'medium' | 'high';
+  recommendation: string;
+  timestamp: Timestamp | any;
 }

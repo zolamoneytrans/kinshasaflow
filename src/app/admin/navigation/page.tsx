@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -37,6 +36,7 @@ const FEATURE_LABELS: Record<NavFeature, string> = {
   contact: "Contactez-nous",
   share: "Bouton Partager",
   kFlowNav: "K-Flow Navigation GPS",
+  fluxInfrastructure: "Flux & Infrastructure",
 };
 
 export default function AdminNavigationPage() {

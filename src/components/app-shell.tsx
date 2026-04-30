@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -151,14 +150,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'navigation'), [firestore]);
   const { data: navSettings } = useDoc<AppNavigationSettings>(navSettingsRef);
 
-  // Notifications Badge Logic - Only fetch if user is logged in
+  // Notifications Badge Logic
   const notifsRef = useMemoFirebase(() => {
     if (!user) return null;
-    return query(collection(firestore, 'notifications'), limit(10));
+    return query(collection(firestore, 'notifications'), orderBy('timestamp', 'desc'), limit(20));
   }, [firestore, user]);
   const { data: notifs } = useCollection<AppNotification>(notifsRef);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
-  // Reports Badge Logic - Only fetch if user is logged in
+  // Reports Badge Logic
   const eventsRef = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(20));
@@ -166,11 +166,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: events } = useCollection<EventReport>(eventsRef);
   const [unreadReports, setUnreadReports] = useState(0);
 
+  // Handle Badge Counts and Path Sync
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    const lastSeenStr = localStorage.getItem('last_seen_reports');
-    const lastSeen = lastSeenStr ? parseInt(lastSeenStr) : 0;
+    // --- Reports Badge ---
+    const lastSeenReportsStr = localStorage.getItem('last_seen_reports');
+    const lastSeenReports = lastSeenReportsStr ? parseInt(lastSeenReportsStr) : 0;
 
     if (pathname === '/reports') {
       localStorage.setItem('last_seen_reports', Date.now().toString());
@@ -178,11 +180,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     } else if (events) {
       const count = events.filter(e => {
         const ts = e.createdAt?.toMillis ? e.createdAt.toMillis() : Date.now();
-        return ts > lastSeen;
+        return ts > lastSeenReports;
       }).length;
       setUnreadReports(count);
     }
-  }, [events, pathname]);
+
+    // --- Notifications Badge ---
+    const lastSeenNotifsStr = localStorage.getItem('last_seen_notifications');
+    const lastSeenNotifs = lastSeenNotifsStr ? parseInt(lastSeenNotifsStr) : 0;
+
+    if (pathname === '/notifications') {
+      localStorage.setItem('last_seen_notifications', Date.now().toString());
+      setUnreadNotifications(0);
+    } else if (notifs) {
+      const count = notifs.filter(n => {
+        const ts = n.timestamp?.toMillis ? n.timestamp.toMillis() : Date.now();
+        return ts > lastSeenNotifs;
+      }).length;
+      setUnreadNotifications(count);
+    }
+  }, [events, notifs, pathname]);
 
   useEffect(() => {
     if (!profile || !subSettings) return;
@@ -352,8 +369,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <Bell className={pathname === '/notifications' ? "text-accent" : "text-primary"} />
                         <span>Notifications</span>
                       </div>
-                      {notifs && notifs.length > 0 && (
-                        <Badge variant="destructive" className="h-4 px-1 text-[8px] animate-pulse">NOUVEAU</Badge>
+                      {unreadNotifications > 0 && (
+                        <Badge variant="destructive" className="h-5 px-1.5 min-w-[20px] justify-center text-[10px] animate-pulse rounded-full font-black">
+                          {unreadNotifications}
+                        </Badge>
                       )}
                     </Link>
                   </SidebarMenuButton>
@@ -672,4 +691,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

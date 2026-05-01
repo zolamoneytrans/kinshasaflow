@@ -108,6 +108,29 @@
         "contact": { "type": "boolean" },
         "share": { "type": "boolean" }
       }
+    },
+    "DailyTrafficReport": {
+      "title": "DailyTrafficReport",
+      "type": "object",
+      "description": "Snapshot of Kinshasa traffic for historical analysis.",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "globalSaturation": { "type": "number" },
+        "axisStats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "road": { "type": "string" },
+              "status": { "type": "string" },
+              "speed": { "type": "number" },
+              "delay": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["timestamp", "globalSaturation", "axisStats"]
     }
   },
   "auth": {
@@ -152,6 +175,16 @@
             "$ref": "#/backend/entities/AppNotification"
           },
           "description": "Global notification feed."
+        }
+      },
+      {
+        "path": "/daily_traffic_reports/{id}",
+        "definition": {
+          "entityName": "DailyTrafficReport",
+          "schema": {
+            "$ref": "#/backend/entities/DailyTrafficReport"
+          },
+          "description": "Historical traffic snapshots."
         }
       }
     ]

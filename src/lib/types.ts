@@ -18,7 +18,7 @@ export const STAR_COSTS = {
 export const navFeatures = [
   'reports', 'liveTraffic', 'map', 'assistant', 'notifications', 'myStars', 'report', 'police', 
   'routes', 'announcements', 'logement', 'transport', 'carRental', 'tourism', 
-  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share', 'kFlowNav', 'fluxInfrastructure'
+  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share'
 ] as const;
 export type NavFeature = typeof navFeatures[number];
 
@@ -43,18 +43,8 @@ export const appNavigationSettingsSchema = z.object({
   restaurants: z.boolean().default(true),
   contact: z.boolean().default(true),
   share: z.boolean().default(true),
-  kFlowNav: z.boolean().default(true),
-  fluxInfrastructure: z.boolean().default(true),
 });
 export type AppNavigationSettings = z.infer<typeof appNavigationSettingsSchema>;
-
-export type SubscriptionMode = 'stars' | 'cash';
-
-export const appSubscriptionSettingsSchema = z.object({
-  mode: z.enum(['stars', 'cash']).default('stars'),
-  lastUpdated: z.instanceof(Timestamp).or(z.any()).optional(),
-});
-export type AppSubscriptionSettings = z.infer<typeof appSubscriptionSettingsSchema>;
 
 // User profile extension for Stars System
 export const userProfileSchema = z.object({
@@ -65,16 +55,10 @@ export const userProfileSchema = z.object({
   phone: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
-  // Stars Model
   currentStarsBalance: z.number().default(0),
   totalStarsEarned: z.number().default(0),
   totalStarsPurchased: z.number().default(0),
   totalStarsUsed: z.number().default(0),
-  // Cash Model
-  isCashSubscribed: z.boolean().default(false),
-  cashSubscriptionExpiry: z.instanceof(Timestamp).or(z.any()).optional().nullable(),
-  hasUsedFreeTrial: z.boolean().default(false),
-  // Meta
   lastLoginTimestamp: z.instanceof(Timestamp).or(z.any()).optional(),
   consecutiveLoginDays: z.number().default(0),
   referralCode: z.string().optional(),
@@ -95,10 +79,23 @@ export const appNotificationSchema = z.object({
 });
 export type AppNotification = z.infer<typeof appNotificationSchema>;
 
+// Daily Traffic Report
+export const dailyTrafficReportSchema = z.object({
+  timestamp: z.instanceof(Timestamp).or(z.any()),
+  globalSaturation: z.number(),
+  axisStats: z.array(z.object({
+    road: z.string(),
+    status: z.string(),
+    speed: z.number(),
+    delay: z.number(),
+  })),
+});
+export type DailyTrafficReport = z.infer<typeof dailyTrafficReportSchema>;
+
 // Star Transaction
 export const starTransactionSchema = z.object({
   userId: z.string(),
-  type: z.enum(['purchase', 'earned', 'spent', 'admin_adjustment', 'subscription_payment']),
+  type: z.enum(['purchase', 'earned', 'spent', 'admin_adjustment']),
   starsChange: z.number(),
   balanceAfterTransaction: z.number(),
   description: z.string(),
@@ -441,15 +438,4 @@ export interface Restaurant {
   coords: { lat: number; lng: number };
   cuisine: string;
   priceRange: '$' | '$$' | '$$$' | '$$$$';
-}
-
-export interface TrafficInsight {
-  userId: string;
-  destination: string;
-  distance: string;
-  duration: string;
-  delayMinutes: number;
-  riskLevel: 'low' | 'medium' | 'high';
-  recommendation: string;
-  timestamp: Timestamp | any;
 }

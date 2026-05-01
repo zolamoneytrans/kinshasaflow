@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "User": {
@@ -125,7 +124,9 @@
               "road": { "type": "string" },
               "status": { "type": "string" },
               "speed": { "type": "number" },
-              "delay": { "type": "number" }
+              "delay": { "type": "number" },
+              "vehicleCount": { "type": "number" },
+              "capacity": { "type": "number" }
             }
           }
         }

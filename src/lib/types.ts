@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { Timestamp } from "firebase/firestore";
 
@@ -88,6 +87,8 @@ export const dailyTrafficReportSchema = z.object({
     status: z.string(),
     speed: z.number(),
     delay: z.number(),
+    vehicleCount: z.number().optional(),
+    capacity: z.number().optional(),
   })),
 });
 export type DailyTrafficReport = z.infer<typeof dailyTrafficReportSchema>;

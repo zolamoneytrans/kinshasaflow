@@ -12,21 +12,16 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Cell,
   AreaChart,
-  Area,
-  PieChart,
-  Pie
+  Area
 } from 'recharts';
 import { 
-  Car, 
   Activity,
   History,
   BarChart3,
   RefreshCw,
   Database,
   Search,
-  ArrowRight,
   TrendingUp,
   AlertTriangle,
   Zap,
@@ -67,11 +62,8 @@ export default function FluxInfrastructureStats() {
   const handleUpdateAndArchive = async () => {
     setIsUpdating(true);
     try {
-        // Étape 1 : Récupérer les données via l'action serveur (API Google)
         const trafficData = await getGoogleTrafficStatusAction(MAJOR_AXES);
         
-        // Étape 2 : Calculer la saturation globale et simuler les volumes (Vehicle Counts)
-        // Simulation basée sur : volume = capacité * multiplicateur_status * variation_aléatoire
         const totalSaturation = trafficData.reduce((acc, curr) => {
             const val = curr.status === "EMBOUTEILLAGE" ? 100 : curr.status === "DENSE" ? 75 : curr.status === "MODÉRÉ" ? 40 : 10;
             return acc + val;
@@ -84,7 +76,6 @@ export default function FluxInfrastructureStats() {
                 const axisConfig = MAJOR_AXES[idx];
                 const capacity = axisConfig.capacity || 5000;
                 
-                // Simulation du volume (v/h) basée sur l'état du trafic
                 let volumeRatio = 0.1;
                 if (d.status === 'EMBOUTEILLAGE') volumeRatio = 0.95 + (Math.random() * 0.15);
                 else if (d.status === 'DENSE') volumeRatio = 0.75 + (Math.random() * 0.2);
@@ -104,7 +95,6 @@ export default function FluxInfrastructureStats() {
             })
         };
 
-        // Étape 3 : Sauvegarder dans Firestore (SDK Client)
         const colRef = collection(firestore, "daily_traffic_reports");
         addDoc(colRef, reportData).catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
@@ -115,7 +105,6 @@ export default function FluxInfrastructureStats() {
             errorEmitter.emit('permission-error', permissionError);
         });
 
-        // Étape 4 : Mettre à jour l'UI locale immédiatement
         const now = new Date();
         setLastLocalReport({
             ...reportData,

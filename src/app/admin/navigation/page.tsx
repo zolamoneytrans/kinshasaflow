@@ -37,6 +37,7 @@ const FEATURE_LABELS: Record<NavFeature, string> = {
   share: "Bouton Partager",
   kFlowNav: "K-Flow Navigation GPS",
   fluxInfrastructure: "Flux & Infrastructure",
+  insights: "K-Flow Insights (IA)",
 };
 
 export default function AdminNavigationPage() {

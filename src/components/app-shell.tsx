@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -8,7 +7,7 @@ import {
   Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
   Palmtree, Compass, LayoutGrid, Utensils, Bell, Send, Navigation,
-  BarChart3
+  BarChart3, Zap
 } from 'lucide-react';
 import {
   Sidebar,
@@ -260,6 +259,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/notifications') return 'Notifications';
     if (pathname === '/k-flow-nav') return 'K-Flow Nav';
     if (pathname === '/flux-infrastructure') return 'Flux & Infrastructure';
+    if (pathname === '/insights') return 'K-Flow Insights';
     if (pathname === '/mes-stars') return subSettings?.mode === 'cash' ? 'Mon Abonnement' : 'Mes Stars';
     if (pathname === '/privacy') return 'Confidentialité & CGU';
     if (pathname.startsWith('/admin')) return 'Administration';
@@ -269,6 +269,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const getPageDescription = () => {
     if (pathname === '/notifications') return 'Découvrez ce qui se passe dans la communauté.';
     if (pathname === '/k-flow-nav') return 'Votre copilote GPS intelligent.';
+    if (pathname === '/insights') return 'Analyse stratégique et conseils IA (15 min).';
     if (pathname === '/flux-infrastructure') return 'Analyse stratégique basée sur Google Vehicle Counts.';
     if (pathname.startsWith('/admin')) return 'Gestion interne de la plateforme.';
     return "Naviguez facilement dans le trafic de Kinshasa.";
@@ -311,6 +312,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           {unreadReports}
                         </Badge>
                       )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('insights') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/insights'} className="bg-primary/5 hover:bg-primary/10 border border-primary/10 mb-1">
+                    <Link href="/insights" className="font-bold flex items-center justify-between w-full text-primary">
+                      <div className="flex items-center gap-2">
+                        <Zap className={pathname === '/insights' ? "text-accent" : "text-primary"} />
+                        <span>K-Flow Insights</span>
+                      </div>
+                      <Badge className="bg-primary/20 text-primary text-[8px]">AI</Badge>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -708,4 +723,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

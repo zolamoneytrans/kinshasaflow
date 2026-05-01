@@ -17,7 +17,7 @@ export const STAR_COSTS = {
 export const navFeatures = [
   'reports', 'liveTraffic', 'map', 'assistant', 'notifications', 'myStars', 'report', 'police', 
   'routes', 'announcements', 'logement', 'transport', 'carRental', 'tourism', 
-  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share'
+  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share', 'fluxInfrastructure', 'kFlowNav', 'insights'
 ] as const;
 export type NavFeature = typeof navFeatures[number];
 
@@ -42,8 +42,16 @@ export const appNavigationSettingsSchema = z.object({
   restaurants: z.boolean().default(true),
   contact: z.boolean().default(true),
   share: z.boolean().default(true),
+  fluxInfrastructure: z.boolean().default(true),
+  kFlowNav: z.boolean().default(true),
+  insights: z.boolean().default(true),
 });
 export type AppNavigationSettings = z.infer<typeof appNavigationSettingsSchema>;
+
+export interface AppSubscriptionSettings {
+  mode: 'stars' | 'cash';
+  lastUpdated?: any;
+}
 
 // User profile extension for Stars System
 export const userProfileSchema = z.object({
@@ -63,6 +71,9 @@ export const userProfileSchema = z.object({
   referralCode: z.string().optional(),
   isProfileComplete: z.boolean().default(false),
   isBlocked: z.boolean().default(false),
+  isCashSubscribed: z.boolean().default(false),
+  cashSubscriptionExpiry: z.instanceof(Timestamp).or(z.any()).optional(),
+  hasUsedFreeTrial: z.boolean().default(false),
   createdAt: z.instanceof(Timestamp).or(z.any()).optional(),
 });
 export type UserProfile = z.infer<typeof userProfileSchema>;
@@ -92,6 +103,17 @@ export const dailyTrafficReportSchema = z.object({
   })),
 });
 export type DailyTrafficReport = z.infer<typeof dailyTrafficReportSchema>;
+
+// Traffic Insight (AI Analysis)
+export const trafficInsightSchema = z.object({
+  userId: z.string(),
+  timestamp: z.instanceof(Timestamp).or(z.any()),
+  globalStatus: z.string(),
+  saturationScore: z.number(),
+  recommendations: z.array(z.string()),
+  criticalAxes: z.array(z.string()),
+});
+export type TrafficInsight = z.infer<typeof trafficInsightSchema>;
 
 // Star Transaction
 export const starTransactionSchema = z.object({
@@ -171,6 +193,23 @@ export const TrafficTipsOutputSchema = z.object({
 });
 export type TrafficTipsOutput = z.infer<typeof TrafficTipsOutputSchema>;
 
+export const StrategicInsightsInputSchema = z.object({
+  axes: z.array(z.object({
+    road: z.string(),
+    status: z.string(),
+    delay: z.number(),
+    speed: z.number()
+  })),
+});
+export type StrategicInsightsInput = z.infer<typeof StrategicInsightsInputSchema>;
+
+export const StrategicInsightsOutputSchema = z.object({
+  globalAdvice: z.string().describe("Conseil global sur l'état de la ville."),
+  tips: z.array(z.string()).describe("3 conseils stratégiques d'évitement."),
+  trend: z.enum(['amélioration', 'dégradation', 'stable']).describe("Tendance pour les 30 prochaines minutes."),
+});
+export type StrategicInsightsOutput = z.infer<typeof StrategicInsightsOutputSchema>;
+
 export const AssistantInputSchema = z.object({
   question: z.string().describe("The user's question about a route in Kinshasa."),
 });
@@ -187,12 +226,6 @@ export const policeReportSchema = z.object({
   type: z.enum(['control', 'traffic_management', 'incident']),
 });
 export type PoliceReport = z.infer<typeof policeReportSchema>;
-export const dummyPoliceReports: (PoliceReport & { id: number, time: string })[] = [
-    { id: 1, location: "Rond-point Victoire", note: "Contrôle de routine des documents.", type: "control", time: "il y a 15m" },
-    { id: 2, location: "Boulevard du 30 Juin", note: "Gestion du trafic suite à un événement.", type: "traffic_management", time: "il y a 30m" },
-    { id: 3, location: "Pont Matete", note: "Présence renforcée pour la sécurité.", type: "control", time: "il y a 5m" },
-    { id: 4, location: "Avenue Kasa-Vubu", note: "Intervention suite à un petit accrochage.", type: "incident", time: "il y a 45m" },
-];
 
 export const loginSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }),

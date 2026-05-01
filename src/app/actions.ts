@@ -3,7 +3,8 @@
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
 import { askAssistant } from "@/ai/flows/assistant-flow";
 import { generateSpeech } from "@/ai/flows/tts-flow";
-import { TrafficTipsInput, AssistantInput, PushSubscription } from "@/lib/types";
+import { getStrategicInsights } from "@/ai/flows/strategic-insights-flow";
+import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsInput } from "@/lib/types";
 import * as webpush from 'web-push';
 
 export async function getTrafficTipsAction(input: TrafficTipsInput) {
@@ -21,6 +22,10 @@ export async function generateSpeechAction(text: string) {
         console.error('generateSpeechAction error:', error);
         throw new Error(error.message || "Erreur lors de la génération vocale.");
     }
+}
+
+export async function getStrategicInsightsAction(input: StrategicInsightsInput) {
+  return await getStrategicInsights(input);
 }
 
 export async function sendTestPushNotificationAction(subscription: PushSubscription, payload: string) {

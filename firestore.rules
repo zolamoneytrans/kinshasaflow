@@ -107,6 +107,12 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    /** Traffic Insights (AI History) */
+    match /traffic_insights/{id} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+    }
+
     /** Logements (RBNB) */
     match /logements/{id} {
       allow read: if isSignedIn();

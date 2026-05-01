@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { 
   Zap, 
-  Clock, 
   TrendingUp, 
-  AlertTriangle, 
   RefreshCw, 
   Bot, 
   ShieldCheck, 
@@ -17,10 +15,10 @@ import {
   Navigation,
   ArrowRight,
   Loader2,
-  Calendar,
   Waves,
   Sparkles,
-  Shield
+  Shield,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 import { getGoogleTrafficStatusAction, getStrategicInsightsAction } from '@/app/actions';
@@ -52,11 +50,9 @@ export default function StrategicInsights() {
     setIsRefreshing(true);
 
     try {
-      // 1. Get raw traffic data
       const data = await getGoogleTrafficStatusAction(MAJOR_AXES);
       setTrafficData(data);
 
-      // 2. Get AI Insights
       const aiResults = await getStrategicInsightsAction({
         axes: data.map(d => ({
           road: d.road,
@@ -67,7 +63,6 @@ export default function StrategicInsights() {
       });
       setInsights(aiResults);
 
-      // 3. Save to history
       if (user) {
         await addDoc(collection(firestore, 'traffic_insights'), {
           userId: user.uid,
@@ -81,7 +76,7 @@ export default function StrategicInsights() {
 
       setLastUpdated(new Date());
       setTimeLeft(REFRESH_INTERVAL_MS);
-      if (!isSilent) toast({ title: "Analyse terminée", description: "Le tableau de bord stratégique a été mis à jour." });
+      if (!isSilent) toast({ title: "Analyse terminée" });
     } catch (error) {
       console.error(error);
       if (!isSilent) toast({ title: "Erreur d'analyse", variant: "destructive" });
@@ -128,127 +123,121 @@ export default function StrategicInsights() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full gap-6 animate-in fade-in duration-700">
+      <div className="flex flex-col items-center justify-center h-full w-full gap-6 p-4">
         <div className="relative">
-          <Loader2 className="h-16 w-16 text-primary animate-spin" />
-          <Bot className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-primary" />
+          <Loader2 className="h-12 w-12 text-primary animate-spin" />
+          <Bot className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-xl font-black uppercase tracking-widest text-slate-800">Initialisation K-Flow Intelligence</h2>
-          <p className="text-muted-foreground font-medium italic">Analyse des 100 axes majeurs de Kinshasa en cours...</p>
+          <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">Analyse IA des 100 axes</h2>
+          <p className="text-xs text-muted-foreground italic">Génération de conseils stratégiques...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full overflow-y-auto bg-slate-50/50 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-12 pb-24">
+    <div className="w-full h-full overflow-y-auto bg-slate-50/50 p-4 md:p-6">
+      <div className="max-w-6xl mx-auto space-y-6 md:space-y-10 pb-20">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-1">
-            <div className="flex items-center gap-3">
-                <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20">
-                    <Zap className="text-white h-6 w-6" />
+            <div className="flex items-center gap-2">
+                <div className="bg-primary p-2 rounded-xl shadow-lg">
+                    <Zap className="text-white h-5 w-5" />
                 </div>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tighter">K-Flow Insights</h1>
+                <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">K-Flow Insights</h1>
             </div>
-            <p className="text-muted-foreground font-medium italic text-lg">Veille stratégique automatisée sur 100 axes toutes les 15 min.</p>
+            <p className="text-muted-foreground font-medium italic text-sm md:text-base">Veille automatisée (100 axes) toutes les 15 min.</p>
           </motion.div>
 
-          <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex items-center gap-4 bg-white p-3 rounded-[2.5rem] shadow-xl border border-slate-100">
-            <div className="text-right px-6 border-r">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prochain audit</p>
-                <p className="text-xl font-black text-primary font-mono">{formatTimeLeft(timeLeft)}</p>
+          <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex items-center gap-3 bg-white p-2 md:p-3 rounded-2xl shadow-md border border-slate-100 w-full md:w-auto justify-between md:justify-start">
+            <div className="text-right px-4 border-r">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Suivant</p>
+                <p className="text-lg font-black text-primary font-mono">{formatTimeLeft(timeLeft)}</p>
             </div>
             <Button 
                 onClick={() => performAnalysis()} 
                 disabled={isRefreshing}
                 variant="ghost"
-                className="rounded-2xl h-12 px-6 gap-2 hover:bg-slate-50 font-black text-xs uppercase tracking-widest"
+                className="rounded-xl h-10 px-4 gap-2 hover:bg-slate-50 font-black text-[10px] uppercase tracking-widest"
             >
-                <RefreshCw className={cn("h-4 w-4 text-primary", isRefreshing && "animate-spin")} />
-                Rafraîchir
+                <RefreshCw className={cn("h-3.5 w-3.5 text-primary", isRefreshing && "animate-spin")} />
+                Actualiser
             </Button>
           </motion.div>
         </div>
 
         {/* Top Intelligence Cards */}
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* Saturation Score */}
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
-            <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white group hover:shadow-primary/10 transition-all h-full">
+            <Card className="border-none shadow-lg rounded-[2rem] bg-white transition-all h-full">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-black uppercase text-slate-400 tracking-[0.2em] flex items-center gap-2">
+                    <CardTitle className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
                         <Waves className="h-4 w-4 text-blue-500" /> Charge Urbaine
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-8 pt-4">
+                <CardContent className="space-y-6 pt-2">
                     <div className="flex items-baseline gap-2">
-                        <span className="text-7xl font-black text-slate-900 tracking-tighter">{globalSaturation}%</span>
+                        <span className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter">{globalSaturation}%</span>
                         <Badge className={cn(
-                            "font-black text-[10px] uppercase px-3 py-1 rounded-full",
+                            "font-black text-[9px] uppercase px-2 py-0.5 rounded-full",
                             globalSaturation > 70 ? "bg-red-500" : globalSaturation > 40 ? "bg-amber-500" : "bg-emerald-500"
                         )}>
                             {globalSaturation > 70 ? "Critique" : globalSaturation > 40 ? "Saturé" : "Fluide"}
                         </Badge>
                     </div>
-                    <div className="space-y-3">
-                        <div className="flex justify-between text-[10px] font-black text-slate-400 tracking-widest uppercase">
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-[9px] font-black text-slate-400 tracking-widest uppercase">
                             <span>Flux Libre</span>
                             <span>{100 - globalSaturation}%</span>
                         </div>
-                        <Progress value={globalSaturation} className="h-4 rounded-full bg-slate-100 shadow-inner" />
-                        <p className="text-[10px] text-slate-500 font-bold leading-relaxed text-center pt-2">
-                            Calculé sur la moyenne pondérée des 100 segments routiers.
-                        </p>
+                        <Progress value={globalSaturation} className="h-3 rounded-full bg-slate-100" />
                     </div>
                 </CardContent>
             </Card>
           </motion.div>
 
           {/* AI Strategic Advice */}
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="lg:col-span-2">
-            <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-slate-900 text-white relative h-full">
-                <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-primary/30 rounded-full blur-[100px]"></div>
-                <CardHeader>
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="md:col-span-2">
+            <Card className="border-none shadow-lg rounded-[2rem] bg-slate-900 text-white relative h-full overflow-hidden">
+                <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-primary/20 rounded-full blur-[80px]"></div>
+                <CardHeader className="pb-2">
                     <div className="flex justify-between items-center relative z-10">
-                        <CardTitle className="text-[10px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-2">
-                            <Bot className="h-4 w-4" /> Rapport de Veille IA
+                        <CardTitle className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                            <Bot className="h-4 w-4" /> Rapport IA
                         </CardTitle>
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Analyse Active</span>
-                        </div>
+                        <span className="text-[9px] font-black uppercase text-primary/60">Analyse Active</span>
                     </div>
                 </CardHeader>
-                <CardContent className="relative z-10 pt-4 flex flex-col justify-between h-[220px]">
-                    <p className="text-2xl md:text-3xl font-bold leading-tight text-slate-50 italic">
+                <CardContent className="relative z-10 pt-2 flex flex-col justify-between min-h-[160px]">
+                    <p className="text-lg md:text-2xl font-bold leading-tight text-slate-50 italic">
                         "{insights?.globalAdvice}"
                     </p>
-                    <div className="flex items-center gap-8 border-t border-white/10 pt-8 mt-auto">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md">
+                    <div className="flex items-center gap-6 border-t border-white/10 pt-4 mt-4">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-white/10 p-2 rounded-xl">
                                 <TrendingUp className={cn(
-                                    "h-6 w-6",
+                                    "h-4 w-4",
                                     insights?.trend === 'dégradation' ? "text-red-400 rotate-45" : 
                                     insights?.trend === 'amélioration' ? "text-emerald-400 -rotate-45" : "text-blue-400"
                                 )} />
                             </div>
                             <div>
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Tendance 30min</p>
-                                <p className="text-sm font-black capitalize tracking-tight">{insights?.trend}</p>
+                                <p className="text-[9px] font-black text-slate-500 uppercase mb-0.5">Tendance</p>
+                                <p className="text-xs font-black capitalize">{insights?.trend}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md">
-                                <ShieldCheck className="h-6 w-6 text-primary" />
+                        <div className="flex items-center gap-2">
+                            <div className="bg-white/10 p-2 rounded-xl">
+                                <ShieldCheck className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Confiance</p>
-                                <p className="text-sm font-black tracking-tight">99.2% (Vérifié)</p>
+                                <p className="text-[9px] font-black text-slate-500 uppercase mb-0.5">Vérifié</p>
+                                <p className="text-xs font-black">99.2%</p>
                             </div>
                         </div>
                     </div>
@@ -258,31 +247,31 @@ export default function StrategicInsights() {
         </div>
 
         {/* Smart Tips & Critical Axes */}
-        <div className="grid lg:grid-cols-2 gap-12 pt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
             
             {/* Smart Tips Section */}
-            <div className="space-y-8">
+            <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
-                        <Sparkles className="text-amber-500 h-6 w-6 fill-amber-500/20" />
-                        Intelligence Stratégique
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                        <Sparkles className="text-amber-500 h-5 w-5" />
+                        Conseils IA
                     </h2>
-                    <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50 font-black text-[10px]">{insights?.tips.length || 0} Conseils</Badge>
+                    <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50 font-black text-[9px]">{insights?.tips.length || 0} TIPS</Badge>
                 </div>
                 
-                <div className="grid gap-6">
+                <div className="grid gap-4">
                     {insights?.tips.map((tip, i) => (
                         <motion.div 
                             key={i} 
-                            initial={{ opacity: 0, x: -30 }}
+                            initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.3 + (i * 0.1) }}
-                            className="bg-white p-7 rounded-[2.5rem] shadow-xl border-l-8 border-l-primary hover:shadow-2xl hover:scale-[1.02] transition-all flex items-start gap-6 group cursor-default"
+                            className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-l-primary flex items-start gap-4"
                         >
-                            <div className="bg-primary/10 text-primary font-black p-3 rounded-2xl text-sm w-12 h-12 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors shadow-inner">
+                            <div className="bg-primary/10 text-primary font-black p-2 rounded-lg text-xs w-8 h-8 flex items-center justify-center shrink-0">
                                 {i+1}
                             </div>
-                            <p className="font-bold text-slate-700 leading-relaxed text-base">
+                            <p className="font-bold text-slate-700 text-sm leading-relaxed">
                                 {tip}
                             </p>
                         </motion.div>
@@ -291,51 +280,44 @@ export default function StrategicInsights() {
             </div>
 
             {/* Critical Tronçons Section */}
-            <div className="space-y-8">
+            <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
-                        <AlertTriangle className="text-red-500 h-6 w-6" />
-                        Points de Friction (100 axes)
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                        <AlertTriangle className="text-red-500 h-5 w-5" />
+                        Points Chauds
                     </h2>
-                    <Badge className="bg-red-500 text-white font-black text-[10px] uppercase">Haute Priorité</Badge>
+                    <Badge className="bg-red-500 text-white font-black text-[9px] uppercase">Alertes</Badge>
                 </div>
 
-                <div className="grid gap-4">
-                    {trafficData.filter(d => d.status === 'EMBOUTEILLAGE' || d.status === 'DENSE').slice(0, 8).map((item, i) => (
+                <div className="grid gap-3">
+                    {trafficData.filter(d => d.status === 'EMBOUTEILLAGE' || d.status === 'DENSE').slice(0, 6).map((item, i) => (
                         <motion.div 
                             key={i} 
-                            initial={{ opacity: 0, scale: 0.95 }}
+                            initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.4 + (i * 0.05) }}
-                            className="flex items-center justify-between p-6 bg-white rounded-[2rem] border border-slate-100 shadow-lg hover:border-red-200 transition-colors group"
+                            className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm"
                         >
-                            <div className="flex items-center gap-5">
+                            <div className="flex items-center gap-3">
                                 <div className={cn(
-                                    "w-4 h-4 rounded-full shadow-inner",
+                                    "w-3 h-3 rounded-full",
                                     item.status === 'EMBOUTEILLAGE' ? "bg-red-500 animate-pulse" : "bg-orange-500"
                                 )} />
                                 <div>
-                                    <p className="font-black text-slate-900 text-base leading-none mb-2 group-hover:text-primary transition-colors">{item.road}</p>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{item.status}</p>
+                                    <p className="font-black text-slate-900 text-sm leading-none mb-1">{item.road}</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.status}</p>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-lg font-black text-red-600">+{item.delay} min</p>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.speed} km/h</p>
+                                <p className="text-sm font-black text-red-600">+{item.delay}m</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase">{item.speed} km/h</p>
                             </div>
                         </motion.div>
                     ))}
                     {trafficData.filter(d => d.status === 'EMBOUTEILLAGE' || d.status === 'DENSE').length === 0 && (
-                        <div className="p-16 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200 shadow-inner">
-                            <Shield className="h-16 w-16 text-emerald-500 mx-auto mb-4 opacity-20" />
-                            <p className="text-lg font-black text-slate-400 tracking-tight uppercase">Ville Fluide</p>
-                            <p className="text-sm text-slate-300 font-medium">Aucun point de friction critique détecté actuellement.</p>
+                        <div className="p-10 text-center bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
+                            <Shield className="h-10 w-10 text-emerald-500 mx-auto mb-3 opacity-20" />
+                            <p className="text-xs font-black text-slate-400 uppercase">Kinshasa Fluide</p>
                         </div>
-                    )}
-                    {trafficData.filter(d => d.status === 'EMBOUTEILLAGE' || d.status === 'DENSE').length > 8 && (
-                        <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest pt-4">
-                            + {trafficData.filter(d => d.status === 'EMBOUTEILLAGE' || d.status === 'DENSE').length - 8} autres axes ralentis
-                        </p>
                     )}
                 </div>
             </div>
@@ -346,28 +328,28 @@ export default function StrategicInsights() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-8"
+            className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6"
         >
-            <div className="flex items-center gap-5">
-                <div className="bg-slate-200 p-4 rounded-2xl shadow-inner">
-                    <History className="h-6 w-6 text-slate-500" />
+            <div className="flex items-center gap-4">
+                <div className="bg-slate-200 p-3 rounded-xl">
+                    <History className="h-5 w-5 text-slate-500" />
                 </div>
                 <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Dernier audit complet (100 axes)</p>
-                    <p className="text-base font-black text-slate-700 tracking-tight">
+                    <p className="text-[9px] font-black text-slate-400 uppercase mb-0.5">Dernier audit (100 axes)</p>
+                    <p className="text-sm font-black text-slate-700">
                         {lastUpdated ? format(lastUpdated, 'EEEE dd MMMM, HH:mm', { locale: fr }) : '--'}
                     </p>
                 </div>
             </div>
-            <div className="flex gap-4 w-full md:w-auto">
-                <Button variant="outline" className="h-16 rounded-[1.5rem] px-10 font-black flex-1 md:flex-none uppercase tracking-[0.2em] text-[10px] border-2 shadow-sm bg-white" asChild>
-                    <Link href="/flux-infrastructure">Analyse Volumétrique</Link>
+            <div className="flex gap-3 w-full md:w-auto">
+                <Button variant="outline" className="h-12 rounded-xl px-6 font-black flex-1 md:flex-none uppercase tracking-widest text-[9px] border-2 bg-white" asChild>
+                    <Link href="/flux-infrastructure">Analyse Tech</Link>
                 </Button>
-                <Button className="h-16 rounded-[1.5rem] px-12 font-black flex-1 md:flex-none uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-primary/40 gap-3 group" asChild>
+                <Button className="h-12 rounded-xl px-8 font-black flex-1 md:flex-none uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 gap-2" asChild>
                     <Link href="/k-flow-nav">
-                        <Navigation className="h-4 w-4 fill-white group-hover:translate-x-1 transition-transform" />
-                        Guidage GPS
-                        <ArrowRight className="h-4 w-4 ml-1 opacity-50" />
+                        <Navigation className="h-3.5 w-3.5 fill-white" />
+                        Navigation
+                        <ArrowRight className="h-3 w-3 opacity-50" />
                     </Link>
                 </Button>
             </div>

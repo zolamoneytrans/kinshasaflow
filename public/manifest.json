@@ -1,77 +1,25 @@
 {
   "name": "Kinshasa Flow",
   "short_name": "K-Flow",
-  "description": "L'application de référence pour la mobilité à Kinshasa. Trafic en temps réel, navigation GPS intelligente K-Flow et assistant IA vocal.",
+  "description": "Trafic en temps réel et navigation intelligente à Kinshasa.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f9fb",
+  "background_color": "#ffffff",
   "theme_color": "#248eeb",
-  "orientation": "portrait",
-  "scope": "/",
-  "lang": "fr-FR",
-  "dir": "ltr",
-  "categories": [
-    "navigation",
-    "travel",
-    "productivity"
-  ],
   "icons": [
     {
-      "src": "https://placehold.co/192x192.png?text=K-Flow+192",
+      "src": "https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=KFlow",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://placehold.co/512x512.png?text=K-Flow+512",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://placehold.co/512x512.png?text=K-Flow+Maskable",
+      "src": "https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=KFlow",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "https://picsum.photos/seed/kflow-mobile/1080/1920",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Trafic en direct sur mobile"
-    },
-    {
-      "src": "https://picsum.photos/seed/kflow-desktop/1920/1080",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Tableau de bord de navigation"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Trafic en temps réel",
-      "url": "/live-traffic",
-      "icons": [
-        {
-          "src": "https://placehold.co/96x96.png?text=Trafic",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "K-Flow Nav",
-      "url": "/k-flow-nav",
-      "icons": [
-        {
-          "src": "https://placehold.co/96x96.png?text=Nav",
-          "sizes": "96x96"
-        }
-      ]
-    }
-  ],
-  "prefer_related_applications": false
+  "orientation": "portrait",
+  "scope": "/"
 }

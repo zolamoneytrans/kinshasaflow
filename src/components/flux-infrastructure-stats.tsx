@@ -32,7 +32,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
-import { getGoogleTrafficStatusAction, MAJOR_AXES } from '@/app/actions';
+import { getGoogleTrafficStatusAction } from '@/app/actions';
+import { MAJOR_AXES } from '@/lib/constants';
 import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { DailyTrafficReport, FirestorePermissionError } from '@/lib/types';

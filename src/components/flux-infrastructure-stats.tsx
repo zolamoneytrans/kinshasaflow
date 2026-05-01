@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -20,9 +19,7 @@ import {
   Car, 
   TrendingUp, 
   AlertTriangle, 
-  Building2, 
   ShieldCheck, 
-  Zap, 
   Activity,
   Coins,
   History,
@@ -35,21 +32,13 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
-import { saveDailyTrafficReportAction } from '@/app/actions';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { DailyTrafficReport, WithId } from '@/lib/types';
+import { getGoogleTrafficStatusAction, MAJOR_AXES } from '@/app/actions';
+import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { DailyTrafficReport, FirestorePermissionError } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-
-const CAPACITY_DATA = [
-  { name: "Blvd 30 Juin", capacity: 5000 },
-  { name: "Blvd Lumumba", capacity: 6000 },
-  { name: "Av. Kasa-Vubu", capacity: 4000 },
-  { name: "Rte Matadi", capacity: 4500 },
-  { name: "Av. By-Pass", capacity: 5000 },
-];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -72,17 +61,49 @@ export default function FluxInfrastructureStats() {
   const handleUpdateAndArchive = async () => {
     setIsUpdating(true);
     try {
-        const result = await saveDailyTrafficReportAction();
-        if (result.success) {
-            setLastLocalReport(result.data);
-            toast({ 
-                title: "Rapport Archivé !", 
-                description: "Les données de trafic ont été sauvegardées pour l'analyse historique.",
-                variant: "default"
+        // Étape 1 : Récupérer les données via l'action serveur (API Google)
+        const trafficData = await getGoogleTrafficStatusAction(MAJOR_AXES);
+        
+        // Étape 2 : Calculer la saturation globale
+        const totalSaturation = trafficData.reduce((acc, curr) => {
+            const val = curr.status === "EMBOUTEILLAGE" ? 100 : curr.status === "DENSE" ? 75 : curr.status === "MODÉRÉ" ? 40 : 10;
+            return acc + val;
+        }, 0) / trafficData.length;
+
+        const reportData = {
+            timestamp: serverTimestamp(),
+            globalSaturation: Math.round(totalSaturation),
+            axisStats: trafficData.map(d => ({
+                road: d.road,
+                status: d.status,
+                speed: d.speed,
+                delay: d.delay
+            }))
+        };
+
+        // Étape 3 : Sauvegarder dans Firestore (SDK Client)
+        const colRef = collection(firestore, "daily_traffic_reports");
+        addDoc(colRef, reportData).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: colRef.path,
+                operation: 'create',
+                requestResourceData: reportData,
             });
-        } else {
-            throw new Error(result.error);
-        }
+            errorEmitter.emit('permission-error', permissionError);
+        });
+
+        // Étape 4 : Mettre à jour l'UI locale immédiatement
+        const now = new Date();
+        setLastLocalReport({
+            ...reportData,
+            timestamp: { toDate: () => now }
+        });
+
+        toast({ 
+            title: "Rapport Archivé !", 
+            description: "Les données de trafic ont été sauvegardées pour l'analyse historique.",
+            variant: "default"
+        });
     } catch (e: any) {
         toast({ title: "Échec de l'archivage", description: e.message, variant: "destructive" });
     } finally {
@@ -120,7 +141,6 @@ export default function FluxInfrastructureStats() {
         animate="visible"
         className="max-w-7xl mx-auto space-y-8 pb-20"
       >
-        {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
@@ -147,7 +167,6 @@ export default function FluxInfrastructureStats() {
           </div>
         </div>
 
-        {/* Top Key Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatCard 
             title="Saturation Urbaine" 
@@ -173,7 +192,6 @@ export default function FluxInfrastructureStats() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Chart: Vehicle Volume Analysis */}
           <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden">
             <CardHeader className="bg-white border-b border-slate-100 p-8">
               <div className="flex justify-between items-center">
@@ -233,7 +251,6 @@ export default function FluxInfrastructureStats() {
             </CardContent>
           </Card>
 
-          {/* Chart: Historical Trends */}
           <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden">
             <CardHeader className="bg-white border-b border-slate-100 p-8">
               <CardTitle className="text-xl font-black text-slate-900">Tendance 7 Jours</CardTitle>
@@ -275,10 +292,7 @@ export default function FluxInfrastructureStats() {
           </Card>
         </div>
 
-        {/* Hotspots & Strategic Insights */}
         <div className="grid md:grid-cols-3 gap-8">
-          
-          {/* Bottlenecks List */}
           <Card className="border-none shadow-sm rounded-[2rem] bg-white group hover:shadow-xl transition-all">
             <CardHeader className="p-8 pb-4">
               <div className="bg-red-500/10 p-3 rounded-2xl w-fit mb-4">
@@ -305,7 +319,6 @@ export default function FluxInfrastructureStats() {
             </CardContent>
           </Card>
 
-          {/* Infrastructure ROI */}
           <Card className="border-none shadow-sm rounded-[2rem] bg-white group hover:shadow-xl transition-all">
             <CardHeader className="p-8 pb-4">
               <div className="bg-emerald-500/10 p-3 rounded-2xl w-fit mb-4">
@@ -317,7 +330,7 @@ export default function FluxInfrastructureStats() {
             <CardContent className="px-8 pb-8">
               <div className="p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 space-y-4">
                 <p className="text-[11px] font-medium text-slate-600 leading-relaxed italic">
-                    "Les données archivées montrent que le Boulevard Lumumba supporte 40% de la charge urbaine matinale. Un projet d'élargissement aurait un ROI de fluidité estimé à +22%."
+                    "Les données archivées montrent que le Boulevard Lumumba supporte une charge urbaine massive. Un projet d'élargissement aurait un ROI de fluidité estimé à +22%."
                 </p>
                 <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                     <span className="text-[10px] font-black text-slate-400 uppercase">Impact Infrastructure</span>
@@ -327,7 +340,6 @@ export default function FluxInfrastructureStats() {
             </CardContent>
           </Card>
 
-          {/* Safety & Enforcement */}
           <Card className="border-none shadow-sm rounded-[2rem] bg-white group hover:shadow-xl transition-all">
             <CardHeader className="p-8 pb-4">
               <div className="bg-primary/10 p-3 rounded-2xl w-fit mb-4">
@@ -343,7 +355,7 @@ export default function FluxInfrastructureStats() {
                 </p>
                 <div className="p-4 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 space-y-3">
                   <p className="text-[10px] font-bold text-slate-700 leading-relaxed">
-                    Sur la base du volume detecté (By-Pass), le déploiement de 4 agents de régulation supplémentaires entre 16h et 19h réduirait le temps de saturation de 15 minutes.
+                    Le déploiement d'agents de régulation supplémentaires aux heures de pointe réduirait le temps de saturation de 15 minutes sur les axes critiques.
                   </p>
                   <Button variant="ghost" className="w-full h-8 text-[9px] font-black uppercase tracking-widest hover:bg-white">
                       Détails de l'analyse <ArrowRight className="ml-2 h-3 w-3" />
@@ -352,7 +364,6 @@ export default function FluxInfrastructureStats() {
               </div>
             </CardContent>
           </Card>
-
         </div>
       </motion.div>
     </div>

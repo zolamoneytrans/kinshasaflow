@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -317,20 +318,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuItem>
               )}
 
-              {isEnabled('insights') && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/insights'} className="bg-primary/5 hover:bg-primary/10 border border-primary/10 mb-1">
-                    <Link href="/insights" className="font-bold flex items-center justify-between w-full text-primary">
-                      <div className="flex items-center gap-2">
-                        <Zap className={pathname === '/insights' ? "text-accent" : "text-primary"} />
-                        <span>K-Flow Insights</span>
-                      </div>
-                      <Badge className="bg-primary/20 text-primary text-[8px]">AI</Badge>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
               {isEnabled('liveTraffic') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} className="hover:bg-sidebar-accent">
@@ -351,6 +338,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <span>K-Flow Nav</span>
                       </div>
                       <Badge className="bg-primary/20 text-primary text-[8px]">PREMIUM</Badge>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('insights') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/insights'} className="bg-primary/5 hover:bg-primary/10 border border-primary/10 mb-1">
+                    <Link href="/insights" className="font-bold flex items-center justify-between w-full text-primary">
+                      <div className="flex items-center gap-2">
+                        <Zap className={pathname === '/insights' ? "text-accent" : "text-primary"} />
+                        <span>K-Flow Insights</span>
+                      </div>
+                      <Badge className="bg-primary/20 text-primary text-[8px]">AI</Badge>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

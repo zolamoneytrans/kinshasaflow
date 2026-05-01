@@ -30,6 +30,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 

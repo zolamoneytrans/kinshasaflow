@@ -113,7 +113,7 @@ export default function FluxInfrastructureStats() {
 
         toast({ 
             title: "Archive Stratégique Créée", 
-            description: "Analyse des volumes effectuée sur 10 axes.",
+            description: "Analyse des volumes effectuée sur 100 axes.",
             variant: "default"
         });
     } catch (e: any) {
@@ -342,7 +342,7 @@ export default function FluxInfrastructureStats() {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trendsData}>
                       <defs>
-                        <linearGradient id="colorSat" x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id="colorSat" x1="0" x2="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#248eeb" stopOpacity={0.3}/>
                           <stop offset="95%" stopColor="#248eeb" stopOpacity={0}/>
                         </linearGradient>

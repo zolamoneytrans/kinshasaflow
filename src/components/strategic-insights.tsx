@@ -133,7 +133,7 @@ export default function StrategicInsights() {
         </div>
         <div className="text-center space-y-2">
           <h2 className="text-xl font-black uppercase tracking-widest text-slate-800">Initialisation K-Flow Intelligence</h2>
-          <p className="text-muted-foreground font-medium italic">Analyse des 10 axes majeurs de Kinshasa en cours...</p>
+          <p className="text-muted-foreground font-medium italic">Analyse des 100 axes majeurs de Kinshasa en cours...</p>
         </div>
       </div>
     );

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Smartphone, Mail as MailIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { LoginValues, loginSchema, STAR_COSTS, UserProfile } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
@@ -31,6 +32,8 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PhoneLogin } from './phone-login';
 
 const GoogleIcon = () => (
     <svg className="h-4 w-4" viewBox="0 0 48 48">
@@ -141,8 +144,8 @@ export function LoginForm() {
             await runTransaction(firestore, async (transaction) => {
                 const userData: UserProfile = {
                     id: user.uid,
-                    email: user.email || '',
-                    name: user.displayName || '',
+                    email: user.email || `${user.uid}@kinshasaflow.online`,
+                    name: user.displayName || 'Utilisateur',
                     photoURL: user.photoURL || '',
                     currentStarsBalance: STAR_COSTS.SIGNUP_BONUS,
                     totalStarsEarned: STAR_COSTS.SIGNUP_BONUS,
@@ -163,7 +166,7 @@ export function LoginForm() {
                     type: 'earned',
                     starsChange: STAR_COSTS.SIGNUP_BONUS,
                     balanceAfterTransaction: STAR_COSTS.SIGNUP_BONUS,
-                    description: "Bonus de bienvenue - Google Connect",
+                    description: "Bonus de bienvenue",
                     timestamp: serverTimestamp(),
                 });
             });
@@ -198,7 +201,6 @@ export function LoginForm() {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
             
-            // Ensure profile exists even if logging in for the first time via Google
             await initializeUserProfile(result.user);
 
             toast({
@@ -234,45 +236,65 @@ export function LoginForm() {
                 <CardDescription className="text-primary-foreground/80 font-medium">Accédez à votre compte pour continuer.</CardDescription>
             </CardHeader>
             <CardContent className="p-8">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <div className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="font-bold text-slate-700">Email</FormLabel>
-                                        <FormControl>
-                                            <Input type="email" placeholder="nom@exemple.com" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <div className="flex items-center justify-between">
-                                            <FormLabel className="font-bold text-slate-700">Mot de passe</FormLabel>
-                                            <ResetPasswordDialog />
-                                        </div>
-                                        <FormControl>
-                                            <Input type="password" placeholder="********" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                        <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-black shadow-lg shadow-primary/20" disabled={isSubmitting || isGoogleSubmitting}>
-                            {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                            Se connecter
-                        </Button>
-                    </form>
-                </Form>
+                <Tabs defaultValue="email" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-slate-100 rounded-xl p-1">
+                        <TabsTrigger value="email" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                            <MailIcon className="h-4 w-4 mr-2" />
+                            Email
+                        </TabsTrigger>
+                        <TabsTrigger value="phone" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                            <Smartphone className="h-4 w-4 mr-2" />
+                            Téléphone
+                        </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="email">
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                <div className="space-y-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="email"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="font-bold text-slate-700">Email</FormLabel>
+                                                <FormControl>
+                                                    <Input type="email" placeholder="nom@exemple.com" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="password"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <div className="flex items-center justify-between">
+                                                    <FormLabel className="font-bold text-slate-700">Mot de passe</FormLabel>
+                                                    <ResetPasswordDialog />
+                                                </div>
+                                                <FormControl>
+                                                    <Input type="password" placeholder="********" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-black shadow-lg shadow-primary/20" disabled={isSubmitting || isGoogleSubmitting}>
+                                    {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                                    Se connecter
+                                </Button>
+                            </form>
+                        </Form>
+                    </TabsContent>
+
+                    <TabsContent value="phone">
+                        <PhoneLogin />
+                    </TabsContent>
+                </Tabs>
+
                 <div className="relative my-8">
                     <div className="absolute inset-0 flex items-center">
                         <span className="w-full border-t" />

@@ -15,6 +15,9 @@ export async function askAssistantAction(input: AssistantInput) {
     return await askAssistant(input);
 }
 
+/**
+ * Action serveur pour la génération vocale de l'assistant.
+ */
 export async function generateSpeechAction(text: string) {
     try {
         return await generateSpeech(text);

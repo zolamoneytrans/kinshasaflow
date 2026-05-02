@@ -278,7 +278,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isEnabled = useCallback((feature: keyof AppNavigationSettings) => {
     if (!navSettings) return true;
-    // Si la clé n'existe pas encore dans la DB (cas du bouton État des Routes), on l'affiche par défaut
     if (navSettings[feature] === undefined) return true;
     return navSettings[feature] !== false;
   }, [navSettings]);

@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -86,7 +85,6 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Exempt special users from the verification wall to ensure they can always connect
   if (!user.emailVerified && !user.isAnonymous && user.providerData.some(p => p.providerId === 'password') && !isSpecialUser) {
     const handleResend = async () => {
         setIsResending(true);
@@ -152,7 +150,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navSettingsRef = useMemoFirebase(() => doc(firestore, 'app_settings', 'navigation'), [firestore]);
   const { data: navSettings } = useDoc<AppNavigationSettings>(navSettingsRef);
 
-  // Notifications Badge Logic
   const notifsRef = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(firestore, 'notifications'), orderBy('timestamp', 'desc'), limit(20));
@@ -160,7 +157,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: notifs } = useCollection<AppNotification>(notifsRef);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
-  // Reports Badge Logic
   const eventsRef = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(20));
@@ -168,11 +164,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: events } = useCollection<EventReport>(eventsRef);
   const [unreadReports, setUnreadReports] = useState(0);
 
-  // Handle Badge Counts and Path Sync
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    // --- Reports Badge ---
     const lastSeenReportsStr = localStorage.getItem('last_seen_reports');
     const lastSeenReports = lastSeenReportsStr ? parseInt(lastSeenReportsStr) : 0;
 
@@ -187,7 +181,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       setUnreadReports(count);
     }
 
-    // --- Notifications Badge ---
     const lastSeenNotifsStr = localStorage.getItem('last_seen_notifications');
     const lastSeenNotifs = lastSeenNotifsStr ? parseInt(lastSeenNotifsStr) : 0;
 
@@ -454,7 +447,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <SidebarMenuButton asChild isActive={pathname === '/routes'} className="hover:bg-sidebar-accent">
                     <Link href="/routes" className="font-medium">
                       <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
-                      <span>Routes</span>
+                      <span>État des Routes</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

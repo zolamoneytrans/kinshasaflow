@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   AlertCircle, 
   Construction, 
@@ -15,7 +16,8 @@ import {
   ArrowRight,
   ShieldAlert,
   Droplets,
-  HardHat
+  HardHat,
+  PlusCircle
 } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
@@ -26,6 +28,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 const officialRoadWorks = [
   { id: 'ow1', name: "Avenue de l'Université", status: "Modernisation / Élargissement", progress: 65, location: "Tronçon Kapela - Intendance" },
@@ -44,9 +47,8 @@ const bridgeStatus = [
 export default function RoutesStats() {
   const { firestore } = useFirebase();
 
-  // Fetch real community reports for road issues
   const eventsQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(15));
+    return query(collection(firestore, 'events'), orderBy('createdAt', 'desc'), limit(30));
   }, [firestore]);
 
   const { data: communityEvents, isLoading } = useCollection<EventReport>(eventsQuery);
@@ -63,7 +65,6 @@ export default function RoutesStats() {
     <div className="w-full h-full overflow-y-auto bg-slate-50/50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-8 pb-20">
         
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
@@ -80,9 +81,8 @@ export default function RoutesStats() {
           </Button>
         </div>
 
-        {/* Global Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <MetricCard title="Nids-de-poule" value={stats.holes + 42} sub="Signalements actifs" icon={AlertCircle} color="text-red-500" bg="bg-red-50" />
+          <MetricCard title="Nids-de-poule" value={(stats.holes + 42).toString()} sub="Signalements actifs" icon={AlertCircle} color="text-red-500" bg="bg-red-50" />
           <MetricCard title="Zones Travaux" value={officialRoadWorks.length.toString()} sub="Chantiers officiels" icon={HardHat} color="text-primary" bg="bg-primary/5" />
           <MetricCard title="Routes Barrées" value={(stats.closed + 2).toString()} sub="Accès restreints" icon={TrafficCone} color="text-orange-500" bg="bg-orange-50" />
           <MetricCard title="Santé Ponts" value="68%" sub="Indice moyen structurel" icon={Construction} color="text-slate-700" bg="bg-slate-100" />
@@ -90,7 +90,6 @@ export default function RoutesStats() {
 
         <div className="grid lg:grid-cols-3 gap-8">
           
-          {/* Main Feed of Infrastructure Reports */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
@@ -160,10 +159,8 @@ export default function RoutesStats() {
             </div>
           </div>
 
-          {/* Side Panels: Official Works & Bridges */}
           <div className="space-y-8">
             
-            {/* Official Works */}
             <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
               <CardHeader className="bg-slate-900 text-white p-6">
                 <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
@@ -189,7 +186,6 @@ export default function RoutesStats() {
               </CardContent>
             </Card>
 
-            {/* Bridge Status */}
             <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
               <CardHeader className="p-6 pb-2">
                 <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-slate-400">
@@ -210,7 +206,6 @@ export default function RoutesStats() {
               </CardContent>
             </Card>
 
-            {/* Security Alert Block */}
             <div className="p-6 bg-red-600 rounded-[2rem] text-white shadow-2xl shadow-red-200 relative overflow-hidden group">
               <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform"></div>
               <ShieldAlert className="h-8 w-8 mb-4 opacity-50" />
@@ -245,17 +240,4 @@ function MetricCard({ title, value, sub, icon: Icon, color, bg }: { title: strin
       </CardContent>
     </Card>
   );
-}
-
-function Avatar({ children, className }: { children: React.ReactNode, className?: string }) {
-  return <div className={cn("rounded-full overflow-hidden bg-slate-200 flex items-center justify-center", className)}>{children}</div>;
-}
-
-function AvatarImage({ src }: { src?: string }) {
-  if (!src) return null;
-  return <img src={src} alt="avatar" className="w-full h-full object-cover" />;
-}
-
-function AvatarFallback({ children, className }: { children: React.ReactNode, className?: string }) {
-  return <span className={className}>{children}</span>;
 }

@@ -363,6 +363,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuItem>
               )}
 
+              {isEnabled('routes') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/routes'} className="hover:bg-sidebar-accent">
+                    <Link href="/routes" className="font-medium">
+                      <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
+                      <span>État des Routes</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
               {isEnabled('map') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/map'} className="hover:bg-sidebar-accent">
@@ -437,17 +448,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link href="/police-routiere" className="font-medium">
                       <Siren className={pathname === '/police-routiere' ? "text-accent" : "text-primary"} />
                       <span>Police</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
-              {isEnabled('routes') && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/routes'} className="hover:bg-sidebar-accent">
-                    <Link href="/routes" className="font-medium">
-                      <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
-                      <span>État des Routes</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

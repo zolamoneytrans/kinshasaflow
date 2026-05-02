@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bot, Send, User, Loader2, Volume2, Star, VolumeX } from 'lucide-react';
+import { Bot, Send, User, Loader2, Volume2, Star, VolumeX, Mic, MicOff } from 'lucide-react';
 import { askAssistantAction, generateSpeechAction } from '@/app/actions';
 import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
 import { STAR_COSTS, UserProfile } from '@/lib/types';
 import { Badge } from './ui/badge';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,6 +29,8 @@ export default function AssistantChat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeakingId, setIsSpeakingId] = useState<number | null>(null);
+  const [isVocalModeActive, setIsVocalModeActive] = useState(false);
+  
   const { user, firestore } = useFirebase();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -122,7 +126,15 @@ export default function AssistantChat() {
 
       const result = await askAssistantAction({ question: currentInput });
       const assistantMessage: Message = { role: 'assistant', content: result.answer };
-      setMessages(prev => [...prev, assistantMessage]);
+      
+      setMessages(prev => {
+          const updated = [...prev, assistantMessage];
+          // Auto-play if vocal mode is on
+          if (isVocalModeActive) {
+            handleSpeech(updated.length - 1, assistantMessage.content);
+          }
+          return updated;
+      });
     } catch (error) {
       console.error('Error:', error);
       const errorMessage: Message = { role: 'assistant', content: "Désolé, je rencontre un problème de connexion. Vérifiez votre connexion internet." };
@@ -157,10 +169,22 @@ export default function AssistantChat() {
                     </div>
                 </div>
             </div>
-            <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200 font-black h-8 px-4 rounded-full">
-                <Star className="h-3 w-3 mr-1.5 fill-amber-500 text-amber-500" />
-                {STAR_COSTS.AI_MESSAGE} ⭐
-            </Badge>
+            
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 bg-white/50 px-3 py-1.5 rounded-full border border-slate-200">
+                    <Label htmlFor="vocal-mode" className="text-[10px] font-black uppercase text-slate-500 cursor-pointer select-none">Mode Auto</Label>
+                    <Switch 
+                        id="vocal-mode" 
+                        checked={isVocalModeActive} 
+                        onCheckedChange={setIsVocalModeActive}
+                        className="data-[state=checked]:bg-emerald-500"
+                    />
+                </div>
+                <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200 font-black h-8 px-4 rounded-full hidden sm:flex">
+                    <Star className="h-3 w-3 mr-1.5 fill-amber-500 text-amber-500" />
+                    {STAR_COSTS.AI_MESSAGE} ⭐
+                </Badge>
+            </div>
           </CardTitle>
         </CardHeader>
 
@@ -176,7 +200,7 @@ export default function AssistantChat() {
                       <div className="max-w-xs space-y-2">
                         <p className="text-2xl font-black text-slate-900 tracking-tight">"Ndenge nini? Naza K-Flow."</p>
                         <p className="text-sm text-slate-500 font-medium leading-relaxed italic">
-                          Je cherche les meilleurs chemins pour vous. Demandez-moi comment aller n'importe où à Kinshasa !
+                          Je cherche les meilleurs chemins pour vous. Activez le mode auto pour m'écouter en conduisant !
                         </p>
                       </div>
                   </motion.div>
@@ -262,7 +286,7 @@ export default function AssistantChat() {
               <Input
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                placeholder="Ex: Victoire vers Gombe, c'est comment?"
+                placeholder="Ex: Quel est le trajet le plus rapide vers la Gombe?"
                 disabled={isLoading}
                 className="flex-1 h-14 bg-transparent border-none text-white font-bold placeholder:text-slate-500 focus-visible:ring-0 px-6"
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage(e)}

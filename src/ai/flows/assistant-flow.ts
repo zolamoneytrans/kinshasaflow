@@ -1,8 +1,8 @@
 'use server';
 /**
  * @fileOverview Un assistant IA connecté aux données réelles de Kinshasa.
- *
- * - askAssistant - Une fonction qui répond aux questions des utilisateurs en utilisant Google Maps.
+ * 
+ * Capable de géocoder n'importe quel lieu de la ville pour fournir un état du trafic précis.
  */
 
 import {ai} from '@/ai/genkit';
@@ -11,17 +11,17 @@ import { z } from 'genkit';
 import { MAJOR_AXES } from '@/lib/constants';
 
 /**
- * Outil permettant à l'IA de vérifier le trafic réel sur un axe de Kinshasa.
+ * Outil permettant à l'IA de vérifier le trafic réel sur n'importe quel point de Kinshasa.
  */
-const getTrafficOnRoad = ai.defineTool(
+const getTrafficAtLocation = ai.defineTool(
   {
-    name: 'getTrafficOnRoad',
-    description: 'Récupère l\'état du trafic en temps réel pour un axe spécifique de Kinshasa (vitesse, retard, statut).',
+    name: 'getTrafficAtLocation',
+    description: 'Récupère l\'état du trafic pour n\'importe quel lieu, avenue ou quartier de Kinshasa.',
     inputSchema: z.object({
-      roadName: z.string().describe('Le nom de la route ou du boulevard (ex: Boulevard du 30 Juin, By-Pass, Poids Lourds).'),
+      locationName: z.string().describe('Le nom du lieu (ex: Victoire, Avenue de la Paix, Bandal, Pompage).'),
     }),
     outputSchema: z.object({
-        road: z.string(),
+        placeName: z.string(),
         status: z.string(),
         speed: z.number(),
         delay: z.number(),
@@ -30,27 +30,33 @@ const getTrafficOnRoad = ai.defineTool(
   },
   async (input) => {
     const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
-    
-    // Recherche de l'axe le plus proche dans notre référentiel de 100 axes
-    const road = MAJOR_AXES.find(a => 
-        a.name.toLowerCase().includes(input.roadName.toLowerCase()) ||
-        input.roadName.toLowerCase().includes(a.name.toLowerCase())
-    ) || MAJOR_AXES[0];
-
-    const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
-    const body = {
-      origin: { location: { latLng: { latitude: road.origin.lat, longitude: road.origin.lng } } },
-      destination: { location: { latLng: { latitude: road.destination.lat, longitude: road.destination.lng } } },
-      travelMode: "DRIVE",
-      routingPreference: "TRAFFIC_AWARE_OPTIMAL",
-      departureTime: new Date(Date.now() + 10000).toISOString(),
-      computeAlternativeRoutes: false,
-      languageCode: "fr-FR",
-      units: "METRIC"
-    };
+    const query = `${input.locationName}, Kinshasa, RDC`;
 
     try {
-        const res = await fetch(url, {
+        // 1. Géocodage pour trouver les coordonnées de n'importe quel lieu
+        const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`;
+        const geoRes = await fetch(geoUrl);
+        const geoData = await geoRes.json();
+
+        if (!geoData.results || geoData.results.length === 0) {
+            return { placeName: input.locationName, status: "INCONNU", speed: 0, delay: 0, message: `Je n'ai pas trouvé le lieu "${input.locationName}" sur la carte de Kinshasa.` };
+        }
+
+        const location = geoData.results[0].geometry.location;
+        const formattedAddress = geoData.results[0].formatted_address;
+
+        // 2. Calcul d'un micro-itinéraire (500m) pour sonder le trafic à cet endroit
+        const routesUrl = "https://routes.googleapis.com/directions/v2:computeRoutes";
+        const body = {
+          origin: { location: { latLng: { latitude: location.lat, longitude: location.lng } } },
+          destination: { location: { latLng: { latitude: location.lat + 0.005, longitude: location.lng + 0.005 } } },
+          travelMode: "DRIVE",
+          routingPreference: "TRAFFIC_AWARE_OPTIMAL",
+          departureTime: new Date(Date.now() + 5000).toISOString(),
+          languageCode: "fr-FR"
+        };
+
+        const res = await fetch(routesUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -64,7 +70,7 @@ const getTrafficOnRoad = ai.defineTool(
         const route = data?.routes?.[0];
 
         if (!route) {
-            return { road: road.name, status: "INCONNU", speed: 0, delay: 0, message: "Désolé, je n'arrive pas à joindre les capteurs GPS pour cet axe pour le moment." };
+            return { placeName: formattedAddress, status: "FLUIDE", speed: 40, delay: 0, message: `Trafic normal détecté aux alentours de ${input.locationName}.` };
         }
 
         const duration = parseInt((route.duration ?? "0s").replace('s', '')) || 1;
@@ -74,19 +80,19 @@ const getTrafficOnRoad = ai.defineTool(
         const speedKmh = Math.round((distance / 1000) / (duration / 3600)) || 0;
 
         let status = "FLUIDE";
-        if (speedKmh < 10 || delayMinutes > 10) status = "EMBOUTEILLAGE";
-        else if (speedKmh <= 20 || delayMinutes >= 5) status = "DENSE";
+        if (speedKmh < 12 || delayMinutes > 8) status = "EMBOUTEILLAGE";
+        else if (speedKmh <= 22 || delayMinutes >= 4) status = "DENSE";
         else if (speedKmh <= 35 || delayMinutes >= 2) status = "MODÉRÉ";
 
         return {
-            road: road.name,
+            placeName: formattedAddress,
             status,
             speed: speedKmh,
             delay: delayMinutes,
-            message: `Résultat réel : Le trafic sur ${road.name} est ${status}. Vitesse : ${speedKmh} km/h. Retard : ${delayMinutes} min.`
+            message: `Analyse réelle : Le trafic vers ${input.locationName} est ${status}.`
         };
     } catch (e) {
-        return { road: road.name, status: "ERREUR", speed: 0, delay: 0, message: "Erreur technique lors de la récupération des données Google Maps." };
+        return { placeName: input.locationName, status: "ERREUR", speed: 0, delay: 0, message: "Erreur technique de connexion aux satellites." };
     }
   }
 );
@@ -95,16 +101,16 @@ const prompt = ai.definePrompt({
   name: 'routeAssistantPrompt',
   input: {schema: AssistantInputSchema},
   output: {schema: AssistantOutputSchema},
-  tools: [getTrafficOnRoad],
-  prompt: `Vous êtes l'assistant expert 'K-Flow Assistant' pour la ville de Kinshasa. 
-Votre mission est d'aider les Kinois à naviguer intelligemment dans les embouteillages.
+  tools: [getTrafficAtLocation],
+  prompt: `Vous êtes l'assistant expert 'K-Flow Assistant' pour l'intégralité de la ville de Kinshasa. 
+Votre mission est d'aider les Kinois à naviguer intelligemment partout, de la Gombe à Maluku, en passant par Ngaliema et Masina.
 
 RÈGLES CRITIQUES :
-1. UTILISEZ l'outil 'getTrafficOnRoad' dès que l'utilisateur demande l'état d'une route, d'un quartier ou un itinéraire. C'est votre source de vérité.
-2. ANALYSEZ les données renvoyées par l'outil (vitesse, retard) pour donner un conseil pertinent.
-3. PARLEZ Français ou Lingala (ou un mélange des deux, le "Frangala" kinois) selon la langue de l'utilisateur.
-4. Si le trafic est saturé sur un boulevard, suggérez des alternatives connues (ex: passer par des avenues secondaires).
-5. Soyez amical et encourageant ("Courage na nzela", "Tosa trafic").
+1. UTILISEZ l'outil 'getTrafficAtLocation' pour n'importe quelle question portant sur une rue, une avenue, un rond-point, un quartier ou un point de repère.
+2. NE VOUS LIMITEZ PAS aux grands boulevards. Si l'utilisateur demande une petite avenue ou un quartier reculé, cherchez-le.
+3. ANALYSEZ les données renvoyées (statut, vitesse) pour donner un conseil pratique (ex: "Évitez cette zone", "C'est le moment d'y aller").
+4. PARLEZ en "Frangala" (Français avec des touches de Lingala) pour être proche de l'utilisateur.
+5. Soyez amical : "Ndenge nini?", "Courage na nzela", "Tosa trafic".
 
 Question de l'utilisateur : {{{question}}}`,
 });

@@ -278,6 +278,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isEnabled = useCallback((feature: keyof AppNavigationSettings) => {
     if (!navSettings) return true;
+    // Si la clé n'existe pas encore dans la DB (cas du bouton État des Routes), on l'affiche par défaut
+    if (navSettings[feature] === undefined) return true;
     return navSettings[feature] !== false;
   }, [navSettings]);
 
@@ -436,7 +438,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {isEnabled('report') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/signaler-embouteillage'} className="bg-primary/10 hover:bg-primary/20 mt-2 border border-primary/20">
-                    <Link href="/signaler-embouteillage" className="font-bold text-primary-foreground">
+                    <Link href="/signaler-embouteillage" className="font-bold">
                       <PlusCircle className={pathname === '/signaler-embouteillage' ? "text-accent" : "text-primary"} />
                       <span>Signaler</span>
                     </Link>
@@ -590,7 +592,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/navigation'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/navigation" className="font-medium">
+                        <Link href="/admin/navigation" className="font-medium flex items-center gap-2">
                           <LayoutGrid className="text-destructive" />
                           <span>Navigation</span>
                         </Link>
@@ -601,7 +603,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/stars" className="font-medium">
+                        <Link href="/admin/stars" className="font-medium flex items-center gap-2">
                           <Users className="text-destructive" />
                           <span>Stars & Utilisateurs</span>
                         </Link>
@@ -612,7 +614,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/notifications'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/notifications" className="font-medium">
+                        <Link href="/admin/notifications" className="font-medium flex items-center gap-2">
                           <Send className="text-destructive" />
                           <span>Notifications Admin</span>
                         </Link>
@@ -623,7 +625,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/adverts" className="font-medium">
+                        <Link href="/admin/adverts" className="font-medium flex items-center gap-2">
                           <Video className="text-destructive" />
                           <span>Publicités</span>
                         </Link>
@@ -634,7 +636,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/transport" className="font-medium">
+                        <Link href="/admin/transport" className="font-medium flex items-center gap-2">
                           <Bus className="text-destructive" />
                           <span>Transport</span>
                         </Link>
@@ -645,7 +647,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/logement" className="font-medium">
+                        <Link href="/admin/logement" className="font-medium flex items-center gap-2">
                           <BedDouble className="text-destructive" />
                           <span>Logement</span>
                         </Link>
@@ -656,7 +658,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/car-rental" className="font-medium">
+                        <Link href="/admin/car-rental" className="font-medium flex items-center gap-2">
                           <Car className="text-destructive" />
                           <span>Location</span>
                         </Link>
@@ -667,7 +669,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isPartnerAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/tourism'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/tourism" className="font-medium">
+                        <Link href="/admin/tourism" className="font-medium flex items-center gap-2">
                           <Palmtree className="text-destructive" />
                           <span>Tourisme</span>
                         </Link>
@@ -678,7 +680,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} className="hover:bg-sidebar-accent">
-                        <Link href="/admin/messages" className="font-medium">
+                        <Link href="/admin/messages" className="font-medium flex items-center gap-2">
                           <Mail className="text-destructive" />
                           <span>Messages</span>
                         </Link>

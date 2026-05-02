@@ -37,7 +37,17 @@ import {
   Activity,
   Bug,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Volume2,
+  VolumeX,
+  Mic,
+  Compass,
+  ArrowUp,
+  ArrowUpRight,
+  ArrowUpLeft,
+  CornerUpRight,
+  CornerUpLeft,
+  Spline
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -45,6 +55,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection, query, orderBy, limit } from 'firebase/firestore';
 import { STAR_COSTS, UserProfile, EventReport, WithId } from '@/lib/types';
+import { generateSpeechAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -86,6 +97,8 @@ interface RouteInfo {
     destinationCoords?: { lat: number, lng: number };
     allRoutes?: RouteSummary[];
     result?: google.maps.DirectionsResult;
+    currentStep?: any;
+    nextStep?: any;
 }
 
 interface TrafficSegment {
@@ -144,12 +157,21 @@ const translateInstruction = (text: string) => {
     return t;
 };
 
+const getDirectionIcon = (instruction: string) => {
+    const text = instruction.toLowerCase();
+    if (text.includes('droite') || text.includes('right')) return <CornerUpRight className="h-10 w-10" />;
+    if (text.includes('gauche') || text.includes('left')) return <CornerUpLeft className="h-10 w-10" />;
+    if (text.includes('rond-point') || text.includes('roundabout')) return <ArrowUpRight className="h-10 w-10" />;
+    return <ArrowUp className="h-10 w-10" />;
+};
+
 /**
  * Hook personnalisé pour lisser la position GPS et calculer l'orientation
  */
 function useInterpolatedLocation(rawLocation: {lat: number, lng: number} | null) {
     const [smoothLocation, setSmoothLocation] = useState<{lat: number, lng: number} | null>(null);
     const [heading, setHeading] = useState(0);
+    const [speed, setSpeed] = useState(0);
     const lastPos = useRef<{lat: number, lng: number} | null>(null);
     const animationFrame = useRef<number>(0);
 
@@ -171,6 +193,13 @@ function useInterpolatedLocation(rawLocation: {lat: number, lng: number} | null)
             if (Math.abs(newHeading) > 1) {
                 setHeading(newHeading);
             }
+            
+            // Speed calculation
+            const dist = g.maps.geometry.spherical.computeDistanceBetween(
+                new g.maps.LatLng(lastPos.current.lat, lastPos.current.lng),
+                new g.maps.LatLng(rawLocation.lat, rawLocation.lng)
+            );
+            setSpeed(Math.round(dist * 3.6)); // approx m/s to km/h if interval is 1s
         }
 
         let startTime: number;
@@ -197,7 +226,7 @@ function useInterpolatedLocation(rawLocation: {lat: number, lng: number} | null)
         return () => cancelAnimationFrame(animationFrame.current);
     }, [rawLocation]);
 
-    return { smoothLocation, heading };
+    return { smoothLocation, heading, speed };
 }
 
 /**
@@ -226,7 +255,7 @@ function MapCameraHandler({
                 center: smoothLocation,
                 heading: isNavigating && is3D ? heading : 0,
                 tilt: isNavigating && is3D ? 45 : 0,
-                zoom: isNavigating ? 18 : 15
+                zoom: isNavigating ? 19 : 15
             });
         }
     }, [map, smoothLocation, autoFollow, heading, isNavigating, is3D, showSummary]);
@@ -238,7 +267,7 @@ export default function KFlowNav() {
     const { user, firestore } = useFirebase();
     const { toast } = useToast();
     const [rawLocation, setRawLocation] = useState<{lat: number, lng: number} | null>(null);
-    const { smoothLocation, heading } = useInterpolatedLocation(rawLocation);
+    const { smoothLocation, heading, speed } = useInterpolatedLocation(rawLocation);
     const [destination, setDestination] = useState<string>('');
     const [isNavigating, setIsNavigating] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -253,6 +282,8 @@ export default function KFlowNav() {
     const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
     const [debugMode, setDebugMode] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+    const lastSpokenStep = useRef<string | null>(null);
     
     const containerRef = useRef<HTMLDivElement>(null);
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
@@ -277,6 +308,22 @@ export default function KFlowNav() {
             return () => navigator.geolocation.clearWatch(watchId);
         }
     }, []);
+
+    // Audio Instruction Logic
+    useEffect(() => {
+        if (!isAudioEnabled || !isNavigating || !routeInfo?.currentStep) return;
+        
+        const stepText = translateInstruction(routeInfo.currentStep.instructions.replace(/<[^>]*>?/gm, ''));
+        if (stepText !== lastSpokenStep.current) {
+            lastSpokenStep.current = stepText;
+            generateSpeechAction(stepText).then(res => {
+                if (res?.media) {
+                    const audio = new Audio(res.media);
+                    audio.play().catch(e => console.error("Audio play blocked", e));
+                }
+            });
+        }
+    }, [isAudioEnabled, isNavigating, routeInfo?.currentStep]);
 
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -338,7 +385,6 @@ export default function KFlowNav() {
             const mainRoute = result.routes[0];
             const leg = mainRoute.legs[0];
             
-            // --- ANALYSE DE TRAFIC HAUTE PRÉCISION ---
             const legDurationTypical = leg.duration?.value || 1;
             const legDurationTraffic = leg.duration_in_traffic?.value || legDurationTypical;
             const legDistanceTotal = leg.distance?.value || 1;
@@ -416,8 +462,6 @@ export default function KFlowNav() {
                 rec = `Flux critique : ${blockedCount} zone(s) de blocage total détectée(s). Retard estimé de ${globalDelay} min.`;
             } else if (congestedCount > 1) {
                 rec = `Ralentissements détectés sur ${congestionPerc}% du parcours. Prévoyez environ ${globalDelay} min de retard.`;
-            } else if (globalDelay > 2) {
-                rec = `Flux modéré : quelques ralentissements mineurs (+${globalDelay} min). Itinéraire K-Flow recommandé.`;
             }
 
             if (result.routes.length > 1) {
@@ -426,7 +470,7 @@ export default function KFlowNav() {
                 const gain = Math.round((dur0 - dur1) / 60);
                 if (gain >= 2) {
                     bestIdx = 1;
-                    rec = `Optimisation majeure : l'itinéraire K-Flow intelligent permet de gagner ${gain} min en contournant les bouchons.`;
+                    rec = `Optimisation K-Flow : cet itinéraire permet de gagner ${gain} min en contournant les zones rouges.`;
                 }
             }
 
@@ -435,19 +479,14 @@ export default function KFlowNav() {
                 const userDoc = await transaction.get(userRef!);
                 const data = userDoc.data() as UserProfile;
                 const newBalance = data.currentStarsBalance - STAR_COSTS.NAVIGATION_SESSION;
-                
-                transaction.update(userRef!, {
-                    currentStarsBalance: newBalance,
-                    totalStarsUsed: (data.totalStarsUsed || 0) + STAR_COSTS.NAVIGATION_SESSION
-                });
-
+                transaction.update(userRef!, { currentStarsBalance: newBalance });
                 const starTransRef = doc(collection(userRef!, 'star_transactions'));
                 transaction.set(starTransRef, {
                     userId: user.uid,
                     type: 'spent',
                     starsChange: -STAR_COSTS.NAVIGATION_SESSION,
                     balanceAfterTransaction: newBalance,
-                    description: `Analyse trajet : ${destination}`,
+                    description: `Guidage GPS : ${destination}`,
                     timestamp: serverTimestamp(),
                 });
             });
@@ -468,7 +507,7 @@ export default function KFlowNav() {
 
         } catch (error: any) {
             console.error(error);
-            toast({ title: "Erreur d'analyse", description: error.message || "Échec de connexion aux services Google.", variant: "destructive" });
+            toast({ title: "Erreur d'analyse", description: error.message || "Échec de connexion.", variant: "destructive" });
         } finally {
             setIsUnlocking(false);
             setIsAnalyzing(false);
@@ -480,14 +519,10 @@ export default function KFlowNav() {
         setShowSummary(false);
         setAutoFollow(true);
         setIs3D(true);
-        toast({ title: "Guidage actif", description: "Suivez les instructions pour naviguer dans Kinshasa." });
     };
 
     const handleReCenter = () => {
-        if (!smoothLocation) {
-            toast({ title: "GPS indisponible", variant: "destructive" });
-            return;
-        }
+        if (!smoothLocation) return;
         setAutoFollow(true);
     };
 
@@ -502,16 +537,104 @@ export default function KFlowNav() {
     return (
         <div 
             ref={containerRef}
-            className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-slate-950 flex flex-col border border-slate-800"
+            className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-[#0b121e] flex flex-col border border-slate-800"
         >
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="fr">
-                {/* Overlay Barre de Recherche */}
+                {/* ── UI NAVIGATION TYPE GOOGLE MAPS ── */}
+                {isNavigating && (
+                    <>
+                        {/* Panneau d'Instruction (HAUT) */}
+                        <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
+                            <motion.div 
+                                initial={{ y: -100, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                className="w-full max-w-xl bg-[#00695c] shadow-2xl rounded-3xl p-5 flex items-center gap-6 pointer-events-auto border-t border-white/20"
+                            >
+                                <div className="text-white bg-[#004d40] p-3 rounded-2xl shadow-inner">
+                                    {getDirectionIcon(routeInfo?.currentStep?.instructions || "")}
+                                </div>
+                                <div className="flex-1 text-white">
+                                    <p className="text-2xl font-black leading-tight tracking-tight">
+                                        {translateInstruction(routeInfo?.currentStep?.instructions.replace(/<[^>]*>?/gm, '').split(',')[0] || "Suivre l'itinéraire")}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-1 opacity-80">
+                                        <p className="text-xs font-bold uppercase tracking-widest">Ensuite :</p>
+                                        <p className="text-xs font-medium">{translateInstruction(routeInfo?.nextStep?.instructions.replace(/<[^>]*>?/gm, '').split(',')[0] || "--")}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white/10 p-3 rounded-full">
+                                    <Mic className="text-white h-5 w-5" />
+                                </div>
+                            </motion.div>
+                        </div>
+
+                        {/* Barre de Statut (BAS) */}
+                        <div className="absolute bottom-0 left-0 right-0 z-30 flex justify-center p-4 bg-black/40 backdrop-blur-xl border-t border-white/5">
+                            <motion.div 
+                                initial={{ y: 100 }}
+                                animate={{ y: 0 }}
+                                className="w-full max-w-3xl flex items-center justify-between gap-4"
+                            >
+                                <button onClick={() => setIsNavigating(false)} className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+                                    <X className="text-white h-7 w-7" />
+                                </button>
+                                
+                                <div className="flex items-center gap-8">
+                                    <div className="text-center">
+                                        <p className="text-3xl font-black text-emerald-400">
+                                            {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic.split(' ')[0] || '--'}
+                                            <span className="text-sm ml-1 uppercase">min</span>
+                                        </p>
+                                        <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-white/50 uppercase tracking-widest">
+                                            <span>{routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || '--'}</span>
+                                            <span>•</span>
+                                            <span>{format(new Date(Date.now() + (routeInfo?.allRoutes?.[selectedRouteIndex]?.delayMinutes || 0) * 60000), 'HH:mm')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+                                    <Spline className="text-white h-7 w-7" />
+                                </button>
+                            </motion.div>
+                        </div>
+
+                        {/* Contrôles Flottants Latéraux (DROITE) */}
+                        <div className="absolute top-32 right-4 z-30 flex flex-col gap-4">
+                            <button onClick={handleReCenter} className="h-14 w-14 rounded-full bg-[#1c2331] border border-white/10 shadow-2xl flex items-center justify-center text-white/70">
+                                <Compass className="h-7 w-7" />
+                            </button>
+                            <button className="h-14 w-14 rounded-full bg-[#1c2331] border border-white/10 shadow-2xl flex items-center justify-center text-white/70">
+                                <Search className="h-7 w-7" />
+                            </button>
+                            <button 
+                                onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+                                className={cn(
+                                    "h-14 w-14 rounded-full border shadow-2xl flex items-center justify-center transition-all",
+                                    isAudioEnabled ? "bg-primary border-primary text-white" : "bg-[#1c2331] border-white/10 text-white/70"
+                                )}
+                            >
+                                {isAudioEnabled ? <Volume2 className="h-7 w-7" /> : <VolumeX className="h-7 w-7" />}
+                            </button>
+                        </div>
+
+                        {/* Compteur de Vitesse (GAUCHE BAS) */}
+                        <div className="absolute bottom-24 left-6 z-30">
+                            <div className="bg-[#1c2331]/90 backdrop-blur-md border border-white/10 h-20 w-20 rounded-full flex flex-col items-center justify-center shadow-2xl">
+                                <p className="text-2xl font-black text-white leading-none">{speed}</p>
+                                <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1">km/h</p>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* Barre de Recherche Initiale */}
                 {!isNavigating && !showSummary && (
                     <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4">
                         <motion.div 
                             initial={{ y: -50, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            className="w-full max-w-xl bg-white/95 backdrop-blur-2xl p-4 rounded-[2rem] shadow-2xl border border-white/20 flex flex-col gap-4"
+                            className="w-full max-w-xl bg-white p-4 rounded-3xl shadow-2xl border border-slate-100 flex flex-col gap-4"
                         >
                             <div className="flex items-center gap-3">
                                 <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20">
@@ -536,53 +659,47 @@ export default function KFlowNav() {
                                 <Button 
                                     onClick={handleAnalyzeRoute} 
                                     disabled={isUnlocking || !destination}
-                                    className="h-12 px-6 rounded-xl font-black shadow-xl shadow-primary/30"
+                                    className="h-12 px-6 rounded-xl font-black shadow-xl"
                                 >
-                                    {isUnlocking ? <Loader2 className="animate-spin" /> : "ALLER"}
+                                    {isUnlocking ? <Loader2 className="animate-spin" /> : "GUIDAGE"}
                                 </Button>
                             </div>
                         </motion.div>
                     </div>
                 )}
 
-                {/* Overlay Résumé "Whiteboard" - Optimized for Mobile Scroll */}
+                {/* Overlay Résumé de l'Itinéraire */}
                 <AnimatePresence>
                     {showSummary && summaryData && (
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 z-50 bg-slate-900/90 backdrop-blur-xl p-0 sm:p-4 md:p-8 flex items-center justify-center overflow-y-auto"
+                            className="absolute inset-0 z-50 bg-[#0b121e]/90 backdrop-blur-xl p-0 sm:p-4 md:p-8 flex items-center justify-center overflow-y-auto"
                         >
-                            <div className="w-full max-w-2xl bg-white sm:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col my-auto min-h-full sm:min-h-0 sm:max-h-[95vh]">
-                                {/* Header - Mobile friendly */}
-                                <div className="bg-primary p-6 sm:p-8 text-white relative flex-shrink-0">
-                                    <div className="absolute top-[-30%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-                                    <button onClick={() => setShowSummary(false)} className="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/50 hover:text-white transition-colors z-20">
+                            <div className="w-full max-w-2xl bg-white sm:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col my-auto">
+                                <div className="bg-primary p-8 text-white relative">
+                                    <button onClick={() => setShowSummary(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
                                         <X className="h-6 w-6" />
                                     </button>
-                                    <div className="space-y-2 relative z-10">
-                                        <div className="flex justify-between items-start">
-                                            <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">SYNTHÈSE STRATÉGIQUE</Badge>
-                                            <button onClick={() => setDebugMode(!debugMode)} className="text-white/20 hover:text-white transition-all"><Bug className="h-4 w-4"/></button>
-                                        </div>
-                                        <h2 className="text-xl sm:text-3xl font-black tracking-tight leading-tight mb-4">{summaryData.destination}</h2>
+                                    <div className="space-y-4">
+                                        <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">SYNTHÈSE DE TRAJET</Badge>
+                                        <h2 className="text-3xl font-black tracking-tight leading-tight">{summaryData.destination}</h2>
                                         
-                                        {/* Route Selector */}
                                         {summaryData.allRoutes && summaryData.allRoutes.length > 1 && (
-                                            <div className="flex gap-2 pt-2">
+                                            <div className="flex gap-2">
                                                 {summaryData.allRoutes.map((route: any, i: number) => (
                                                     <button
                                                         key={i}
                                                         onClick={() => setSelectedRouteIndex(i)}
                                                         className={cn(
-                                                            "flex-1 p-2 sm:p-3 rounded-xl border-2 transition-all text-left relative",
-                                                            selectedRouteIndex === i ? "bg-white/20 border-white" : "bg-black/10 border-white/10 hover:bg-black/20"
+                                                            "flex-1 p-4 rounded-2xl border-2 transition-all text-left relative",
+                                                            selectedRouteIndex === i ? "bg-white/20 border-white" : "bg-black/10 border-white/10"
                                                         )}
                                                     >
-                                                        <p className="text-[8px] sm:text-[9px] font-black uppercase mb-1 opacity-70">{route.isSmart ? "K-Flow" : "Standard"}</p>
-                                                        <p className="text-sm sm:text-lg font-black">{route.durationInTraffic}</p>
-                                                        {selectedRouteIndex === i && <CheckCircle2 className="absolute top-2 right-2 h-3 w-3" />}
+                                                        <p className="text-[9px] font-black uppercase mb-1 opacity-70">{route.isSmart ? "K-Flow Smart" : "Standard"}</p>
+                                                        <p className="text-xl font-black">{route.durationInTraffic}</p>
+                                                        {selectedRouteIndex === i && <CheckCircle2 className="absolute top-2 right-2 h-4 w-4" />}
                                                     </button>
                                                 ))}
                                             </div>
@@ -590,27 +707,19 @@ export default function KFlowNav() {
                                     </div>
                                 </div>
 
-                                {/* Body - Scrollable */}
-                                <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 bg-white">
+                                <div className="p-8 space-y-6">
                                     <div className="space-y-4">
-                                        <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] flex items-center gap-2">
-                                            <Activity className="h-4 w-4" /> État des tronçons routiers
-                                        </h3>
+                                        <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Tronçons routiers critiques</h3>
                                         <div className="space-y-3">
                                             {summaryData.segments.map((seg, i) => (
-                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group">
+                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
                                                     <div className="flex items-center gap-4">
                                                         <div className={cn(
-                                                            "w-3 h-3 rounded-full shadow-sm",
+                                                            "w-3 h-3 rounded-full",
                                                             seg.status === 'fluide' ? "bg-emerald-500" :
                                                             seg.status === 'congestionné' ? "bg-amber-500" : "bg-red-500"
                                                         )} />
-                                                        <div>
-                                                            <p className="font-bold text-slate-800 text-sm">{seg.from}</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase">
-                                                                {seg.status} • {seg.distanceText}
-                                                            </p>
-                                                        </div>
+                                                        <p className="font-bold text-slate-800 text-sm">{seg.from}</p>
                                                     </div>
                                                     {seg.delayMinutes > 0 && <span className="text-xs font-black text-red-500">+{seg.delayMinutes}m</span>}
                                                 </div>
@@ -618,108 +727,22 @@ export default function KFlowNav() {
                                         </div>
                                     </div>
 
-                                    <div className="p-6 bg-blue-50 rounded-[2rem] border border-blue-100 flex items-start gap-4">
-                                        <div className="bg-primary p-2 rounded-xl text-white shrink-0">
-                                            <ShieldCheck className="h-5 w-5" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-xs font-black text-primary uppercase tracking-widest">Conseil K-Flow</p>
-                                            <p className="text-sm text-slate-700 font-bold leading-relaxed">{summaryData.recommendation}</p>
-                                        </div>
+                                    <div className="p-6 bg-blue-50 rounded-[1.5rem] border border-blue-100 flex items-start gap-4">
+                                        <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
+                                        <p className="text-sm text-slate-700 font-bold leading-relaxed">{summaryData.recommendation}</p>
                                     </div>
-
-                                    {debugMode && (
-                                        <div className="p-4 bg-slate-900 rounded-2xl text-[10px] font-mono text-emerald-400 space-y-1">
-                                            <p className="text-white font-bold mb-2 uppercase tracking-widest">Debug Stats</p>
-                                            {summaryData.segments.map((s, idx) => (
-                                                <div key={idx} className="border-b border-white/10 pb-1">
-                                                    Seg {idx}: Ratio {s.debugRatio?.toFixed(2)} | Delay {s.delayMinutes}m
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
 
-                                {/* Footer - Stacked on Mobile */}
-                                <div className="p-6 sm:p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4 flex-shrink-0">
-                                    <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-14 sm:h-16 rounded-2xl font-black uppercase tracking-widest text-xs flex-1">
-                                        Annuler
-                                    </Button>
-                                    <Button onClick={handleStartNavigation} className="h-14 sm:h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-sm flex-[2] shadow-2xl shadow-primary/30 gap-3">
-                                        <Navigation2 className="h-6 w-6 fill-current" />
-                                        Démarrer Guidage
+                                <div className="p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4">
+                                    <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-16 rounded-2xl font-black flex-1">ANNULER</Button>
+                                    <Button onClick={handleStartNavigation} className="h-16 rounded-2xl bg-primary text-white font-black text-lg flex-[2] shadow-2xl shadow-primary/30">
+                                        DÉMARRER GUIDAGE
                                     </Button>
                                 </div>
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Overlay Header Navigation (Slimmer) */}
-                {isNavigating && (
-                    <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
-                        <div className="w-full max-w-xl pointer-events-auto">
-                            <motion.div 
-                                initial={{ y: -100, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                className="bg-slate-900/95 backdrop-blur-xl p-3 rounded-[2rem] shadow-2xl border border-white/10 flex justify-between items-center text-white"
-                            >
-                                <div className="flex items-center gap-3 ml-2">
-                                    <div className="bg-emerald-500 p-2 rounded-xl shadow-lg">
-                                        <Navigation2 className="h-5 w-5 fill-white" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xl font-black leading-none">
-                                            {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo?.duration || '--'}
-                                        </p>
-                                        <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mt-0.5">
-                                            {routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || routeInfo?.distance || '--'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        onClick={() => setIs3D(!is3D)} 
-                                        className="text-white hover:bg-white/10 rounded-xl h-10 gap-1.5 border border-white/10"
-                                    >
-                                        {is3D ? <Layers className="h-3.5 w-3.5" /> : <Box className="h-3.5 w-3.5" />}
-                                        <span className="text-[9px] font-black uppercase">{is3D ? 'Mode 3D' : 'Mode 2D'}</span>
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => { setIsNavigating(false); setActiveAlert(null); setShowDestInfo(false); }} className="text-white hover:bg-white/10 rounded-full h-10 w-10">
-                                        <X className="h-5 w-5" />
-                                    </Button>
-                                </div>
-                            </motion.div>
-
-                            <AnimatePresence>
-                                {activeAlert && (
-                                    <motion.div
-                                        key={activeAlert.id}
-                                        initial={{ scale: 0.8, opacity: 0, y: 20 }}
-                                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                                        exit={{ scale: 0.8, opacity: 0 }}
-                                        className={cn(
-                                            "mt-3 p-4 rounded-[2rem] shadow-2xl border-2 flex items-center gap-3 backdrop-blur-xl relative overflow-hidden",
-                                            activeAlert.type === 'red' ? "bg-red-600/95 border-red-400 text-white" :
-                                            activeAlert.type === 'yellow' ? "bg-amber-500/95 border-amber-300 text-slate-950" :
-                                            "bg-emerald-600/95 border-emerald-400 text-white"
-                                        )}
-                                    >
-                                        <div className="p-2 bg-white/20 rounded-xl shrink-0">
-                                            {activeAlert.type === 'red' ? <AlertOctagon className="h-6 w-6" /> :
-                                            activeAlert.type === 'yellow' ? <AlertTriangle className="h-6 w-6" /> :
-                                            <CheckCircle2 className="h-6 w-6" />}
-                                        </div>
-                                        <p className="text-xs font-black leading-tight uppercase flex-1">{activeAlert.message}</p>
-                                        <button onClick={() => setActiveAlert(null)} className="opacity-50 hover:opacity-100"><X className="h-4 w-4" /></button>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-                )}
 
                 <div className="flex-1 relative">
                     <Map
@@ -728,11 +751,8 @@ export default function KFlowNav() {
                         gestureHandling={'greedy'}
                         disableDefaultUI={true}
                         onDragstart={() => setAutoFollow(false)}
-                        restriction={{
-                            latLngBounds: KINSHASA_BOUNDS,
-                            strictBounds: false,
-                        }}
-                        mapId="kflow_nav_map_v6"
+                        restriction={{ latLngBounds: KINSHASA_BOUNDS, strictBounds: false }}
+                        mapId="kflow_nav_dark_v1"
                         className="w-full h-full"
                     >
                         <TrafficLayerComponent />
@@ -770,100 +790,11 @@ export default function KFlowNav() {
                             onRouteUpdate={onRouteUpdate}
                             onAlertUpdate={onAlertUpdate}
                         />
-
-                        {isNavigating && routeInfo?.destinationCoords && (
-                            <>
-                                <Marker 
-                                    position={routeInfo.destinationCoords}
-                                    animation={(window as any).google?.maps?.Animation?.DROP}
-                                    onClick={() => setShowDestInfo(true)}
-                                    icon={{
-                                        path: "M14.5 2H6v20h2v-7h11l-2-6.5 2-6.5h-4.5z",
-                                        fillColor: '#f59e0b',
-                                        fillOpacity: 1,
-                                        strokeColor: '#000000',
-                                        strokeWeight: 2,
-                                        scale: 1.5,
-                                        anchor: (window as any).google?.maps?.Point ? new (window as any).google.maps.Point(12, 22) : undefined
-                                    } as google.maps.Symbol}
-                                />
-                                {showDestInfo && (
-                                    <InfoWindow 
-                                        position={routeInfo.destinationCoords}
-                                        onCloseClick={() => setShowDestInfo(false)}
-                                    >
-                                        <div className="p-2 min-w-[150px]">
-                                            <p className="font-black text-slate-900 border-b pb-1 mb-2 uppercase text-[10px] tracking-widest flex items-center gap-2">
-                                                <Flag className="h-3 w-3 text-amber-500" />
-                                                Destination
-                                            </p>
-                                            <p className="text-sm font-bold text-slate-800 truncate mb-2">{destination}</p>
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-[10px]">
-                                                    <span className="text-slate-400 font-bold uppercase">Arrivée prévue</span>
-                                                    <span className="text-emerald-600 font-black">
-                                                        {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic || routeInfo.duration}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </InfoWindow>
-                                )}
-                            </>
-                        )}
                         
                         <IncidentMarkers incidents={incidents || []} />
-                        
-                        <MapControls 
-                            onReCenter={handleReCenter} 
-                            isAutoFollowing={autoFollow} 
-                            toggleFullscreen={toggleFullscreen}
-                            isFullscreen={isFullscreen}
-                        />
                     </Map>
                 </div>
             </APIProvider>
-        </div>
-    );
-}
-
-function MapControls({ onReCenter, isAutoFollowing, toggleFullscreen, isFullscreen }: { 
-    onReCenter: () => void, 
-    isAutoFollowing: boolean,
-    toggleFullscreen: () => void,
-    isFullscreen: boolean
-}) {
-    const map = useMap();
-    const handleZoomIn = () => { if (map) map.setZoom((map.getZoom() || 13) + 1); };
-    const handleZoomOut = () => { if (map) map.setZoom((map.getZoom() || 13) - 1); };
-
-    return (
-        <div className="absolute bottom-10 right-4 z-30 flex flex-col gap-3">
-            <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={toggleFullscreen}
-                title={isFullscreen ? "Réduire" : "Plein écran"}
-                className="h-12 w-12 rounded-2xl flex items-center justify-center shadow-2xl border-2 bg-white border-slate-100 text-slate-600 hover:bg-slate-50 transition-all"
-            >
-                {isFullscreen ? <Minimize2 className="h-6 w-6" /> : <Maximize2 className="h-6 w-6" />}
-            </motion.button>
-
-            <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={onReCenter}
-                title="Recentrer sur ma position"
-                className={cn(
-                    "h-12 w-12 rounded-2xl flex items-center justify-center shadow-2xl border-2 transition-all",
-                    isAutoFollowing ? "bg-primary border-primary text-white" : "bg-white border-slate-100 text-slate-600 hover:bg-slate-50"
-                )}
-            >
-                <LocateFixed className="h-6 w-6" />
-            </motion.button>
-
-            <div className="flex flex-col rounded-2xl overflow-hidden border-2 border-slate-100 bg-white shadow-2xl">
-                <button onClick={handleZoomIn} title="Zoom avant" className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 border-b border-slate-100"><Plus className="h-6 w-6" /></button>
-                <button onClick={handleZoomOut} title="Zoom arrière" className="h-12 w-12 flex items-center justify-center text-slate-600 hover:bg-slate-50"><Minus className="h-6 w-6" /></button>
-            </div>
         </div>
     );
 }
@@ -891,12 +822,12 @@ function AutocompleteInput({ value, onChange, onSearch, isLoading }: { value: st
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <Input 
                 ref={inputRef}
-                placeholder="Votre destination à Kinshasa..." 
+                placeholder="Destination..." 
                 value={value}
                 onChange={e => onChange(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && onSearch()}
                 disabled={isLoading}
-                className="pl-12 h-14 rounded-2xl border-none bg-slate-100 font-bold text-slate-800 shadow-inner"
+                className="pl-12 h-14 rounded-2xl border-none bg-slate-100 font-bold"
             />
         </div>
     );
@@ -914,10 +845,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
     const routesLibrary = useMapsLibrary('routes');
     const [renderers, setRenderers] = useState<google.maps.DirectionsRenderer[]>([]);
     const lastPosUpdate = useRef<{lat: number, lng: number} | null>(null);
-    const lastAlertTime = useRef<number>(0);
-    const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Init Traceurs
     useEffect(() => {
         if (!routesLibrary || !map) return;
         
@@ -925,55 +853,30 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
         const rendererNormal = new g.maps.DirectionsRenderer({
             map,
             suppressMarkers: true,
-            polylineOptions: { 
-                strokeColor: '#3b82f6', 
-                strokeWeight: 6, 
-                strokeOpacity: 0.6,
-                zIndex: 10
-            }
+            polylineOptions: { strokeColor: '#3b82f6', strokeWeight: 8, strokeOpacity: 0.5, zIndex: 10 }
         });
 
         const rendererSmart = new g.maps.DirectionsRenderer({
             map,
             suppressMarkers: true,
-            polylineOptions: { 
-                strokeColor: '#a855f7', 
-                strokeWeight: 10, 
-                strokeOpacity: 0.9,
-                zIndex: 20
-            }
+            polylineOptions: { strokeColor: '#a855f7', strokeWeight: 12, strokeOpacity: 0.9, zIndex: 20 }
         });
 
         setRenderers([rendererNormal, rendererSmart]);
-
-        return () => {
-            rendererNormal.setMap(null);
-            rendererSmart.setMap(null);
-        };
+        return () => { rendererNormal.setMap(null); rendererSmart.setMap(null); };
     }, [routesLibrary, map]);
 
     useEffect(() => {
         if (!isNavigating || !origin || !destination || !routesLibrary || renderers.length === 0 || !map) return;
 
         const g = (window as any).google;
-        if (lastPosUpdate.current && g?.maps?.geometry?.spherical) {
-            const dist = g.maps.geometry.spherical.computeDistanceBetween(
-                new g.maps.LatLng(lastPosUpdate.current.lat, lastPosUpdate.current.lng),
-                new g.maps.LatLng(origin.lat, origin.lng)
-            );
-            if (dist < 30) return;
-        }
-
         const service = new g.maps.DirectionsService();
         service.route({
             origin: origin,
             destination: destination,
             travelMode: g.maps.TravelMode.DRIVING,
             provideRouteAlternatives: true,
-            drivingOptions: { 
-                departureTime: new Date(), 
-                trafficModel: g?.maps?.TrafficModel?.BEST_GUESS || 'best_guess'
-            }
+            drivingOptions: { departureTime: new Date(), trafficModel: 'best_guess' }
         }, (result: any, status: any) => {
             if (status === g.maps.DirectionsStatus.OK && result) {
                 const routes = result.routes;
@@ -983,16 +886,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
                         r.setMap(map);
                         r.setDirections(result);
                         r.setRouteIndex(idx);
-                        
-                        const isSelected = selectedRouteIndex === idx;
-                        r.setOptions({
-                            polylineOptions: {
-                                ...r.get('polylineOptions'),
-                                strokeOpacity: isSelected ? 0.9 : 0.2,
-                                strokeWeight: isSelected ? 12 : 6,
-                                zIndex: isSelected ? 30 : 10
-                            }
-                        });
+                        r.setOptions({ polylineOptions: { ...r.get('polylineOptions'), strokeOpacity: selectedRouteIndex === idx ? 0.9 : 0.2 }});
                     } else {
                         r.setMap(null);
                     }
@@ -1000,61 +894,27 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
 
                 const summaries: RouteSummary[] = routes.slice(0, 2).map((r: any, i: number) => {
                     const l = r.legs[0];
-                    const dur = l.duration?.value || 0;
-                    const durT = l.duration_in_traffic?.value || dur;
                     return {
                         index: i,
                         distance: l.distance?.text || '',
                         duration: l.duration?.text || '',
                         durationInTraffic: l.duration_in_traffic?.text || l.duration?.text || '',
-                        delayMinutes: Math.max(0, Math.round((durT - dur) / 60)),
-                        isSmart: i > 0 || (routes.length > 1 && durT < (routes[1]?.legs[0].duration_in_traffic?.value || Infinity))
+                        delayMinutes: Math.max(0, Math.round(((l.duration_in_traffic?.value || 0) - (l.duration?.value || 0)) / 60)),
+                        isSmart: i > 0
                     };
                 });
 
-                lastPosUpdate.current = origin;
                 const activeLeg = routes[Math.min(selectedRouteIndex, routes.length - 1)].legs[0];
-                
                 onRouteUpdate({ 
                     distance: activeLeg.distance?.text || '', 
                     duration: activeLeg.duration?.text || '', 
-                    durationInTraffic: activeLeg.duration_in_traffic?.text,
-                    destinationCoords: {
-                        lat: activeLeg.end_location.lat(),
-                        lng: activeLeg.end_location.lng()
-                    },
+                    currentStep: activeLeg.steps[0],
+                    nextStep: activeLeg.steps[1],
                     allRoutes: summaries,
-                    result: result
                 });
-
-                // Logique d'alertes temps réel
-                const now = Date.now();
-                const currentStep = activeLeg.steps[0];
-                const ratio = (currentStep.duration?.value || 0) / ((currentStep.distance?.value / activeLeg.distance?.value) * activeLeg.duration?.value);
-                
-                if (now - lastAlertTime.current > 30000) {
-                    if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
-                    
-                    let newAlert: TrafficAlert | null = null;
-                    if (ratio > 1.8) {
-                        newAlert = { id: `a-${now}`, message: "Route bloquée dans moins de 1 km, veuillez changer d'itinéraire", type: 'red', timestamp: now };
-                    } else if (ratio > 1.3) {
-                        newAlert = { id: `a-${now}`, message: "Embouteillage détecté devant vous", type: 'yellow', timestamp: now };
-                    } else if (ratio < 1.1) {
-                        newAlert = { id: `a-${now}`, message: "Circulation fluide sur le prochain kilomètre", type: 'green', timestamp: now };
-                    }
-
-                    if (newAlert) {
-                        onAlertUpdate(newAlert);
-                        lastAlertTime.current = now;
-                        alertTimeoutRef.current = setTimeout(() => onAlertUpdate(null), 10000);
-                    }
-                }
             }
         });
-
-        return () => { if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current); };
-    }, [isNavigating, origin, destination, routesLibrary, renderers, selectedRouteIndex, onAlertUpdate, onRouteUpdate, map]);
+    }, [isNavigating, origin, destination, routesLibrary, renderers, selectedRouteIndex, onRouteUpdate, map]);
 
     return null;
 }

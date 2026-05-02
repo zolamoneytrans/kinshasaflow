@@ -366,9 +366,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {isEnabled('routes') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/routes'} className="hover:bg-sidebar-accent">
-                    <Link href="/routes" className="font-medium">
-                      <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
-                      <span>État des Routes</span>
+                    <Link href="/routes" className="font-medium flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
+                        <span>État des Routes</span>
+                      </div>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -325,7 +325,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('kFlowNav') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/k-flow-nav'} className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 mb-2 shadow-sm">
+                  <SidebarMenuButton asChild isActive={pathname === '/k-flow-nav'} className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 mb-1 shadow-sm">
                     <Link href="/k-flow-nav" className="font-bold flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
                         <Navigation className={pathname === '/k-flow-nav' ? "text-accent" : "text-primary"} />
@@ -339,7 +339,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('insights') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/insights'} className="bg-primary/5 hover:bg-primary/10 border border-primary/10 mb-1">
+                  <SidebarMenuButton asChild isActive={pathname === '/insights'} className="bg-primary/5 hover:bg-primary/10 border border-primary/10 mb-2">
                     <Link href="/insights" className="font-bold flex items-center justify-between w-full text-primary">
                       <div className="flex items-center gap-2">
                         <Zap className={pathname === '/insights' ? "text-accent" : "text-primary"} />
@@ -366,7 +366,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('routes') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/routes'} className="hover:bg-sidebar-accent">
+                  <SidebarMenuButton asChild isActive={pathname === '/routes'} className="hover:bg-sidebar-accent mb-2">
                     <Link href="/routes" className="font-medium flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
                         <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />

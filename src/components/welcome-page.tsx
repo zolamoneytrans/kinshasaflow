@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car, Shield, Monitor, Laptop } from 'lucide-react';
+import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car, Shield, Monitor, Laptop, Smartphone } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
@@ -64,9 +64,13 @@ export default function WelcomePage() {
         };
     }, []);
 
-    const handleInstallClick = async () => {
+    const handleInstallClick = async (platform: 'desktop' | 'mobile') => {
         if (!installPrompt) {
-            alert("Pour installer Kinshasa Flow sur Windows ou Mac :\n1. Utilisez Google Chrome ou Edge.\n2. Cliquez sur l'icône d'ordinateur avec une flèche dans la barre d'adresse.");
+            if (platform === 'desktop') {
+                alert("Pour installer Kinshasa Flow sur Windows ou Mac :\n1. Utilisez Google Chrome ou Edge.\n2. Cliquez sur l'icône d'ordinateur avec une flèche dans la barre d'adresse.");
+            } else {
+                alert("Pour installer sur Mobile :\n1. Appuyez sur 'Partager' (Safari iOS) ou les 3 points (Chrome Android).\n2. Sélectionnez 'Sur l'écran d'accueil'.");
+            }
             return;
         }
         await installPrompt.prompt();
@@ -157,12 +161,20 @@ export default function WelcomePage() {
                             </Link>
                         </motion.div>
                         
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                            <Button onClick={handleInstallClick} size="lg" variant="outline" className="text-xl py-8 px-10 rounded-2xl border-2 border-primary/20 bg-card/50 backdrop-blur-sm shadow-sm hover:bg-primary/5 group">
-                                <Laptop className="mr-2 h-6 w-6 text-primary group-hover:animate-bounce" />
-                                Télécharger pour Windows/Mac
-                            </Button>
-                        </motion.div>
+                        <div className="flex flex-col gap-3">
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button onClick={() => handleInstallClick('desktop')} size="lg" variant="outline" className="w-full text-base py-6 px-10 rounded-2xl border-2 border-primary/20 bg-card/50 backdrop-blur-sm shadow-sm hover:bg-primary/5 group">
+                                    <Laptop className="mr-2 h-6 w-6 text-primary group-hover:animate-bounce" />
+                                    Télécharger Logiciel (Win/Mac)
+                                </Button>
+                            </motion.div>
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button onClick={() => handleInstallClick('mobile')} size="lg" variant="ghost" className="w-full text-base py-6 px-10 rounded-2xl border-2 border-dashed border-slate-200 hover:bg-slate-50 group">
+                                    <Smartphone className="mr-2 h-6 w-6 text-slate-400 group-hover:text-primary" />
+                                    Installer App Mobile
+                                </Button>
+                            </motion.div>
+                        </div>
                     </motion.div>
                 </motion.div>
 

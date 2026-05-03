@@ -278,7 +278,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isEnabled = useCallback((feature: keyof AppNavigationSettings) => {
     if (!navSettings) return true;
-    if (navSettings[feature] === undefined) return true;
     return navSettings[feature] !== false;
   }, [navSettings]);
 

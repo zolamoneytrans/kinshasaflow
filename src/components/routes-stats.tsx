@@ -60,7 +60,6 @@ export default function RoutesStats() {
         const reportData = {
             timestamp: serverTimestamp(),
             globalSaturation: Math.round(totalSaturation),
-            type: 'infrastructure_audit',
             axisStats: trafficData.map((d) => ({
                 road: d.road,
                 status: d.status,
@@ -81,7 +80,7 @@ export default function RoutesStats() {
 
         toast({ 
             title: "Archive Routière Enregistrée", 
-            description: "L'état des 100 axes a été sauvegardé pour l'analyse prédictive.",
+            description: "L'état des axes a été sauvegardé pour l'analyse prédictive.",
             variant: "default"
         });
     } catch (e: any) {

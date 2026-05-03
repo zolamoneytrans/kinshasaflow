@@ -7,7 +7,7 @@ import {
   Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
   Palmtree, Compass, LayoutGrid, Utensils, Bell, Send, Navigation,
-  BarChart3, Zap
+  BarChart3, Zap, Smartphone, Monitor
 } from 'lucide-react';
 import {
   Sidebar,

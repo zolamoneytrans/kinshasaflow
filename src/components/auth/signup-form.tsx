@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -172,23 +171,25 @@ export function SignupForm() {
     }
 
     return (
-        <Card className="w-full shadow-2xl border-none rounded-3xl overflow-hidden">
-            <CardHeader className="bg-primary p-8 text-white">
-                <CardTitle className="text-3xl font-black tracking-tight">Rejoignez la communauté</CardTitle>
+        <Card className="w-full shadow-2xl border-none rounded-[2rem] overflow-hidden">
+            <CardHeader className="bg-primary p-6 md:p-8 text-white">
+                <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Rejoignez la communauté</CardTitle>
                 <CardDescription className="text-primary-foreground/80 font-medium">Créez votre compte et recevez 25 stars gratuites.</CardDescription>
             </CardHeader>
-            <CardContent className="p-8">
+            <CardContent className="p-6 md:p-8">
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                         <div className="grid md:grid-cols-2 gap-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-5">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
                                 name="name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><User className="h-4 w-4" />Nom complet</FormLabel>
+                                        <FormLabel className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                                            <User className="h-3 w-3" /> Nom complet
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input placeholder="John Doe" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                            <Input placeholder="John Doe" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -199,9 +200,11 @@ export function SignupForm() {
                                 name="phone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><Phone className="h-4 w-4" />Téléphone</FormLabel>
+                                        <FormLabel className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                                            <Phone className="h-3 w-3" /> Téléphone
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input placeholder="08..." className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                            <Input placeholder="08..." className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -214,24 +217,28 @@ export function SignupForm() {
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="flex items-center gap-2"><Mail className="h-4 w-4" />Email</FormLabel>
+                                    <FormLabel className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                                        <Mail className="h-3 w-3" /> Email
+                                    </FormLabel>
                                     <FormControl>
-                                        <Input type="email" placeholder="nom@exemple.com" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                        <Input type="email" placeholder="nom@exemple.com" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        <div className="grid md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
                                 name="city"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><MapPin className="h-4 w-4" />Ville</FormLabel>
+                                        <FormLabel className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                                            <MapPin className="h-3 w-3" /> Ville
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Kinshasa" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                            <Input placeholder="Kinshasa" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -242,9 +249,11 @@ export function SignupForm() {
                                 name="country"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4" />Pays</FormLabel>
+                                        <FormLabel className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                                            <Globe className="h-3 w-3" /> Pays
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input placeholder="RDC" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                            <Input placeholder="RDC" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -257,26 +266,28 @@ export function SignupForm() {
                             name="password"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="flex items-center gap-2"><Lock className="h-4 w-4" />Mot de passe</FormLabel>
+                                    <FormLabel className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                                        <Lock className="h-3 w-3" /> Mot de passe
+                                    </FormLabel>
                                     <FormControl>
-                                        <Input type="password" placeholder="********" className="rounded-xl h-12" {...field} disabled={isSubmitting || isGoogleSubmitting} />
+                                        <Input type="password" placeholder="********" className="rounded-xl h-12 border-2" {...field} disabled={isSubmitting || isGoogleSubmitting} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-center justify-between">
+                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-center justify-between shadow-inner">
                             <div className="flex items-center gap-3">
                                 <div className="bg-amber-500 p-2 rounded-lg text-white">
-                                    <CheckCircle2 className="h-5 w-5" />
+                                    <CheckCircle2 className="h-4 w-4" />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-black text-amber-800 uppercase tracking-widest leading-none mb-1">Bonus Inscription</p>
-                                    <p className="text-[10px] text-amber-600 font-bold">Crédité après validation email</p>
+                                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">Bonus Inscription</p>
+                                    <p className="text-[9px] text-amber-600 font-bold italic">Crédité après validation email</p>
                                 </div>
                             </div>
-                            <span className="text-2xl font-black text-amber-600">+25 ⭐</span>
+                            <span className="text-xl font-black text-amber-600">+25 ⭐</span>
                         </div>
 
                         <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-black shadow-lg shadow-primary/20" disabled={isSubmitting || isGoogleSubmitting}>
@@ -284,9 +295,9 @@ export function SignupForm() {
                         </Button>
                     </form>
                 </Form>
-                 <div className="relative my-8">
+                 <div className="relative my-6 md:my-8">
                     <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-4 text-muted-foreground font-bold tracking-widest">Ou s'inscrire avec</span></div>
+                    <div className="relative flex justify-center text-[10px] uppercase"><span className="bg-white px-4 text-muted-foreground font-black tracking-[0.2em]">Ou s'inscrire avec</span></div>
                 </div>
                  <Button variant="outline" className="w-full h-12 rounded-2xl font-bold border-2" onClick={onGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
                     {isGoogleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}

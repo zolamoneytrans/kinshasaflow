@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car, Shield } from 'lucide-react';
+import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car, Shield, Monitor, Laptop } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
@@ -65,7 +65,10 @@ export default function WelcomePage() {
     }, []);
 
     const handleInstallClick = async () => {
-        if (!installPrompt) return;
+        if (!installPrompt) {
+            alert("Pour installer Kinshasa Flow sur Windows ou Mac :\n1. Utilisez Google Chrome ou Edge.\n2. Cliquez sur l'icône d'ordinateur avec une flèche dans la barre d'adresse.");
+            return;
+        }
         await installPrompt.prompt();
         const { outcome } = await installPrompt.userChoice;
         console.log(`[PWA] Install outcome: ${outcome}`);
@@ -154,14 +157,12 @@ export default function WelcomePage() {
                             </Link>
                         </motion.div>
                         
-                        {installPrompt && (
-                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button onClick={handleInstallClick} size="lg" variant="outline" className="text-xl py-8 px-10 rounded-2xl border-2 border-primary/20 bg-card/50 backdrop-blur-sm shadow-sm hover:bg-primary/5">
-                                    <Download className="mr-2 h-6 w-6" />
-                                    Installer l'app
-                                </Button>
-                            </motion.div>
-                        )}
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button onClick={handleInstallClick} size="lg" variant="outline" className="text-xl py-8 px-10 rounded-2xl border-2 border-primary/20 bg-card/50 backdrop-blur-sm shadow-sm hover:bg-primary/5 group">
+                                <Laptop className="mr-2 h-6 w-6 text-primary group-hover:animate-bounce" />
+                                Télécharger pour Windows/Mac
+                            </Button>
+                        </motion.div>
                     </motion.div>
                 </motion.div>
 
@@ -204,8 +205,8 @@ export default function WelcomePage() {
                     >
                         <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-primary mb-1">Ville de Kinshasa</p>
                         <h4 className="text-lg md:text-2xl font-bold flex items-center justify-center md:justify-start gap-2">
-                            <Car className="w-4 h-4 md:w-6 md:h-6 text-primary animate-bounce"/> 
-                            La mobilité réinventée
+                            <Monitor className="w-4 h-4 md:w-6 md:h-6 text-primary animate-pulse"/> 
+                            Logiciel disponible sur PC & Mac
                         </h4>
                     </motion.div>
                 </div>

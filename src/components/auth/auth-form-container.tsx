@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 /**
  * Conteneur pour les formulaires d'authentification.
  * Assure que le contenu est défilable sur mobile et centré sur bureau.
@@ -11,5 +13,5 @@ export function AuthFormContainer({ children }: { children: React.ReactNode }) {
                 {children}
             </div>
         </div>
-    )
+    );
 }

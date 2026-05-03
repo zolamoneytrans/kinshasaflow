@@ -353,11 +353,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {isEnabled('fluxInfrastructure') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/flux-infrastructure'} className="hover:bg-sidebar-accent">
-                    <Link href="/flux-infrastructure" className="font-medium flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className={pathname === '/flux-infrastructure' ? "text-accent" : "text-primary"} />
-                        <span>Flux & Infrastructure</span>
-                      </div>
+                    <Link href="/flux-infrastructure" className="font-medium flex items-center gap-2">
+                      <BarChart3 className={pathname === '/flux-infrastructure' ? "text-accent" : "text-primary"} />
+                      <span>Flux & Infrastructure</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -366,11 +364,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {isEnabled('routes') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/routes'} className="hover:bg-sidebar-accent mb-2">
-                    <Link href="/routes" className="font-medium flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
-                        <span>État des Routes</span>
-                      </div>
+                    <Link href="/routes" className="font-medium flex items-center gap-2">
+                      <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
+                      <span>État des Routes</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

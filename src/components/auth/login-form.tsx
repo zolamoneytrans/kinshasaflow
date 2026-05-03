@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -81,7 +80,7 @@ function ResetPasswordDialog() {
                     Mot de passe oublié ?
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md rounded-3xl border-none">
+            <DialogContent className="sm:max-w-md rounded-2xl border-none">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-black">Réinitialiser le mot de passe</DialogTitle>
                     <DialogDescription className="font-medium text-slate-500">
@@ -230,27 +229,27 @@ export function LoginForm() {
     }
 
     return (
-        <Card className="w-full shadow-2xl border-none rounded-3xl overflow-hidden">
-            <CardHeader className="bg-primary p-8 text-white">
-                <CardTitle className="text-3xl font-black tracking-tight">Se connecter</CardTitle>
+        <Card className="w-full shadow-xl border-none rounded-[1.5rem] md:rounded-[2rem] overflow-hidden">
+            <CardHeader className="bg-primary p-6 md:p-8 text-white text-center md:text-left">
+                <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Se connecter</CardTitle>
                 <CardDescription className="text-primary-foreground/80 font-medium">Accédez à votre compte pour continuer.</CardDescription>
             </CardHeader>
-            <CardContent className="p-8">
+            <CardContent className="p-6 md:p-8">
                 <Tabs defaultValue="email" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-slate-100 rounded-xl p-1">
+                    <TabsList className="grid w-full grid-cols-2 mb-6 md:mb-8 h-12 bg-slate-100 rounded-xl p-1">
                         <TabsTrigger value="email" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">
                             <MailIcon className="h-4 w-4 mr-2" />
                             Email
                         </TabsTrigger>
                         <TabsTrigger value="phone" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">
                             <Smartphone className="h-4 w-4 mr-2" />
-                            Téléphone
+                            SMS
                         </TabsTrigger>
                     </TabsList>
                     
                     <TabsContent value="email">
                         <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
                                 <div className="space-y-4">
                                     <FormField
                                         control={form.control}
@@ -282,7 +281,7 @@ export function LoginForm() {
                                         )}
                                     />
                                 </div>
-                                <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-black shadow-lg shadow-primary/20" disabled={isSubmitting || isGoogleSubmitting}>
+                                <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-black shadow-lg shadow-primary/20 transition-transform active:scale-95" disabled={isSubmitting || isGoogleSubmitting}>
                                     {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
                                     Se connecter
                                 </Button>
@@ -295,26 +294,26 @@ export function LoginForm() {
                     </TabsContent>
                 </Tabs>
 
-                <div className="relative my-8">
+                <div className="relative my-6 md:my-8">
                     <div className="absolute inset-0 flex items-center">
                         <span className="w-full border-t" />
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-4 text-muted-foreground font-bold tracking-widest">
-                        Ou continuer avec
+                    <div className="relative flex justify-center text-[10px] uppercase">
+                        <span className="bg-white px-4 text-muted-foreground font-black tracking-[0.2em]">
+                        Ou avec
                         </span>
                     </div>
                 </div>
-                 <Button variant="outline" className="w-full h-12 rounded-2xl font-bold border-2" onClick={onGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
+                 <Button variant="outline" className="w-full h-12 rounded-2xl font-black border-2 transition-all hover:bg-slate-50 active:scale-95" onClick={onGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
                     {isGoogleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
                     Google
                 </Button>
             </CardContent>
-            <CardFooter className="flex justify-center border-t bg-slate-50 p-6">
+            <CardFooter className="flex justify-center border-t bg-slate-50/50 p-6">
                 <p className="text-sm text-muted-foreground font-medium">
-                    Vous n'avez pas de compte?{" "}
+                    Pas encore membre?{" "}
                     <Link href="/signup" className="text-primary font-bold hover:underline">
-                        S'inscrire
+                        Créer un compte
                     </Link>
                 </p>
             </CardFooter>

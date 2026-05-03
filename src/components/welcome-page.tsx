@@ -3,11 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car, Shield, Monitor, Laptop, Smartphone, X, Sparkles, Smartphone as PhoneIcon } from 'lucide-react';
+import { Activity, Bot, Megaphone, ArrowRight, ShieldCheck, Zap, Monitor, X, Smartphone as PhoneIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from './ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -46,8 +45,8 @@ const FeatureCard = ({ icon, title, description, color }: { icon: React.ReactNod
 
 const AppIconSmall = ({ className }: { className?: string }) => (
     <div className={`bg-primary p-2 rounded-xl shadow-lg flex items-center justify-center ${className}`}>
-        <svg viewBox="0 0 32 32" className="w-full h-full text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 3.5C10.201 3.5 5.5 8.201 5.5 14C5.5 21.333 16 31.5 16 31.5S26.5 21.333 26.5 14C26.5 8.201 21.799 3.5 16 3.5ZM16 17.5C14.067 17.5 12.5 15.933 12.5 14C12.5 12.067 14.067 10.5 16 10.5C17.933 10.5 19.5 12.067 19.5 14C19.5 15.933 17.933 17.5 16 17.5Z" fill="currentColor" />
+        <svg viewBox="0 0 24 24" className="w-full h-full text-white" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
         </svg>
     </div>
 );
@@ -64,7 +63,6 @@ export default function WelcomePage() {
         const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             setInstallPrompt(e);
-            // On mobile, show the suggestion after a short delay
             if (isMobile) {
                 setTimeout(() => setShowInstallSuggestion(true), 3000);
             }
@@ -72,10 +70,8 @@ export default function WelcomePage() {
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-        // Check if already in standalone mode
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;
         if (isMobile && !isStandalone && !installPrompt) {
-            // Even if prompt hasn't fired yet, show info on mobile
             setTimeout(() => setShowInstallSuggestion(true), 5000);
         }
 
@@ -87,7 +83,7 @@ export default function WelcomePage() {
     const handleInstallClick = async (platform: 'desktop' | 'mobile') => {
         if (!installPrompt) {
             if (platform === 'desktop') {
-                alert("Installation Desktop :\n1. Utilisez Chrome ou Edge.\n2. Cliquez sur l'icône d'installation dans la barre d'adresse.");
+                alert("Installation Desktop :\n1. Utilisez Chrome ou Edge.\n2. Cliquez sur l'icône d'installation dans la barre d'adresse (le marqueur bleu).");
             } else {
                 alert("Installation Mobile :\n1. Appuyez sur 'Partager' (iOS) ou les 3 points (Android).\n2. Sélectionnez 'Sur l'écran d'accueil'.");
             }
@@ -158,12 +154,12 @@ export default function WelcomePage() {
                 <Logo className="h-10 w-auto text-primary" />
                 <div className="flex items-center gap-4">
                     <Link href="/login">
-                        <Button variant="ghost" className="hidden sm:inline-flex hover:bg-primary/10">
+                        <Button variant="ghost" className="hidden sm:inline-flex hover:bg-primary/10 font-bold">
                             Se connecter
                         </Button>
                     </Link>
                     <Link href="/signup">
-                        <Button className="shadow-lg shadow-primary/20">
+                        <Button className="shadow-lg shadow-primary/20 font-bold px-6">
                             Commencer
                         </Button>
                     </Link>
@@ -201,7 +197,7 @@ export default function WelcomePage() {
                     <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-center gap-6">
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                             <Link href="/reports">
-                                <Button size="lg" className="text-xl py-8 px-10 rounded-2xl shadow-2xl shadow-primary/30 group">
+                                <Button size="lg" className="text-xl py-8 px-10 rounded-2xl shadow-2xl shadow-primary/30 group font-black">
                                     Accéder au Direct
                                     <ArrowRight className="ml-2 w-6 h-6 transition-transform group-hover:translate-x-1" />
                                 </Button>
@@ -210,13 +206,13 @@ export default function WelcomePage() {
                         
                         <div className="flex flex-col gap-3">
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button onClick={() => handleInstallClick('desktop')} size="lg" variant="outline" className="w-full text-base py-6 px-10 rounded-2xl border-2 border-primary/20 bg-card/50 backdrop-blur-sm shadow-sm hover:bg-primary/5 group">
+                                <Button onClick={() => handleInstallClick('desktop')} size="lg" variant="outline" className="w-full text-base py-6 px-10 rounded-2xl border-2 border-primary/20 bg-card/50 backdrop-blur-sm shadow-sm hover:bg-primary/5 group font-bold">
                                     <AppIconSmall className="mr-3 w-8 h-8 group-hover:animate-pulse" />
                                     Télécharger Logiciel (Win/Mac)
                                 </Button>
                             </motion.div>
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button onClick={() => handleInstallClick('mobile')} size="lg" variant="ghost" className="w-full text-base py-6 px-10 rounded-2xl border-2 border-dashed border-slate-200 hover:bg-slate-50 group">
+                                <Button onClick={() => handleInstallClick('mobile')} size="lg" variant="ghost" className="w-full text-base py-6 px-10 rounded-2xl border-2 border-dashed border-slate-200 hover:bg-slate-50 group font-bold">
                                     <AppIconSmall className="mr-3 w-8 h-8 opacity-40 group-hover:opacity-100" />
                                     Installer App Mobile
                                 </Button>
@@ -225,7 +221,6 @@ export default function WelcomePage() {
                     </motion.div>
                 </motion.div>
 
-                {/* Hero Image Container */}
                 <div className="w-full max-w-7xl px-4 flex flex-col items-center gap-12 group">
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.95, y: 40 }}
@@ -319,7 +314,7 @@ export default function WelcomePage() {
                     <Logo className="h-8 w-auto text-muted-foreground opacity-60" />
                     <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground">
                         <Link href="/privacy" className="hover:text-primary transition-colors flex items-center gap-2">
-                            <Shield className="h-4 w-4" />
+                            <ShieldCheck className="h-4 w-4" />
                             Confidentialité & CGU
                         </Link>
                         <Link href="/contact" className="hover:text-primary transition-colors">Contact</Link>

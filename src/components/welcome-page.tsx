@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car, Shield, Monitor, Laptop, Smartphone } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Activity, Bot, Megaphone, Download, ArrowRight, MapPin, ShieldCheck, Zap, Car, Shield, Monitor, Laptop, Smartphone, X, Sparkles, Smartphone as PhoneIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from './ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -43,11 +44,19 @@ const FeatureCard = ({ icon, title, description, color }: { icon: React.ReactNod
     </motion.div>
 );
 
+const AppIconSmall = ({ className }: { className?: string }) => (
+    <div className={`bg-primary p-2 rounded-xl shadow-lg flex items-center justify-center ${className}`}>
+        <svg viewBox="0 0 32 32" className="w-full h-full text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 3.5C10.201 3.5 5.5 8.201 5.5 14C5.5 21.333 16 31.5 16 31.5S26.5 21.333 26.5 14C26.5 8.201 21.799 3.5 16 3.5ZM16 17.5C14.067 17.5 12.5 15.933 12.5 14C12.5 12.067 14.067 10.5 16 10.5C17.933 10.5 19.5 12.067 19.5 14C19.5 15.933 17.933 17.5 16 17.5Z" fill="currentColor" />
+        </svg>
+    </div>
+);
+
 export default function WelcomePage() {
+    const isMobile = useIsMobile();
     const [installPrompt, setInstallPrompt] = useState<any>(null);
-    const heroImageData = PlaceHolderImages.find(img => img.id === 'kinshasa-hero');
+    const [showInstallSuggestion, setShowInstallSuggestion] = useState(false);
     
-    // Fallback image urls if custom images are not provided
     const echangeurBgUrl = "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1200";
     const heroImageUrl = "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&q=80&w=1600";
 
@@ -55,21 +64,32 @@ export default function WelcomePage() {
         const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             setInstallPrompt(e);
+            // On mobile, show the suggestion after a short delay
+            if (isMobile) {
+                setTimeout(() => setShowInstallSuggestion(true), 3000);
+            }
         };
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+        // Check if already in standalone mode
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        if (isMobile && !isStandalone && !installPrompt) {
+            // Even if prompt hasn't fired yet, show info on mobile
+            setTimeout(() => setShowInstallSuggestion(true), 5000);
+        }
+
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         };
-    }, []);
+    }, [isMobile, installPrompt]);
 
     const handleInstallClick = async (platform: 'desktop' | 'mobile') => {
         if (!installPrompt) {
             if (platform === 'desktop') {
-                alert("Pour installer Kinshasa Flow sur Windows ou Mac :\n1. Utilisez Google Chrome ou Edge.\n2. Cliquez sur l'icône d'ordinateur avec une flèche dans la barre d'adresse.");
+                alert("Installation Desktop :\n1. Utilisez Chrome ou Edge.\n2. Cliquez sur l'icône d'installation dans la barre d'adresse.");
             } else {
-                alert("Pour installer sur Mobile :\n1. Appuyez sur 'Partager' (Safari iOS) ou les 3 points (Chrome Android).\n2. Sélectionnez 'Sur l'écran d'accueil'.");
+                alert("Installation Mobile :\n1. Appuyez sur 'Partager' (iOS) ou les 3 points (Android).\n2. Sélectionnez 'Sur l'écran d'accueil'.");
             }
             return;
         }
@@ -77,17 +97,45 @@ export default function WelcomePage() {
         const { outcome } = await installPrompt.userChoice;
         console.log(`[PWA] Install outcome: ${outcome}`);
         setInstallPrompt(null);
+        setShowInstallSuggestion(false);
     };
 
     return (
         <div className="relative min-h-screen w-full text-foreground overflow-x-hidden flex flex-col">
+            {/* --- MOBILE INSTALL SUGGESTION --- */}
+            <AnimatePresence>
+                {showInstallSuggestion && (
+                    <motion.div 
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-6 left-4 right-4 z-[100] md:hidden"
+                    >
+                        <div className="bg-slate-900 text-white p-5 rounded-[2rem] shadow-2xl border border-white/10 flex items-center gap-4 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-2">
+                                <button onClick={() => setShowInstallSuggestion(false)} className="text-white/40 hover:text-white p-1">
+                                    <X size={16} />
+                                </button>
+                            </div>
+                            <AppIconSmall className="w-12 h-12 shrink-0 ring-4 ring-primary/20" />
+                            <div className="flex-1 space-y-1">
+                                <p className="font-black text-sm tracking-tight">Installer Kinshasa Flow</p>
+                                <p className="text-[10px] text-slate-400 font-medium leading-tight">Accédez au trafic plus vite sans passer par le navigateur.</p>
+                            </div>
+                            <Button onClick={() => handleInstallClick('mobile')} size="sm" className="rounded-xl h-10 px-4 font-black text-xs uppercase bg-primary hover:bg-primary/90">
+                                Installer
+                            </Button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* --- BACKGROUND LAYERS --- */}
             <div className="fixed inset-0 -z-50 bg-background"></div>
             <div className="fixed inset-0 -z-40 bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.12]"></div>
             
             <div className="fixed top-[-5%] left-[-5%] -z-30 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[120px] pointer-events-none"></div>
             <div className="fixed top-[30%] right-[-10%] -z-30 h-[500px] w-[500px] rounded-full bg-accent/10 blur-[130px] pointer-events-none"></div>
-            <div className="fixed bottom-[-10%] left-[10%] -z-30 h-[600px] w-[600px] rounded-full bg-blue-400/10 blur-[150px] pointer-events-none"></div>
 
             <div className="fixed inset-0 -z-20 pointer-events-none overflow-hidden">
                 <Image
@@ -97,7 +145,6 @@ export default function WelcomePage() {
                     className="object-cover object-center"
                     style={{ opacity: 0.15 }}
                     priority
-                    data-ai-hint="city traffic"
                 />
             </div>
 
@@ -164,13 +211,13 @@ export default function WelcomePage() {
                         <div className="flex flex-col gap-3">
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                 <Button onClick={() => handleInstallClick('desktop')} size="lg" variant="outline" className="w-full text-base py-6 px-10 rounded-2xl border-2 border-primary/20 bg-card/50 backdrop-blur-sm shadow-sm hover:bg-primary/5 group">
-                                    <Laptop className="mr-2 h-6 w-6 text-primary group-hover:animate-bounce" />
+                                    <AppIconSmall className="mr-3 w-8 h-8 group-hover:animate-pulse" />
                                     Télécharger Logiciel (Win/Mac)
                                 </Button>
                             </motion.div>
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                 <Button onClick={() => handleInstallClick('mobile')} size="lg" variant="ghost" className="w-full text-base py-6 px-10 rounded-2xl border-2 border-dashed border-slate-200 hover:bg-slate-50 group">
-                                    <Smartphone className="mr-2 h-6 w-6 text-slate-400 group-hover:text-primary" />
+                                    <AppIconSmall className="mr-3 w-8 h-8 opacity-40 group-hover:opacity-100" />
                                     Installer App Mobile
                                 </Button>
                             </motion.div>
@@ -199,11 +246,10 @@ export default function WelcomePage() {
                         <div className="relative aspect-[4/3] md:aspect-video lg:aspect-[21/9] rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white/50 ring-1 ring-white/20 bg-white">
                             <Image 
                                 src={heroImageUrl} 
-                                alt={heroImageData?.description || "Kinshasa Flow Hero"} 
+                                alt="Kinshasa Flow Dashboard" 
                                 fill 
                                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                                 priority
-                                data-ai-hint="city roads"
                             />
                         </div>
                     </motion.div>

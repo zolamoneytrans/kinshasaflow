@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -264,17 +263,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuItem>
               )}
 
-              {isEnabled('hazardMap') && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/hazard-map'} className={cn(pathname === '/hazard-map' && "bg-white/10")}>
-                    <Link href="/hazard-map" className="font-bold flex items-center gap-3 h-11 px-4 rounded-xl">
-                      <HazardIcon className={cn("h-5 w-5", pathname === '/hazard-map' ? "text-accent" : "text-primary")} />
-                      <span>Carte des Dangers</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
               {isEnabled('localTraffic') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/local-traffic'} className={cn(pathname === '/local-traffic' && "bg-white/10")}>
@@ -331,6 +319,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link href="/routes" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
                       <Route className={cn("h-5 w-5", pathname === '/routes' ? "text-accent" : "text-primary")} />
                       <span>État des Routes</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('hazardMap') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/hazard-map'} className={cn(pathname === '/hazard-map' && "bg-white/10")}>
+                    <Link href="/hazard-map" className="font-bold flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <HazardIcon className={cn("h-5 w-5", pathname === '/hazard-map' ? "text-accent" : "text-primary")} />
+                      <span>Carte des Dangers</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

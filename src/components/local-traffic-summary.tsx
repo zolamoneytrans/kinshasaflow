@@ -36,7 +36,7 @@ import { Slider } from '@/components/ui/slider';
 import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
 import { STAR_COSTS, UserProfile } from '@/lib/types';
-import { generateSpeechAction } from '@/app/actions';
+import { generateSpeechAction, getGoogleTrafficStatusAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,7 +46,7 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
 interface TrafficProbe {
   road: string;
-  status: 'FLUIDE' | 'MODÉRÉ' | 'DENSE' | 'EMBOUTEILLAGE';
+  status: 'FLUIDE' | 'MODÉRÉ' | 'DENSE' | 'EMBOUTEILLAGE' | 'INCONNU';
   delay: number;
   distance: string;
   coords: { lat: number, lng: number };
@@ -106,29 +106,20 @@ export default function LocalTrafficSummary() {
     if (!silent) setIsAnalyzing(true);
 
     try {
-      const g = (window as any).google;
-      if (!g) throw new Error("API non prête.");
-
-      // On simule une analyse premium des segments via Route Service
-      // Dans une version finale, on appellerait une API de proximité
-      const roads = [
-        "Avenue de proximité 1",
-        "Boulevard principal",
-        "Rue transversale",
-        "Route nationale d'accès"
+      const axesToScan = [
+        { name: "Secteur Local A", origin: location, destination: { lat: location.lat + 0.005, lng: location.lng + 0.005 } },
+        { name: "Secteur Local B", origin: location, destination: { lat: location.lat - 0.005, lng: location.lng - 0.005 } }
       ];
 
-      const probes: TrafficProbe[] = roads.map((r, i) => {
-          const statuses: ('FLUIDE' | 'MODÉRÉ' | 'DENSE' | 'EMBOUTEILLAGE')[] = ['FLUIDE', 'MODÉRÉ', 'DENSE', 'EMBOUTEILLAGE'];
-          const rand = Math.floor(Math.random() * 4);
-          return {
-              road: r,
-              status: statuses[rand],
-              delay: rand * 3,
-              distance: `${(Math.random() * radius).toFixed(1)} km`,
-              coords: { lat: location.lat + (Math.random() - 0.5) * 0.01, lng: location.lng + (Math.random() - 0.5) * 0.01 }
-          };
-      });
+      const results = await getGoogleTrafficStatusAction(axesToScan as any);
+      
+      const probes: TrafficProbe[] = results.map((r, i) => ({
+        road: r.road,
+        status: r.status as any,
+        delay: r.delay,
+        distance: "Proximité",
+        coords: axesToScan[i].destination
+      }));
 
       const avgDelay = probes.reduce((acc, p) => acc + p.delay, 0) / probes.length;
       const score = Math.max(0, 100 - (avgDelay * 10));
@@ -144,14 +135,10 @@ export default function LocalTrafficSummary() {
       setAnalysis(newAnalysis);
 
       if (isAudioEnabled && !silent) {
-        const text = `Analyse locale terminée. Trafic ${newAnalysis.globalScore > 70 ? 'fluide' : 'dense'} dans votre zone. L'axe ${newAnalysis.bestRoute} est le plus dégagé.`;
+        const text = `Radar actualisé. L'indice de fluidité locale est de ${newAnalysis.globalScore} sur 100.`;
         generateSpeechAction(text).then(res => {
             if (res?.media) new Audio(res.media).play();
         });
-      }
-
-      if (!silent) {
-        toast({ title: "Radar K-Flow actualisé", description: `Analyse terminée sur un rayon de ${radius}km.` });
       }
     } catch (e) {
       console.error(e);
@@ -159,7 +146,7 @@ export default function LocalTrafficSummary() {
       setIsAnalyzing(false);
       setIsLoading(false);
     }
-  }, [location, radius, user, isAudioEnabled, toast]);
+  }, [location, radius, user, isAudioEnabled]);
 
   useEffect(() => {
     if (location && isLoading) handleStartAnalysis();
@@ -175,10 +162,7 @@ export default function LocalTrafficSummary() {
     <div className="w-full h-full flex flex-col bg-[#0b121e] overflow-hidden rounded-[2.5rem] border border-slate-800 shadow-2xl relative">
       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
         
-        {/* -- UI Overlay -- */}
         <div className="absolute inset-0 z-10 pointer-events-none p-4 flex flex-col justify-between">
-            
-            {/* Header Radar */}
             <motion.div 
                 initial={{ y: -50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -236,7 +220,6 @@ export default function LocalTrafficSummary() {
                 </Card>
             </motion.div>
 
-            {/* Bottom Summary Panel */}
             <AnimatePresence>
                 {analysis && (
                     <motion.div 
@@ -260,36 +243,32 @@ export default function LocalTrafficSummary() {
 
                                 <div className="flex-1 space-y-4 w-full">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-xs font-black text-white/50 uppercase tracking-[0.2em]">Axes à proximité</h3>
+                                        <h3 className="text-xs font-black text-white/50 uppercase tracking-[0.2em]">Flux Proximité</h3>
                                         <span className="text-[9px] text-white/30 font-bold flex items-center gap-1">
-                                            <Clock className="h-2.5 w-2.5" /> mis à jour à {format(analysis.lastUpdated, 'HH:mm:ss')}
+                                            <Clock className="h-2.5 w-2.5" /> MàJ {format(analysis.lastUpdated, 'HH:mm')}
                                         </span>
                                     </div>
                                     
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[120px] overflow-y-auto scrollbar-none">
                                         {analysis.probes.map((probe, i) => (
-                                            <div key={i} className="bg-white/5 p-3 rounded-2xl border border-white/5 flex items-center justify-between group hover:bg-white/10 transition-all">
+                                            <div key={i} className="bg-white/5 p-3 rounded-2xl border border-white/5 flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
                                                     <div className={cn(
                                                         "w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]",
                                                         probe.status === 'FLUIDE' ? "bg-emerald-400" : probe.status === 'MODÉRÉ' ? "bg-amber-400" : "bg-red-500"
                                                     )} />
-                                                    <div>
-                                                        <p className="text-xs font-bold text-white truncate max-w-[120px]">{probe.road}</p>
-                                                        <p className="text-[9px] font-bold text-white/40 uppercase">{probe.distance}</p>
-                                                    </div>
+                                                    <p className="text-xs font-bold text-white truncate max-w-[120px]">{probe.road}</p>
                                                 </div>
                                                 {probe.delay > 0 && <span className="text-[10px] font-black text-red-400">+{probe.delay}m</span>}
                                             </div>
                                         ))}
                                     </div>
 
-                                    <div className="bg-primary/20 p-3 rounded-2xl border border-primary/20 flex items-center justify-between group cursor-pointer hover:bg-primary/30 transition-all">
+                                    <div className="bg-primary/20 p-3 rounded-2xl border border-primary/20 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <Zap className="text-primary h-4 w-4 fill-primary" />
-                                            <p className="text-[11px] font-black text-white uppercase tracking-tight">Meilleur axe : {analysis.bestRoute}</p>
+                                            <p className="text-[11px] font-black text-white uppercase tracking-tight">Scan actif dans votre secteur</p>
                                         </div>
-                                        <ArrowRight className="text-primary h-4 w-4 transition-transform group-hover:translate-x-1" />
                                     </div>
                                 </div>
                             </div>
@@ -299,22 +278,6 @@ export default function LocalTrafficSummary() {
             </AnimatePresence>
         </div>
 
-        {/* Map Controls */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-3">
-            <button onClick={handleReCenter} className="h-12 w-12 rounded-2xl bg-white/90 backdrop-blur-md shadow-2xl flex items-center justify-center text-slate-900 active:scale-95 transition-all">
-                <LocateFixed className="h-6 w-6" />
-            </button>
-            <div className="flex flex-col rounded-2xl bg-white/90 backdrop-blur-md shadow-2xl overflow-hidden">
-                <button onClick={() => setZoom(z => Math.min(z + 1, 21))} className="h-12 w-12 flex items-center justify-center border-b hover:bg-slate-50 active:scale-95 transition-all">
-                    <Plus className="h-5 w-5" />
-                </button>
-                <button onClick={() => setZoom(z => Math.max(z - 1, 10))} className="h-12 w-12 flex items-center justify-center hover:bg-slate-50 active:scale-95 transition-all">
-                    <Minus className="h-5 w-5" />
-                </button>
-            </div>
-        </div>
-
-        {/* Map View */}
         <Map
             defaultCenter={location || { lat: -4.330, lng: 15.313 }}
             center={location}
@@ -342,64 +305,10 @@ export default function LocalTrafficSummary() {
                         anchor: (window as any).google?.maps?.Point ? new (window as any).google.maps.Point(12, 12) : undefined
                     } as any}
                 />
-                <RadarCircle center={location} radius={radius * 1000} />
             </>
           )}
-
-          {analysis?.probes.map((probe, i) => (
-             <Marker 
-                key={i}
-                position={probe.coords}
-                icon={{
-                    url: probe.status === 'EMBOUTEILLAGE' ? 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' :
-                         probe.status === 'DENSE' ? 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png' :
-                         'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
-                }}
-             />
-          ))}
         </Map>
       </APIProvider>
     </div>
   );
-}
-
-/**
- * Overlay visuel du radar
- */
-function RadarCircle({ center, radius }: { center: {lat: number, lng: number}, radius: number }) {
-    const map = useMap();
-    const circleRef = useRef<google.maps.Circle | null>(null);
-
-    useEffect(() => {
-        if (!map || !center) return;
-        
-        const g = (window as any).google;
-        if (!g) return;
-
-        if (circleRef.current) {
-            circleRef.current.setCenter(center);
-            circleRef.current.setRadius(radius);
-        } else {
-            circleRef.current = new g.maps.Circle({
-                map,
-                center,
-                radius,
-                fillColor: '#248eeb',
-                fillOpacity: 0.1,
-                strokeColor: '#248eeb',
-                strokeWeight: 1,
-                strokeOpacity: 0.3,
-                clickable: false
-            });
-        }
-
-        return () => {
-            if (circleRef.current) {
-                circleRef.current.setMap(null);
-                circleRef.current = null;
-            }
-        };
-    }, [map, center, radius]);
-
-    return null;
 }

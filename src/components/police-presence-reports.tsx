@@ -1,12 +1,17 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PoliceReport, dummyPoliceReports } from '@/lib/types';
+import { PoliceReport } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Siren, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const ReportTypeBadge = ({ type }: { type: PoliceReport['type'] }) => {
     const typeMap = {
@@ -20,19 +25,22 @@ const ReportTypeBadge = ({ type }: { type: PoliceReport['type'] }) => {
     return <Badge variant={variant}>{text}</Badge>;
 }
 
-const PoliceReportItem = ({ report }: { report: PoliceReport & { id: number; time: string } }) => (
-    <div className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors shadow-sm">
-        <div className="flex justify-between items-start mb-2">
-            <h3 className="font-semibold text-card-foreground">{report.location}</h3>
-            <ReportTypeBadge type={report.type} />
+const PoliceReportItem = ({ report }: { report: any }) => {
+    const formattedTime = report.timestamp ? formatDistanceToNow(report.timestamp.toDate(), { addSuffix: true, locale: fr }) : '...';
+    return (
+        <div className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors shadow-sm">
+            <div className="flex justify-between items-start mb-2">
+                <h3 className="font-semibold text-card-foreground">{report.location}</h3>
+                <ReportTypeBadge type={report.type} />
+            </div>
+            <p className="text-sm text-muted-foreground">{report.note}</p>
+            <div className="flex items-center text-xs text-muted-foreground mt-3">
+                <Clock className="w-3 h-3 mr-1.5" />
+                <span>{formattedTime}</span>
+            </div>
         </div>
-        <p className="text-sm text-muted-foreground">{report.note}</p>
-        <div className="flex items-center text-xs text-muted-foreground mt-3">
-            <Clock className="w-3 h-3 mr-1.5" />
-            <span>{report.time}</span>
-        </div>
-    </div>
-);
+    );
+};
 
 const ReportSkeleton = () => (
     <div className="p-4 rounded-lg border space-y-3">
@@ -46,39 +54,12 @@ const ReportSkeleton = () => (
 );
 
 export default function PolicePresenceReports() {
-  const [reports, setReports] = useState<(PoliceReport & { id: number; time: string })[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { firestore } = useFirebase();
+  const reportsQuery = useMemoFirebase(() => {
+    return query(collection(firestore, 'police_reports'), orderBy('timestamp', 'desc'), limit(20));
+  }, [firestore]);
 
-  const fetchData = (isRefresh = false) => {
-    if (isRefresh) {
-      setIsRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    // Simulate fetching data
-    setTimeout(() => {
-      setReports([...dummyPoliceReports].sort(() => Math.random() - 0.5));
-      setLoading(false);
-      if (isRefresh) {
-        setIsRefreshing(false);
-      }
-    }, 800);
-  };
-
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(() => {
-        fetchData(true);
-    }, 15 * 60 * 1000); // 15 minutes
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleUpdate = () => {
-    fetchData(true);
-  };
+  const { data: reports, isLoading } = useCollection(reportsQuery);
 
   return (
     <Card className="border-none shadow-none bg-transparent">
@@ -88,20 +69,20 @@ export default function PolicePresenceReports() {
               <Siren className="text-primary h-5 w-5" />
               <span>Présence Policière Signalée</span>
             </div>
-            <Button size="sm" variant="outline" onClick={handleUpdate} disabled={isRefreshing} className="h-8">
-              {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              <span className="ml-2 hidden sm:inline">Mettre à jour</span>
-            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="px-0">
           <div className="space-y-4">
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => <ReportSkeleton key={i} />)
-            ) : (
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, i) => <ReportSkeleton key={i} />)
+            ) : reports && reports.length > 0 ? (
               reports.map((report) => (
                   <PoliceReportItem key={report.id} report={report} />
               ))
+            ) : (
+                <div className="py-10 text-center bg-white rounded-3xl border-2 border-dashed">
+                    <p className="text-muted-foreground text-sm font-medium">Aucun poste de police signalé actuellement.</p>
+                </div>
             )}
           </div>
         </CardContent>

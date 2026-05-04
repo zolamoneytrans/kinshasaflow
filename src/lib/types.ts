@@ -229,14 +229,6 @@ export const policeReportSchema = z.object({
 });
 export type PoliceReport = z.infer<typeof policeReportSchema>;
 
-export const dummyPoliceReports: (PoliceReport & { id: number; time: string })[] = [
-  { id: 1, location: "Rond-point Huileries", type: "control", note: "Contrôle des vignettes en cours.", time: "il y a 5 min" },
-  { id: 2, location: "Boulevard du 30 Juin", type: "traffic_management", note: "Régulation manuelle au croisement Batetela.", time: "il y a 12 min" },
-  { id: 3, location: "Échangeur de Limete", type: "incident", note: "Véhicule en panne sur la bretelle vers Masina.", time: "il y a 20 min" },
-  { id: 4, location: "Kintambo Magasin", type: "control", note: "Vérification des permis de conduire.", time: "il y a 35 min" },
-  { id: 5, location: "Bypass (Triangle)", type: "traffic_management", note: "Fluidification du trafic vers Lemba.", time: "il y a 45 min" },
-];
-
 export const loginSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }),
   password: z.string().min(1, { message: "Veuillez entrer votre mot de passe." }),

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -92,7 +93,7 @@ export default function TrafficReports() {
       setNavIncidents(analyzedAxes);
     } catch (err) {
       console.error("Traffic API Error:", err);
-      toast({ title: "Erreur API", description: "Impossible de scanner les 100 axes. Vérifiez votre connexion.", variant: "destructive" });
+      toast({ title: "Erreur API", description: "Impossible de scanner les 100 axes.", variant: "destructive" });
     } finally {
       setLoading(false);
       setIsRefreshing(false);

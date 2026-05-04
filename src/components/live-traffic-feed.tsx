@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -145,7 +146,7 @@ const StatusCard = ({ axis, verified, onVerify, isVerifying, lastUpdated, onNavi
 
                         <div className="flex gap-2">
                             <Button onClick={onNavigate} disabled={isNavigating} className="flex-1 rounded-xl h-12 font-black">
-                                {isNavigating ? <Loader2 className="animate-spin mr-2" /> : <Navigation className="mr-2 h-4 w-4" />}
+                                {isNavigating ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Navigation className="mr-2 h-4 w-4" />}
                                 Naviguer ({STAR_COSTS.NAVIGATION_SESSION} ⭐)
                             </Button>
                         </div>
@@ -163,7 +164,7 @@ const StatusCard = ({ axis, verified, onVerify, isVerifying, lastUpdated, onNavi
                                     disabled={isVerifying}
                                     className="bg-primary hover:bg-primary/90 text-white rounded-2xl h-12 px-6 font-black shadow-xl"
                                 >
-                                    {isVerifying ? <Loader2 className="animate-spin mr-2" /> : <Star className="mr-2 fill-amber-400 text-amber-400" />}
+                                    {isVerifying ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Star className="mr-2 fill-amber-400 text-amber-400" />}
                                     Voir détails ({STAR_COSTS.ROAD_VERIFY} ⭐)
                                 </Button>
                             </div>
@@ -355,14 +356,8 @@ export default function LiveTrafficFeed() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                            <div className="bg-primary/10 p-2 rounded-lg">
-                                <Zap className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-800">Poste de police signalé</p>
-                                <p className="text-[10px] text-slate-500 font-medium">Près de {selectedAxis.name} • il y a 5m</p>
-                            </div>
+                        <div className="py-8 text-center bg-slate-50 rounded-2xl border-2 border-dashed">
+                            <p className="text-xs font-bold text-slate-400 italic">En attente de signalements dans cette zone...</p>
                         </div>
                         <Button variant="ghost" className="w-full text-xs font-bold text-primary hover:bg-primary/5" asChild>
                             <Link href="/reports">Voir plus de signalements</Link>

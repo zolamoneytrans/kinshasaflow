@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -88,6 +89,7 @@
       "properties": {
         "reports": { "type": "boolean" },
         "liveTraffic": { "type": "boolean" },
+        "localTraffic": { "type": "boolean" },
         "map": { "type": "boolean" },
         "assistant": { "type": "boolean" },
         "notifications": { "type": "boolean" },

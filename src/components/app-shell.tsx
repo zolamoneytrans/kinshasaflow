@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -7,7 +8,7 @@ import {
   Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
   Palmtree, Compass, LayoutGrid, Utensils, Bell, Send, Navigation,
-  BarChart3, Zap, Smartphone, Monitor
+  BarChart3, Zap, Smartphone, Monitor, Radar
 } from 'lucide-react';
 import {
   Sidebar,
@@ -235,6 +236,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const getPageTitle = () => {
     if (pathname === '/reports') return 'Rapports de trafic';
     if (pathname === '/live-traffic') return 'Embouteillage en Temps Réel';
+    if (pathname === '/local-traffic') return 'Trafic de Proximité';
     if (pathname === '/police-routiere') return 'Police Routière';
     if (pathname === '/routes') return 'État des Routes';
     if (pathname === '/annonces') return 'Annonces Officielles';
@@ -261,6 +263,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const getPageDescription = () => {
+    if (pathname === '/local-traffic') return 'Analyse du trafic dans un rayon de 1 km.';
     if (pathname === '/notifications') return 'Découvrez ce qui se passe dans la communauté.';
     if (pathname === '/k-flow-nav') return 'Votre copilote GPS intelligent.';
     if (pathname === '/insights') return 'Analyse stratégique et conseils IA (15 min).';
@@ -317,6 +320,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link href="/live-traffic" className="font-medium">
                       <Activity className={pathname === '/live-traffic' ? "text-accent" : "text-primary"} />
                       <span>Temps Réel</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('localTraffic') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/local-traffic'} className="hover:bg-sidebar-accent">
+                    <Link href="/local-traffic" className="font-medium">
+                      <Radar className={pathname === '/local-traffic' ? "text-accent" : "text-primary"} />
+                      <span>Trafic Local</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 import { Timestamp } from "firebase/firestore";
 
@@ -15,7 +16,7 @@ export const STAR_COSTS = {
 
 // App Navigation Features
 export const navFeatures = [
-  'reports', 'liveTraffic', 'map', 'assistant', 'notifications', 'myStars', 'report', 'police', 
+  'reports', 'liveTraffic', 'localTraffic', 'map', 'assistant', 'notifications', 'myStars', 'report', 'police', 
   'routes', 'announcements', 'logement', 'transport', 'carRental', 'tourism', 
   'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share', 'fluxInfrastructure', 'kFlowNav', 'insights'
 ] as const;
@@ -24,6 +25,7 @@ export type NavFeature = typeof navFeatures[number];
 export const appNavigationSettingsSchema = z.object({
   reports: z.boolean().default(true),
   liveTraffic: z.boolean().default(true),
+  localTraffic: z.boolean().default(true),
   map: z.boolean().default(true),
   assistant: z.boolean().default(true),
   notifications: z.boolean().default(true),

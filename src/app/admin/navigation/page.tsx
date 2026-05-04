@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 const FEATURE_LABELS: Record<NavFeature, string> = {
   reports: "Rapports de trafic",
   liveTraffic: "Temps Réel",
+  localTraffic: "Trafic Local (Radar)",
   map: "Carte du Trafic",
   assistant: "Assistant IA",
   notifications: "Notifications Directes",

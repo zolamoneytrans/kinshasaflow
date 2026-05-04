@@ -1,8 +1,10 @@
-
 'use client';
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Logo officiel de Kinshasa Flow utilisant le marqueur de position bleu.
+ */
 export function Logo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
@@ -12,10 +14,13 @@ export function Logo({ className }: { className?: string }) {
           xmlns="http://www.w3.org/2000/svg"
           className="h-full w-auto text-primary"
         >
+          {/* Forme du Pin / Marqueur de position */}
           <path
-            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"
+            d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2Z"
             fill="currentColor"
           />
+          {/* Cercle intérieur blanc */}
+          <circle cx="12" cy="9" r="3" fill="white" />
         </svg>
         <span className="font-black tracking-tighter text-xl">Kinshasa Flow</span>
     </div>

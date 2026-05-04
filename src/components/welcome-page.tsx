@@ -46,7 +46,8 @@ const FeatureCard = ({ icon, title, description, color }: { icon: React.ReactNod
 const AppIconSmall = ({ className }: { className?: string }) => (
     <div className={`bg-primary p-2 rounded-xl shadow-lg flex items-center justify-center ${className}`}>
         <svg viewBox="0 0 24 24" className="w-full h-full text-white" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
+          <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2Z" />
+          <circle cx="12" cy="9" r="3" fill="rgba(255,255,255,0.8)" />
         </svg>
     </div>
 );

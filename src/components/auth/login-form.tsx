@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -229,12 +230,12 @@ export function LoginForm() {
     }
 
     return (
-        <Card className="w-full shadow-xl border-none rounded-[1.5rem] md:rounded-[2rem] overflow-hidden">
+        <Card className="w-full shadow-xl border-none rounded-[2rem] overflow-hidden">
             <CardHeader className="bg-primary p-6 md:p-8 text-white text-center md:text-left">
                 <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Se connecter</CardTitle>
                 <CardDescription className="text-primary-foreground/80 font-medium">Accédez à votre compte pour continuer.</CardDescription>
             </CardHeader>
-            <CardContent className="p-6 md:p-8">
+            <CardContent className="p-5 md:p-8">
                 <Tabs defaultValue="email" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-6 md:mb-8 h-12 bg-slate-100 rounded-xl p-1">
                         <TabsTrigger value="email" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">

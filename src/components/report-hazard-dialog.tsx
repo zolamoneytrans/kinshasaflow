@@ -36,7 +36,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Camera, Loader2, MapPin, Plus, CheckCircle2 } from 'lucide-react';
+import { Camera, Loader2, MapPin, Plus, CheckCircle2, Send } from 'lucide-react';
 import Image from 'next/image';
 
 export function ReportHazardDialog({ location }: { location: {lat: number, lng: number} | null }) {

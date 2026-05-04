@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -7,7 +8,7 @@ import {
   Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
   Palmtree, Compass, LayoutGrid, Utensils, Bell, Send, Navigation,
-  BarChart3, Zap, Smartphone, Monitor, Radar
+  BarChart3, Zap, Smartphone, Monitor, Radar, Construction, ShieldAlert as HazardIcon
 } from 'lucide-react';
 import {
   Sidebar,
@@ -206,6 +207,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       '/live-traffic': 'Temps Réel',
       '/local-traffic': 'Trafic Local',
       '/k-flow-nav': 'K-Flow Nav',
+      '/hazard-map': 'Carte des Dangers',
       '/insights': 'K-Flow Insights',
       '/flux-infrastructure': 'Flux & Infrastructure',
       '/routes': 'État des Routes',
@@ -257,6 +259,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link href="/live-traffic" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
                       <Activity className={cn("h-5 w-5", pathname === '/live-traffic' ? "text-accent" : "text-primary")} />
                       <span>Temps Réel</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('hazardMap') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/hazard-map'} className={cn(pathname === '/hazard-map' && "bg-white/10")}>
+                    <Link href="/hazard-map" className="font-bold flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <HazardIcon className={cn("h-5 w-5", pathname === '/hazard-map' ? "text-accent" : "text-primary")} />
+                      <span>Carte des Dangers</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

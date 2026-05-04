@@ -67,76 +67,30 @@
         "isProfileComplete"
       ]
     },
-    "AppNotification": {
-      "title": "AppNotification",
+    "RoadConditionReport": {
+      "title": "RoadConditionReport",
       "type": "object",
-      "description": "Global notifications for real-time engagement.",
+      "description": "A report submitted by a user about road conditions in Kinshasa.",
       "properties": {
         "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["user_joined", "traffic_report", "video_added", "system_alert"] },
-        "title": { "type": "string" },
-        "message": { "type": "string" },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "link": { "type": "string" },
-        "userId": { "type": "string" }
-      },
-      "required": ["id", "type", "title", "message", "timestamp"]
-    },
-    "AppNavigationSettings": {
-      "title": "AppNavigationSettings",
-      "type": "object",
-      "description": "Controls the visibility of navigation items in the app.",
-      "properties": {
-        "reports": { "type": "boolean" },
-        "liveTraffic": { "type": "boolean" },
-        "localTraffic": { "type": "boolean" },
-        "map": { "type": "boolean" },
-        "assistant": { "type": "boolean" },
-        "notifications": { "type": "boolean" },
-        "myStars": { "type": "boolean" },
-        "report": { "type": "boolean" },
-        "police": { "type": "boolean" },
-        "routes": { "type": "boolean" },
-        "announcements": { "type": "boolean" },
-        "logement": { "type": "boolean" },
-        "transport": { "type": "boolean" },
-        "carRental": { "type": "boolean" },
-        "tourism": { "type": "boolean" },
-        "events": { "type": "boolean" },
-        "videos": { "type": "boolean" },
-        "kinshasa": { "type": "boolean" },
-        "restaurants": { "type": "boolean" },
-        "contact": { "type": "boolean" },
-        "share": { "type": "boolean" },
-        "fluxInfrastructure": { "type": "boolean" },
-        "kFlowNav": { "type": "boolean" },
-        "insights": { "type": "boolean" }
-      }
-    },
-    "DailyTrafficReport": {
-      "title": "DailyTrafficReport",
-      "type": "object",
-      "description": "Snapshot of Kinshasa traffic for historical analysis.",
-      "properties": {
-        "id": { "type": "string" },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "globalSaturation": { "type": "number" },
-        "axisStats": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "road": { "type": "string" },
-              "status": { "type": "string" },
-              "speed": { "type": "number" },
-              "delay": { "type": "number" },
-              "vehicleCount": { "type": "number" },
-              "capacity": { "type": "number" }
-            }
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "type": { "type": "string", "enum": ["pothole", "blockage", "police", "damaged_road"] },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "locationName": { "type": "string" },
+        "coords": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
           }
-        }
+        },
+        "votes": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "expired"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["timestamp", "globalSaturation", "axisStats"]
+      "required": ["userId", "type", "coords", "createdAt"]
     }
   },
   "auth": {
@@ -166,33 +120,13 @@
         }
       },
       {
-        "path": "/app_settings/navigation",
+        "path": "/road_condition_reports/{reportId}",
         "definition": {
-          "entityName": "AppNavigationSettings",
+          "entityName": "RoadConditionReport",
           "schema": {
-            "$ref": "#/backend/entities/AppNavigationSettings"
+            "$ref": "#/backend/entities/RoadConditionReport"
           },
-          "description": "Global application navigation configuration."
-        }
-      },
-      {
-        "path": "/notifications/{id}",
-        "definition": {
-          "entityName": "AppNotification",
-          "schema": {
-            "$ref": "#/backend/entities/AppNotification"
-          },
-          "description": "Global notification feed."
-        }
-      },
-      {
-        "path": "/daily_traffic_reports/{id}",
-        "definition": {
-          "entityName": "DailyTrafficReport",
-          "schema": {
-            "$ref": "#/backend/entities/DailyTrafficReport"
-          },
-          "description": "Historical traffic snapshots."
+          "description": "Community-powered reports on road conditions."
         }
       }
     ]

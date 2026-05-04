@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -18,6 +19,7 @@ const FEATURE_LABELS: Record<NavFeature, string> = {
   reports: "Rapports de trafic",
   liveTraffic: "Temps Réel",
   localTraffic: "Trafic Local (Radar)",
+  hazardMap: "Carte des Dangers",
   map: "Carte du Trafic",
   assistant: "Assistant IA",
   notifications: "Notifications Directes",

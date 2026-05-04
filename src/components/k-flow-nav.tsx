@@ -7,7 +7,6 @@ import {
   useMap, 
   useMapsLibrary, 
   Marker,
-  InfoWindow,
 } from '@vis.gl/react-google-maps';
 import { 
   Navigation2, 
@@ -123,7 +122,6 @@ interface SummaryData {
     allRoutes?: RouteSummary[];
 }
 
-// Helper pour traduire les instructions brutes si l'API renvoie de l'anglais
 const translateInstruction = (text: string) => {
     let t = text;
     const map: Record<string, string> = {
@@ -166,9 +164,6 @@ const getDirectionIcon = (instruction: string) => {
     return <ArrowUp className="h-10 w-10" />;
 };
 
-/**
- * Hook personnalisé pour lisser la position GPS et calculer l'orientation
- */
 function useInterpolatedLocation(rawLocation: {lat: number, lng: number} | null) {
     const [smoothLocation, setSmoothLocation] = useState<{lat: number, lng: number} | null>(null);
     const [heading, setHeading] = useState(0);
@@ -194,13 +189,11 @@ function useInterpolatedLocation(rawLocation: {lat: number, lng: number} | null)
             if (Math.abs(newHeading) > 1) {
                 setHeading(newHeading);
             }
-            
-            // Speed calculation
             const dist = g.maps.geometry.spherical.computeDistanceBetween(
                 new g.maps.LatLng(lastPos.current.lat, lastPos.current.lng),
                 new g.maps.LatLng(rawLocation.lat, rawLocation.lng)
             );
-            setSpeed(Math.round(dist * 3.6)); // approx m/s to km/h if interval is 1s
+            setSpeed(Math.round(dist * 3.6));
         }
 
         let startTime: number;
@@ -230,9 +223,6 @@ function useInterpolatedLocation(rawLocation: {lat: number, lng: number} | null)
     return { smoothLocation, heading, speed };
 }
 
-/**
- * Sous-composant pour gérer les mouvements de caméra
- */
 function MapCameraHandler({ 
   smoothLocation, 
   autoFollow, 
@@ -277,14 +267,11 @@ export default function KFlowNav() {
     const [is3D, setIs3D] = useState(true);
     const [isUnlocking, setIsUnlocking] = useState(false);
     const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-    const [activeAlert, setActiveAlert] = useState<TrafficAlert | null>(null);
     const [autoFollow, setAutoFollow] = useState(true);
-    const [showDestInfo, setShowDestInfo] = useState(false);
     const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
-    const [debugMode, setDebugMode] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
     const [isAudioEnabled, setIsAudioEnabled] = useState(false);
     const lastSpokenStep = useRef<string | null>(null);
+    const lastAlertTimestamp = useRef<number>(0);
     
     const containerRef = useRef<HTMLDivElement>(null);
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
@@ -310,7 +297,33 @@ export default function KFlowNav() {
         }
     }, []);
 
-    // Audio Instruction Logic
+    // Monitoring Actif de l'Itinéraire (Scanner de dangers)
+    useEffect(() => {
+        if (!isNavigating || !routeInfo?.allRoutes) return;
+        
+        const currentRoute = routeInfo.allRoutes[selectedRouteIndex];
+        const now = Date.now();
+
+        // Alerte si le retard dépasse 5 min sur le trajet actif
+        if (currentRoute.delayMinutes > 5 && (now - lastAlertTimestamp.current) > 60000) {
+            lastAlertTimestamp.current = now;
+            const msg = `Attention : un retard de ${currentRoute.delayMinutes} minutes est détecté sur votre itinéraire.`;
+            
+            toast({
+                title: "Alerte Trafic K-Flow",
+                description: msg,
+                variant: "destructive"
+            });
+
+            if (isAudioEnabled) {
+                generateSpeechAction(msg).then(res => {
+                    if (res?.media) new Audio(res.media).play().catch(e => console.warn("Audio blocked"));
+                });
+            }
+        }
+    }, [isNavigating, routeInfo, selectedRouteIndex, isAudioEnabled, toast]);
+
+    // Vocal Instruction Logic
     useEffect(() => {
         if (!isAudioEnabled || !isNavigating || !routeInfo?.currentStep) return;
         
@@ -325,25 +338,6 @@ export default function KFlowNav() {
             });
         }
     }, [isAudioEnabled, isNavigating, routeInfo?.currentStep]);
-
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
-        };
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    }, []);
-
-    const toggleFullscreen = () => {
-        if (!containerRef.current) return;
-        if (!document.fullscreenElement) {
-            containerRef.current.requestFullscreen().catch(err => {
-                toast({ title: "Erreur Plein Écran", description: "Votre navigateur ne supporte pas cette option.", variant: "destructive" });
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    };
 
     const handleAnalyzeRoute = async () => {
         if (!user || !profile) return;
@@ -475,7 +469,6 @@ export default function KFlowNav() {
                 }
             }
 
-            // Déduction des Stars
             await runTransaction(firestore, async (transaction) => {
                 const userDoc = await transaction.get(userRef!);
                 const data = userDoc.data() as UserProfile;
@@ -531,20 +524,14 @@ export default function KFlowNav() {
         setRouteInfo(info);
     };
 
-    const onAlertUpdate = (alert: TrafficAlert | null) => {
-        setActiveAlert(alert);
-    };
-
     return (
         <div 
             ref={containerRef}
             className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-[#0b121e] flex flex-col border border-slate-800"
         >
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="fr">
-                {/* ── UI NAVIGATION TYPE GOOGLE MAPS ── */}
                 {isNavigating && (
                     <>
-                        {/* Panneau d'Instruction (HAUT) */}
                         <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
                             <motion.div 
                                 initial={{ y: -100, opacity: 0 }}
@@ -569,7 +556,6 @@ export default function KFlowNav() {
                             </motion.div>
                         </div>
 
-                        {/* Barre de Statut (BAS) */}
                         <div className="absolute bottom-0 left-0 right-0 z-30 flex justify-center p-4 bg-black/40 backdrop-blur-xl border-t border-white/5">
                             <motion.div 
                                 initial={{ y: 100 }}
@@ -600,7 +586,6 @@ export default function KFlowNav() {
                             </motion.div>
                         </div>
 
-                        {/* Contrôles Flottants Latéraux (DROITE) */}
                         <div className="absolute top-32 right-4 z-30 flex flex-col gap-4">
                             <button onClick={handleReCenter} className="h-14 w-14 rounded-full bg-[#1c2331] border border-white/10 shadow-2xl flex items-center justify-center text-white/70">
                                 <Compass className="h-7 w-7" />
@@ -619,7 +604,6 @@ export default function KFlowNav() {
                             </button>
                         </div>
 
-                        {/* Compteur de Vitesse (GAUCHE BAS) */}
                         <div className="absolute bottom-24 left-6 z-30">
                             <div className="bg-[#1c2331]/90 backdrop-blur-md border border-white/10 h-20 w-20 rounded-full flex flex-col items-center justify-center shadow-2xl">
                                 <p className="text-2xl font-black text-white leading-none">{speed}</p>
@@ -629,7 +613,6 @@ export default function KFlowNav() {
                     </>
                 )}
 
-                {/* Barre de Recherche Initiale */}
                 {!isNavigating && !showSummary && (
                     <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4">
                         <motion.div 
@@ -669,7 +652,6 @@ export default function KFlowNav() {
                     </div>
                 )}
 
-                {/* Overlay Résumé de l'Itinéraire */}
                 <AnimatePresence>
                     {showSummary && summaryData && (
                         <motion.div 
@@ -789,7 +771,6 @@ export default function KFlowNav() {
                             isNavigating={isNavigating}
                             selectedRouteIndex={selectedRouteIndex}
                             onRouteUpdate={onRouteUpdate}
-                            onAlertUpdate={onAlertUpdate}
                         />
                         
                         <IncidentMarkers incidents={incidents || []} />
@@ -834,18 +815,16 @@ function AutocompleteInput({ value, onChange, onSearch, isLoading }: { value: st
     );
 }
 
-function DirectionsHandler({ origin, destination, isNavigating, selectedRouteIndex, onRouteUpdate, onAlertUpdate }: { 
+function DirectionsHandler({ origin, destination, isNavigating, selectedRouteIndex, onRouteUpdate }: { 
     origin: {lat: number; lng: number} | null, 
     destination: string, 
     isNavigating: boolean,
     selectedRouteIndex: number,
-    onRouteUpdate: (info: RouteInfo) => void,
-    onAlertUpdate: (alert: TrafficAlert | null) => void
+    onRouteUpdate: (info: RouteInfo) => void
 }) {
     const map = useMap();
     const routesLibrary = useMapsLibrary('routes');
     const [renderers, setRenderers] = useState<google.maps.DirectionsRenderer[]>([]);
-    const lastPosUpdate = useRef<{lat: number, lng: number} | null>(null);
 
     useEffect(() => {
         if (!routesLibrary || !map) return;

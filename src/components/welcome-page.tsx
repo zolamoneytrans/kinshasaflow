@@ -99,7 +99,6 @@ export default function WelcomePage() {
 
     return (
         <div className="relative min-h-screen w-full text-foreground overflow-x-hidden flex flex-col">
-            {/* --- MOBILE INSTALL SUGGESTION --- */}
             <AnimatePresence>
                 {showInstallSuggestion && (
                     <motion.div 
@@ -127,7 +126,6 @@ export default function WelcomePage() {
                 )}
             </AnimatePresence>
 
-            {/* --- BACKGROUND LAYERS --- */}
             <div className="fixed inset-0 -z-50 bg-background"></div>
             <div className="fixed inset-0 -z-40 bg-[radial-gradient(hsl(var(--primary))_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.12]"></div>
             
@@ -145,7 +143,6 @@ export default function WelcomePage() {
                 />
             </div>
 
-            {/* --- PAGE CONTENT --- */}
             <motion.header
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}

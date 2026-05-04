@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -295,7 +294,10 @@ export default function TrafficReports() {
                                                     <div className="flex items-center gap-6 shrink-0 border-l border-slate-50 pl-6 md:pl-8">
                                                         <div className="text-center">
                                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Vitesse</p>
-                                                            <p className="font-black text-slate-800 text-xl">{incident.speed > 0 ? incident.speed : '--'}<span className="text-[10px] ml-0.5">km/h</span></p>
+                                                            <p className="font-black text-slate-800 text-xl">
+                                                                {incident.source === 'gps' ? incident.speed : '--'}
+                                                                <span className="text-[10px] ml-0.5">km/h</span>
+                                                            </p>
                                                         </div>
                                                         <div className="text-center">
                                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Retard</p>

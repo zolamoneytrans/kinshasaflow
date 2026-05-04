@@ -97,16 +97,9 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       },
       body: JSON.stringify(body)
     }).then(async res => {
-        if (!res.ok) {
-            const errText = await res.text();
-            console.error(`API Error for ${axis.name}: HTTP ${res.status}`, errText);
-            return { error: errText, status: res.status };
-        }
+        if (!res.ok) return { error: "API Error" };
         return res.json();
-    }).catch(err => {
-        console.error(`Fetch error for ${axis.name}:`, err);
-        return { error: err.message };
-    });
+    }).catch(err => ({ error: err.message }));
   });
 
   try {
@@ -124,15 +117,14 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
         const delaySeconds = Math.max(0, duration - staticDuration);
         const delayMinutes = Math.round(delaySeconds / 60);
         
+        // Calcul plus précis de la vitesse
         const speedKmh = duration > 0 && distance > 0
           ? Math.round((distance / 1000) / (duration / 3600))
           : 0;
 
         let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" | "INCONNU" = "FLUIDE";
         
-        if (speedKmh === 0 && distance > 0) {
-            status = "EMBOUTEILLAGE";
-        } else if (speedKmh < 10 || delayMinutes > 10) {
+        if (speedKmh <= 8 || delayMinutes > 10) {
           status = "EMBOUTEILLAGE";
         } else if (speedKmh <= 20 || delayMinutes >= 5) {
           status = "DENSE";
@@ -155,7 +147,6 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
       return { road: axes[index].name, status: "INCONNU" as const, speed: 0, delay: 0 };
     });
   } catch (error) {
-    console.error("Global Traffic Action Error:", error);
     return axes.map(a => ({ road: a.name, status: "INCONNU" as const, speed: 0, delay: 0 }));
   }
 }
@@ -186,8 +177,6 @@ export async function initiateMbiyoPaymentAction(data: {
             }
         };
 
-        console.log("MbiyoPay Payin Payload:", JSON.stringify(payload, null, 2));
-
         const response = await fetch(
             "https://dashboard.mbiyo.africa/api/v1/merchant/payin",
             {
@@ -202,19 +191,15 @@ export async function initiateMbiyoPaymentAction(data: {
 
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-            const errorHtml = await response.text();
-            console.error("MbiyoPay Payin non-JSON response:", errorHtml);
-            return { success: false, error: `Erreur serveur (${response.status}): Réponse invalide.` };
+            return { success: false, error: "Réponse invalide du serveur de paiement." };
         }
 
         if (!response.ok) {
             const errorJson = await response.json();
-            console.error("MbiyoPay Payin API Error:", JSON.stringify(errorJson, null, 2));
             return { success: false, error: errorJson.message || `Erreur API (${response.status})` };
         }
 
         const result = await response.json();
-        console.log("MbiyoPay Payin Result:", JSON.stringify(result, null, 2));
         
         if (result.status === "success" && result.data) {
             return {
@@ -228,8 +213,7 @@ export async function initiateMbiyoPaymentAction(data: {
 
         return { success: false, error: result.message || "L'API MbiyoPay a renvoyé un succès sans données." };
     } catch (error: any) {
-        console.error("MbiyoPay Payin Catch Error:", error);
-        return { success: false, error: "Impossible de joindre le service de paiement. Vérifiez votre connexion." };
+        return { success: false, error: "Impossible de joindre le service de paiement." };
     }
 }
 
@@ -238,7 +222,6 @@ export async function initiateMbiyoPaymentAction(data: {
  */
 export async function checkMbiyoTransactionStatusAction(transactionId: string): Promise<{ success: boolean; data?: { status: string }; error?: string }> {
     try {
-        console.log(`Checking MbiyoPay status for transaction: ${transactionId}`);
         const response = await fetch(
             `https://dashboard.mbiyo.africa/api/v1/merchant/transactions/${transactionId}`,
             {
@@ -252,19 +235,15 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
 
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-            const text = await response.text();
-            console.error("MbiyoPay Status non-JSON response:", text);
-            return { success: false, error: "Réponse invalide du serveur de paiement." };
+            return { success: false, error: "Réponse invalide." };
         }
 
         if (!response.ok) {
             const errorJson = await response.json();
-            console.error("MbiyoPay Status API Error:", JSON.stringify(errorJson, null, 2));
             return { success: false, error: errorJson.message || `Erreur serveur (${response.status})` };
         }
 
         const result = await response.json();
-        console.log("MbiyoPay Status Result:", JSON.stringify(result, null, 2));
         
         if (result.status === "success" && result.data) {
             const txStatus = String(result.data.status).toLowerCase();
@@ -278,7 +257,6 @@ export async function checkMbiyoTransactionStatusAction(transactionId: string): 
 
         return { success: false, error: result.message || "La réponse de MbiyoPay est incomplète." };
     } catch (error: any) {
-        console.error("MbiyoPay Status Check Catch Error:", error);
         return { success: false, error: "Erreur réseau lors de la vérification." };
     }
 }

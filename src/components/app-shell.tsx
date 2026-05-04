@@ -33,6 +33,7 @@ import { UserProfile, AppNavigationSettings, AppSubscriptionSettings, AppNotific
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { sendEmailVerification } from 'firebase/auth';
+import { cn } from '@/lib/utils';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -114,7 +115,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
                         J'ai vérifié mon email
                     </Button>
                     <Button variant="outline" onClick={handleResend} disabled={isResending} className="h-12 rounded-2xl font-bold">
-                        {isResending ? <Loader2 className="animate-spin mr-2" /> : "Renvoyer l'email"}
+                        {isResending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Renvoyer l'email"}
                     </Button>
                 </div>
             </div>
@@ -238,10 +239,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               
               {isEnabled('reports') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/reports'}>
-                    <Link href="/reports" className="font-medium flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Home className={pathname === '/reports' ? "text-accent" : "text-primary"} />
+                  <SidebarMenuButton asChild isActive={pathname === '/reports'} className={cn(pathname === '/reports' && "bg-white/10")}>
+                    <Link href="/reports" className="font-medium flex items-center justify-between w-full h-11 px-4 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Home className={cn("h-5 w-5", pathname === '/reports' ? "text-accent" : "text-primary")} />
                         <span>Rapports</span>
                       </div>
                       {unreadReports > 0 && <Badge variant="destructive" className="h-5 px-1.5 min-w-[20px] justify-center text-[10px] rounded-full font-black">{unreadReports}</Badge>}
@@ -252,9 +253,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('liveTraffic') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/live-traffic'}>
-                    <Link href="/live-traffic" className="font-medium flex items-center gap-2">
-                      <Activity className={pathname === '/live-traffic' ? "text-accent" : "text-primary"} />
+                  <SidebarMenuButton asChild isActive={pathname === '/live-traffic'} className={cn(pathname === '/live-traffic' && "bg-white/10")}>
+                    <Link href="/live-traffic" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <Activity className={cn("h-5 w-5", pathname === '/live-traffic' ? "text-accent" : "text-primary")} />
                       <span>Temps Réel</span>
                     </Link>
                   </SidebarMenuButton>
@@ -263,9 +264,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('localTraffic') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/local-traffic'}>
-                    <Link href="/local-traffic" className="font-medium flex items-center gap-2">
-                      <Radar className={pathname === '/local-traffic' ? "text-accent" : "text-primary"} />
+                  <SidebarMenuButton asChild isActive={pathname === '/local-traffic'} className={cn(pathname === '/local-traffic' && "bg-white/10")}>
+                    <Link href="/local-traffic" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <Radar className={cn("h-5 w-5", pathname === '/local-traffic' ? "text-accent" : "text-primary")} />
                       <span>Trafic Local</span>
                     </Link>
                   </SidebarMenuButton>
@@ -274,10 +275,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('kFlowNav') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/k-flow-nav'} className="bg-primary/10 mb-1">
+                  <SidebarMenuButton asChild isActive={pathname === '/k-flow-nav'} className={cn("bg-primary/10 mb-1 h-11 rounded-xl px-4", pathname === '/k-flow-nav' && "bg-primary/20")}>
                     <Link href="/k-flow-nav" className="font-bold flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Navigation className={pathname === '/k-flow-nav' ? "text-accent" : "text-primary"} />
+                      <div className="flex items-center gap-3">
+                        <Navigation className={cn("h-5 w-5", pathname === '/k-flow-nav' ? "text-accent" : "text-primary")} />
                         <span>K-Flow Nav</span>
                       </div>
                       <Badge className="bg-primary/20 text-primary text-[8px]">PREMIUM</Badge>
@@ -288,10 +289,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('insights') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/insights'} className="bg-primary/5 mb-2">
+                  <SidebarMenuButton asChild isActive={pathname === '/insights'} className={cn("bg-primary/5 mb-2 h-11 rounded-xl px-4", pathname === '/insights' && "bg-primary/15")}>
                     <Link href="/insights" className="font-bold flex items-center justify-between w-full text-primary">
-                      <div className="flex items-center gap-2">
-                        <Zap className={pathname === '/insights' ? "text-accent" : "text-primary"} />
+                      <div className="flex items-center gap-3">
+                        <Zap className={cn("h-5 w-5", pathname === '/insights' ? "text-accent" : "text-primary")} />
                         <span>K-Flow Insights</span>
                       </div>
                       <Badge className="bg-primary/20 text-primary text-[8px]">AI</Badge>
@@ -302,9 +303,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('fluxInfrastructure') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/flux-infrastructure'}>
-                    <Link href="/flux-infrastructure" className="font-medium flex items-center gap-2">
-                      <BarChart3 className={pathname === '/flux-infrastructure' ? "text-accent" : "text-primary"} />
+                  <SidebarMenuButton asChild isActive={pathname === '/flux-infrastructure'} className={cn(pathname === '/flux-infrastructure' && "bg-white/10")}>
+                    <Link href="/flux-infrastructure" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <BarChart3 className={cn("h-5 w-5", pathname === '/flux-infrastructure' ? "text-accent" : "text-primary")} />
                       <span>Flux & Infrastructure</span>
                     </Link>
                   </SidebarMenuButton>
@@ -313,9 +314,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('routes') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/routes'}>
-                    <Link href="/routes" className="font-medium flex items-center gap-2">
-                      <Route className={pathname === '/routes' ? "text-accent" : "text-primary"} />
+                  <SidebarMenuButton asChild isActive={pathname === '/routes'} className={cn(pathname === '/routes' && "bg-white/10")}>
+                    <Link href="/routes" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <Route className={cn("h-5 w-5", pathname === '/routes' ? "text-accent" : "text-primary")} />
                       <span>État des Routes</span>
                     </Link>
                   </SidebarMenuButton>
@@ -324,9 +325,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('map') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/map'}>
-                    <Link href="/map" className="font-medium flex items-center gap-2">
-                      <Map className={pathname === '/map' ? "text-accent" : "text-primary"} />
+                  <SidebarMenuButton asChild isActive={pathname === '/map'} className={cn(pathname === '/map' && "bg-white/10")}>
+                    <Link href="/map" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <Map className={cn("h-5 w-5", pathname === '/map' ? "text-accent" : "text-primary")} />
                       <span>Carte</span>
                     </Link>
                   </SidebarMenuButton>
@@ -335,9 +336,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('assistant') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/assistant'}>
-                    <Link href="/assistant" className="font-medium flex items-center gap-2">
-                      <Bot className={pathname === '/assistant' ? "text-accent" : "text-primary"} />
+                  <SidebarMenuButton asChild isActive={pathname === '/assistant'} className={cn(pathname === '/assistant' && "bg-white/10")}>
+                    <Link href="/assistant" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <Bot className={cn("h-5 w-5", pathname === '/assistant' ? "text-accent" : "text-primary")} />
                       <span>Assistant IA</span>
                     </Link>
                   </SidebarMenuButton>
@@ -346,10 +347,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('notifications') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/notifications'}>
-                    <Link href="/notifications" className="font-medium flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Bell className={pathname === '/notifications' ? "text-accent" : "text-primary"} />
+                  <SidebarMenuButton asChild isActive={pathname === '/notifications'} className={cn(pathname === '/notifications' && "bg-white/10")}>
+                    <Link href="/notifications" className="font-medium flex items-center justify-between w-full h-11 px-4 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Bell className={cn("h-5 w-5", pathname === '/notifications' ? "text-accent" : "text-primary")} />
                         <span>Notifications</span>
                       </div>
                       {unreadNotifications > 0 && <Badge variant="destructive" className="h-5 px-1.5 min-w-[20px] justify-center text-[10px] rounded-full font-black">{unreadNotifications}</Badge>}
@@ -360,9 +361,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('myStars') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/mes-stars'}>
-                    <Link href="/mes-stars" className="font-medium flex items-center gap-2">
-                      <Star className={pathname === '/mes-stars' ? "text-accent" : "text-primary"} />
+                  <SidebarMenuButton asChild isActive={pathname === '/mes-stars'} className={cn(pathname === '/mes-stars' && "bg-white/10")}>
+                    <Link href="/mes-stars" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <Star className={cn("h-5 w-5", pathname === '/mes-stars' ? "text-accent" : "text-primary")} />
                       <span>{subSettings?.mode === 'cash' ? "Mon Accès" : "Mes Stars"}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -375,17 +376,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <>
                   <div className="px-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Admin</div>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/navigation'}>
-                      <Link href="/admin/navigation" className="font-medium flex items-center gap-2">
-                        <LayoutGrid className="text-destructive" />
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/navigation'} className={cn(pathname === '/admin/navigation' && "bg-white/10")}>
+                      <Link href="/admin/navigation" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <LayoutGrid className="text-destructive h-5 w-5" />
                         <span>Navigation</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/admin/stars'}>
-                      <Link href="/admin/stars" className="font-medium flex items-center gap-2">
-                        <Users className="text-destructive" />
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/stars'} className={cn(pathname === '/admin/stars' && "bg-white/10")}>
+                      <Link href="/admin/stars" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <Users className="text-destructive h-5 w-5" />
                         <span>Stars & Utilisateurs</span>
                       </Link>
                     </SidebarMenuButton>

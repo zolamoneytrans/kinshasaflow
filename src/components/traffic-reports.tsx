@@ -15,7 +15,8 @@ import {
   TrendingDown,
   ArrowUpRight,
   MapPin,
-  Waves
+  Waves,
+  Bot
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,7 +70,6 @@ export default function TrafficReports() {
     if (!isRefresh) setLoading(true);
     
     try {
-      // Analyse complète des 100 axes de la ville
       const data = await getGoogleTrafficStatusAction(MAJOR_AXES);
       setLastUpdated(new Date());
       
@@ -110,7 +110,6 @@ export default function TrafficReports() {
         status: rep.severity === 'high' ? 'EMBOUTEILLAGE' : rep.severity === 'medium' ? 'DENSE' : 'MODÉRÉ',
         speed: 0, delay: 5, updatedAt: "Communauté", source: 'user'
     }));
-    // Combiner et trier par sévérité (Retard)
     return [...formattedUserReports, ...navIncidents].sort((a, b) => b.delay - a.delay);
   }, [navIncidents, userReports]);
 
@@ -139,7 +138,6 @@ export default function TrafficReports() {
   return (
     <div className="flex-1 flex flex-col h-full w-full bg-slate-50/50 overflow-hidden">
       
-      {/* Header compact & Actions */}
       <div className="bg-white border-b shadow-sm z-30 p-4 md:p-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -177,7 +175,6 @@ export default function TrafficReports() {
       <div className="p-4 md:p-6 flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-8 pb-20">
             
-            {/* Dashboard Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
                     <CardContent className="p-6 flex items-center justify-between">
@@ -231,8 +228,6 @@ export default function TrafficReports() {
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
-                
-                {/* Search & List */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="relative group">
                         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-blue-400/20 rounded-2xl blur opacity-25 group-focus-within:opacity-100 transition duration-500"></div>
@@ -327,7 +322,6 @@ export default function TrafficReports() {
                     </div>
                 </div>
 
-                {/* Sidebar Hotspots */}
                 <div className="space-y-6">
                     <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
                         <CardHeader className="bg-slate-900 text-white p-6">

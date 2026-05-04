@@ -147,7 +147,7 @@ export default function TrafficReports() {
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">Rapports 100 Axes</h1>
                     <div className="flex items-center gap-2 mt-0.5">
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[9px] font-black uppercase tracking-widest" variant="outline">Scan Temps Réel</Badge>
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[9px] font-black uppercase tracking-widest" variant="outline">SCAN TEMPS RÉEL</Badge>
                         {lastUpdated && <span className="text-[10px] font-bold text-slate-400">MàJ: {format(lastUpdated, 'HH:mm:ss')}</span>}
                     </div>
                 </div>

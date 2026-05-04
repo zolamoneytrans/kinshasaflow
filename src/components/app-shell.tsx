@@ -240,7 +240,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {isEnabled('reports') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/reports'} className={cn(pathname === '/reports' && "bg-white/10")}>
-                    <Link href="/reports" className="font-medium flex items-center justify-between w-full h-11 px-4 rounded-xl">
+                    <Link href="/reports" className="font-bold flex items-center justify-between w-full h-11 px-4 rounded-xl">
                       <div className="flex items-center gap-3">
                         <Home className={cn("h-5 w-5", pathname === '/reports' ? "text-accent" : "text-primary")} />
                         <span>Rapports</span>

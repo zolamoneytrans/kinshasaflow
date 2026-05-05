@@ -71,21 +71,7 @@ const AddLogementDialog = () => {
 
         } catch (error: any) {
             console.error("Image upload error:", error);
-
-            if (error?.code === 'storage/retry-limit-exceeded' || error?.code === 'storage/unknown') {
-                toast({
-                    title: 'Erreur de Téléversement',
-                    description: "La limite de tentatives a été dépassée ou une erreur inconnue est survenue. Veuillez vérifier vos règles puis réessayez.",
-                    variant: 'destructive',
-                    duration: 20000,
-                    action: <ToastAction altText="Réessayer le téléversement" onClick={() => onSubmit(data)}>Réessayer</ToastAction>,
-                });
-                setIsSubmitting(false);
-                return;
-            }
-
-            let description = 'Une erreur est survenue lors du téléversement des images. Veuillez réessayer.';
-            toast({ title: 'Erreur Storage', description, variant: 'destructive', duration: 10000 });
+            toast({ title: 'Erreur Storage', description: 'Impossible de téléverser les images.', variant: 'destructive' });
             setIsSubmitting(false);
             return;
         }
@@ -188,7 +174,7 @@ const EditLogementDialog = ({ open, onOpenChange, logement }: { open: boolean, o
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={setEditDialogOpen}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader><DialogTitle>Modifier le logement</DialogTitle></DialogHeader>
                 <Form {...form}>
@@ -393,7 +379,7 @@ export default function LogementPage() {
                     <h1 className="text-3xl md:text-4xl font-bold flex items-center justify-center gap-3"><BedDouble className="h-8 w-8 text-primary"/>Logements Kinshasa</h1>
                     <p className="mt-2 text-lg text-muted-foreground">Appartements et studios meublés de court séjour.</p>
                 </div>
-                {isLoading ? <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"><Skeleton className="h-64 w-full" /><Skeleton className="h-64 w-full" /></div> : logements?.map(logement => <LogementCard key={logement.id} logement={logement} />)}
+                {isLoading ? <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"><Skeleton className="h-64 w-full" /><Skeleton className="h-64 w-full" /></div> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{logements?.map(logement => <LogementCard key={logement.id} logement={logement} />)}</div>}
             </div>
         </div>
     );

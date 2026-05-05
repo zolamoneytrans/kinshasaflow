@@ -229,16 +229,21 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
     const onSubmit = async (data: LogementApplicationFormValues) => {
         if (!user) return router.push('/login');
         setIsSubmitting(true);
-        const applicationData: Omit<LogementApplication, 'id' | 'createdAt'> = {
+        const applicationData: Omit<LogementApplication, 'createdAt'> = {
             ...data,
+            id: "", // Will be assigned by Firestore but type requires it
             logementId: logement.id,
             logementTitle: logement.title,
             applicantId: user.uid,
             status: 'pending',
         };
         const newApplicationRef = doc(collection(firestore, 'logement_applications'));
+        const finalData = { ...applicationData, createdAt: serverTimestamp() };
+        // Delete dummy id for Firestore add
+        delete (finalData as any).id;
+
         try {
-            await setDoc(newApplicationRef, { ...applicationData, createdAt: serverTimestamp() });
+            await setDoc(newApplicationRef, finalData);
             toast({ title: "Candidature envoyée !" });
             setOpen(false);
             form.reset();
@@ -246,7 +251,7 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: newApplicationRef.path,
                 operation: 'create',
-                requestResourceData: applicationData,
+                requestResourceData: finalData,
             }));
         } finally {
             setIsSubmitting(false);

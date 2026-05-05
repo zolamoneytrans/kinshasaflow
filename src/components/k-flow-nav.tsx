@@ -856,7 +856,10 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
             destination: destination,
             travelMode: g.maps.TravelMode.DRIVING,
             provideRouteAlternatives: true,
-            drivingOptions: { departureTime: new Date(), trafficModel: 'best_guess' }
+            drivingOptions: { 
+                departureTime: new Date(), 
+                trafficModel: g.maps.TrafficModel.BEST_GUESS
+            }
         }, (result: any, status: any) => {
             if (status === g.maps.DirectionsStatus.OK && result) {
                 const routes = result.routes;

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -304,12 +305,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isEnabled('fluxInfrastructure') && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/flux-infrastructure'} className={cn(pathname === '/flux-infrastructure' && "bg-white/10")}>
-                    <Link href="/flux-infrastructure" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
-                      <BarChart3 className={cn("h-5 w-5", pathname === '/flux-infrastructure' ? "text-accent" : "text-primary")} />
-                      <span>Flux & Infrastructure</span>
-                    </Link>
-                  </SidebarMenuButton>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/flux-infrastructure'} className={cn(pathname === '/flux-infrastructure' && "bg-white/10")}>
+                      <Link href="/flux-infrastructure" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <BarChart3 className={cn("h-5 w-5", pathname === '/flux-infrastructure' ? "text-accent" : "text-primary")} />
+                        <span>Flux & Infrastructure</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenuItem>
               )}
 

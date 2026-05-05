@@ -51,7 +51,6 @@ export default function AdvertsManager() {
         let videoUrl = '';
         try {
             const storage = getStorage(firebaseApp);
-            // On utilise un chemin autorisé par les règles Storage existantes
             const fileRef = storageRef(storage, `videos/${user.uid}/adverts/${adId}`);
             
             const snapshot = await uploadBytes(fileRef, file);

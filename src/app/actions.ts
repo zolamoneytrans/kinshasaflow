@@ -4,7 +4,7 @@ import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
 import { askAssistant } from "@/ai/flows/assistant-flow";
 import { generateSpeech } from "@/ai/flows/tts-flow";
 import { getStrategicInsights } from "@/ai/flows/strategic-insights-flow";
-import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsInput } from "@/lib/types";
+import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsInput, StrategicInsightsOutput } from "@/lib/types";
 import * as webpush from 'web-push';
 
 export async function getTrafficTipsAction(input: TrafficTipsInput) {
@@ -27,8 +27,19 @@ export async function generateSpeechAction(text: string) {
     }
 }
 
-export async function getStrategicInsightsAction(input: StrategicInsightsInput) {
-  return await getStrategicInsights(input);
+export async function getStrategicInsightsAction(input: StrategicInsightsInput): Promise<StrategicInsightsOutput> {
+  try {
+    const result = await getStrategicInsights(input);
+    if (!result) throw new Error("No data returned from AI flow");
+    return result;
+  } catch (error: any) {
+    console.error("Strategic Insights Action Error:", error);
+    return {
+      globalAdvice: "Analyse momentanément indisponible. Restez prudents sur les routes.",
+      tips: ["Vérifiez vos rétroviseurs", "Gardez vos distances de sécurité", "Évitez les axes saturés"],
+      trend: "stable"
+    };
+  }
 }
 
 export async function sendTestPushNotificationAction(subscription: PushSubscription, payload: string) {

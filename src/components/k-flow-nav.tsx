@@ -737,6 +737,9 @@ export default function KFlowNav() {
                         restriction={{ latLngBounds: KINSHASA_BOUNDS, strictBounds: false }}
                         mapId="kflow_nav_dark_v1"
                         className="w-full h-full"
+                        onCameraChanged={(e) => {
+                            if (e.detail.gesture) setAutoFollow(false);
+                        }}
                     >
                         <TrafficLayerComponent />
                         

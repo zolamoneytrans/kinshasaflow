@@ -386,7 +386,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {isPartnerAdmin && (
                 <>
-                  <div className="px-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Admin</div>
+                  <div className="px-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Admin Global</div>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/admin/navigation'} className={cn(pathname === '/admin/navigation' && "bg-white/10")}>
                       <Link href="/admin/navigation" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
@@ -400,6 +400,72 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <Link href="/admin/stars" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
                         <Users className="text-destructive h-5 w-5" />
                         <span>Stars & Utilisateurs</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/adverts'} className={cn(pathname === '/admin/adverts' && "bg-white/10")}>
+                      <Link href="/admin/adverts" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <Video className="text-destructive h-5 w-5" />
+                        <span>Publicités</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/notifications'} className={cn(pathname === '/admin/notifications' && "bg-white/10")}>
+                      <Link href="/admin/notifications" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <Bell className="text-destructive h-5 w-5" />
+                        <span>Diffusion Push</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <div className="px-4 mt-4 mb-2 text-[10px] font-black uppercase text-destructive/60 tracking-widest">Services</div>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/car-rental'} className={cn(pathname === '/admin/car-rental' && "bg-white/10")}>
+                      <Link href="/admin/car-rental" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <Car className="text-destructive h-5 w-5" />
+                        <span>Location Voiture</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/logement'} className={cn(pathname === '/admin/logement' && "bg-white/10")}>
+                      <Link href="/admin/logement" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <BedDouble className="text-destructive h-5 w-5" />
+                        <span>Logements</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/tourism'} className={cn(pathname === '/admin/tourism' && "bg-white/10")}>
+                      <Link href="/admin/tourism" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <Palmtree className="text-destructive h-5 w-5" />
+                        <span>Tourisme</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/transport'} className={cn(pathname === '/admin/transport' && "bg-white/10")}>
+                      <Link href="/admin/transport" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <Bus className="text-destructive h-5 w-5" />
+                        <span>Abonnements Bus</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/messages'} className={cn(pathname === '/admin/messages' && "bg-white/10")}>
+                      <Link href="/admin/messages" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <Mail className="text-destructive h-5 w-5" />
+                        <span>Messages</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/admin/test-push'} className={cn(pathname === '/admin/test-push' && "bg-white/10")}>
+                      <Link href="/admin/test-push" className="font-medium flex items-center gap-3 h-11 px-4 rounded-xl">
+                        <Smartphone className="text-destructive h-5 w-5" />
+                        <span>Push Engine</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

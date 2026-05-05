@@ -232,17 +232,16 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
         
         const newApplicationRef = doc(collection(firestore, 'logement_applications'));
         
-        const applicationData = {
+        const applicationData: Omit<LogementApplication, 'createdAt' | 'id'> = {
             logementId: logement.id,
             logementTitle: logement.title,
             applicantId: user.uid,
             status: 'pending',
             ...data,
-            createdAt: serverTimestamp(),
         };
 
         try {
-            await setDoc(newApplicationRef, applicationData);
+            await setDoc(newApplicationRef, { ...applicationData, createdAt: serverTimestamp() });
             toast({ title: "Candidature envoyée !" });
             setOpen(false);
             form.reset();

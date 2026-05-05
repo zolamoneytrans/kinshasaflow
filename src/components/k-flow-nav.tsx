@@ -371,7 +371,7 @@ export default function KFlowNav() {
                 provideRouteAlternatives: true,
                 drivingOptions: { 
                     departureTime: new Date(), 
-                    trafficModel: g.maps.TrafficModel.BEST_GUESS
+                    trafficModel: 'bestguess'
                 }
             });
 
@@ -861,7 +861,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
             provideRouteAlternatives: true,
             drivingOptions: { 
                 departureTime: new Date(), 
-                trafficModel: g.maps.TrafficModel.BEST_GUESS
+                trafficModel: 'bestguess'
             }
         }, (result: any, status: any) => {
             if (status === g.maps.DirectionsStatus.OK && result) {

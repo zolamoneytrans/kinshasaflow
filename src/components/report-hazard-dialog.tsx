@@ -219,7 +219,7 @@ export function ReportHazardDialog({ location }: { location: {lat: number, lng: 
 
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting || !location} className="w-full h-14 rounded-2xl text-lg font-black shadow-xl shadow-primary/20">
-                  {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2 h-5 w-5" />}
+                  {isSubmitting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Send className="mr-2 h-5 w-5" />}
                   Diffuser l'Alerte
                 </Button>
               </DialogFooter>

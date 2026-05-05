@@ -371,7 +371,7 @@ export default function KFlowNav() {
                 provideRouteAlternatives: true,
                 drivingOptions: { 
                     departureTime: new Date(), 
-                    trafficModel: g.maps.TrafficModel.BEST_GUESS 
+                    trafficModel: g.maps.TrafficModel.BEST_GUESS
                 }
             });
 

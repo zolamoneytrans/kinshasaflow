@@ -229,18 +229,15 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
     const onSubmit = async (data: LogementApplicationFormValues) => {
         if (!user) return router.push('/login');
         setIsSubmitting(true);
-        const applicationData: Omit<LogementApplication, 'createdAt'> = {
-            ...data,
-            id: "", // Will be assigned by Firestore but type requires it
+        const applicationData: Omit<LogementApplication, 'id' | 'createdAt'> = {
             logementId: logement.id,
             logementTitle: logement.title,
             applicantId: user.uid,
             status: 'pending',
+            ...data,
         };
         const newApplicationRef = doc(collection(firestore, 'logement_applications'));
         const finalData = { ...applicationData, createdAt: serverTimestamp() };
-        // Delete dummy id for Firestore add
-        delete (finalData as any).id;
 
         try {
             await setDoc(newApplicationRef, finalData);

@@ -96,6 +96,7 @@ export const reportFormSchema = z.object({
   location: z.string().min(2, "Le lieu est requis"),
   description: z.string().min(5, "La description est trop courte"),
   severity: z.enum(["low", "medium", "high"]),
+  picture: z.any().optional(),
 });
 export type ReportFormValues = z.infer<typeof reportFormSchema>;
 

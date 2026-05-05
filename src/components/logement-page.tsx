@@ -72,42 +72,24 @@ const AddLogementDialog = () => {
         } catch (error: any) {
             console.error("Image upload error:", error);
 
-            // Handle the specific retryable error with a custom toast and retry action
             if (error?.code === 'storage/retry-limit-exceeded' || error?.code === 'storage/unknown') {
                 toast({
                     title: 'Erreur de Téléversement',
-                    description: "La limite de tentatives a été dépassée ou une erreur inconnue est survenue. Ceci est généralement dû à des règles de sécurité Firebase Storage qui bloquent l'accès. Veuillez vérifier vos règles puis réessayez.",
+                    description: "La limite de tentatives a été dépassée ou une erreur inconnue est survenue. Veuillez vérifier vos règles puis réessayez.",
                     variant: 'destructive',
                     duration: 20000,
                     action: <ToastAction altText="Réessayer le téléversement" onClick={() => onSubmit(data)}>Réessayer</ToastAction>,
                 });
-                setIsSubmitting(false); // Stop loading state to allow retry
+                setIsSubmitting(false);
                 return;
             }
 
-            // Handle other general errors
             let description = 'Une erreur est survenue lors du téléversement des images. Veuillez réessayer.';
-            if (error && typeof error === 'object' && 'code' in error) {
-                switch (error.code) {
-                    case 'storage/unauthorized':
-                        description = "Permission de téléversement refusée. Veuillez vérifier que vos règles de sécurité Firebase Storage autorisent l'écriture pour les administrateurs.";
-                        break;
-                    case 'storage/canceled':
-                        description = "Le téléversement a été annulé.";
-                        break;
-                    case 'storage/object-not-found':
-                         description = "Fichier non trouvé. Un problème est survenu.";
-                        break;
-                    default:
-                        description = `Erreur de stockage non gérée: ${error.code}`;
-                }
-            }
-            toast({ title: 'Étape 1/2 Échouée : Erreur de téléversement des images', description, variant: 'destructive', duration: 10000 });
+            toast({ title: 'Erreur Storage', description, variant: 'destructive', duration: 10000 });
             setIsSubmitting(false);
-            return; // Stop execution for non-retryable errors
+            return;
         }
 
-        // STAGE 2: Create Firestore document.
         const logementData = {
             title: data.title,
             description: data.description,
@@ -121,22 +103,15 @@ const AddLogementDialog = () => {
 
         try {
             await setDoc(newLogementRef, logementData);
-
-            toast({ title: 'Logement ajouté !', description: 'Le nouveau logement est maintenant visible par les utilisateurs.' });
+            toast({ title: 'Logement ajouté !' });
             setOpen(false);
             form.reset();
-
         } catch (serverError: any) {
-            console.error("Firestore write error:", serverError);
-            // Create a detailed, contextual error object
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: newLogementRef.path,
                 operation: 'create',
                 requestResourceData: logementData,
-            });
-            // Emit the error globally. This will be caught by FirebaseErrorListener,
-            // which will throw it to show the Next.js error overlay for debugging.
-            errorEmitter.emit('permission-error', permissionError);
+            }));
         } finally {
             setIsSubmitting(false);
         }
@@ -145,65 +120,31 @@ const AddLogementDialog = () => {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Ajouter un appartement
-                </Button>
+                <Button><PlusCircle className="mr-2 h-4 w-4" />Ajouter un appartement</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Nouveau Logement</DialogTitle>
-                </DialogHeader>
+                <DialogHeader><DialogTitle>Nouveau Logement</DialogTitle></DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         <FormField control={form.control} name="title" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Titre</FormLabel>
-                                <FormControl><Input placeholder="Ex: Bel appartement moderne à Gombe" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            <FormItem><FormLabel>Titre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                         <FormField control={form.control} name="address" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Adresse</FormLabel>
-                                <FormControl><Input placeholder="Ex: 123 Avenue de la Justice, Gombe, Kinshasa" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                        <FormField control={form.control} name="address" render={({ field }) => (
+                            <FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="description" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Description</FormLabel>
-                                <FormControl><Textarea placeholder="Décrivez le logement en détail..." {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                         <FormField control={form.control} name="pricePerMonth" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Prix par mois (USD)</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                        <FormField control={form.control} name="pricePerMonth" render={({ field }) => (
+                            <FormItem><FormLabel>Prix/mois ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                         <FormField control={form.control} name="amenities" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Commodités (séparées par une virgule)</FormLabel>
-                                <FormControl><Input placeholder="Ex: WiFi, Climatisation, Parking" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                        <FormField control={form.control} name="amenities" render={({ field }) => (
+                            <FormItem><FormLabel>Commodités</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        <FormField control={form.control} name="images" render={({ field: { onChange, ...fieldProps} }) => (
-                            <FormItem>
-                                <FormLabel>Images</FormLabel>
-                                <FormControl><Input type="file" multiple accept="image/*" onChange={e => onChange(e.target.files)} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                        <FormField control={form.control} name="images" render={({ field: { onChange } }) => (
+                            <FormItem><FormLabel>Images</FormLabel><FormControl><Input type="file" multiple accept="image/*" onChange={e => onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        <DialogFooter>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Publier le logement
-                            </Button>
-                        </DialogFooter>
+                        <DialogFooter><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Publier</Button></DialogFooter>
                     </form>
                 </Form>
             </DialogContent>
@@ -211,7 +152,6 @@ const AddLogementDialog = () => {
     );
 };
 
-// --- Edit Logement Dialog (for Admin) ---
 const EditLogementDialog = ({ open, onOpenChange, logement }: { open: boolean, onOpenChange: (open: boolean) => void, logement: Logement & { id: string } }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
@@ -228,38 +168,20 @@ const EditLogementDialog = ({ open, onOpenChange, logement }: { open: boolean, o
         },
     });
 
-    useEffect(() => {
-        form.reset({
-            title: logement.title,
-            description: logement.description,
-            address: logement.address,
-            pricePerMonth: logement.pricePerMonth,
-            amenities: logement.amenities.join(', '),
-        });
-    }, [logement, form, open]);
-
-
     const onSubmit = async (data: EditLogementFormValues) => {
         setIsSubmitting(true);
         const logementDocRef = doc(firestore, 'logements', logement.id);
-        
-        const updateData = {
-            ...data,
-            amenities: data.amenities.split(',').map(a => a.trim()).filter(a => a),
-        };
-
+        const updateData = { ...data, amenities: data.amenities.split(',').map(a => a.trim()).filter(a => a) };
         try {
             await updateDoc(logementDocRef, updateData);
-            toast({ title: 'Mise à jour réussie!', description: 'Les informations du logement ont été mises à jour.' });
+            toast({ title: 'Mise à jour réussie!' });
             onOpenChange(false);
         } catch (error) {
-            console.error("Failed to update logement:", error);
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: logementDocRef.path,
                 operation: 'update',
                 requestResourceData: updateData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
         } finally {
             setIsSubmitting(false);
         }
@@ -267,54 +189,28 @@ const EditLogementDialog = ({ open, onOpenChange, logement }: { open: boolean, o
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Modifier le logement</DialogTitle>
-                    <DialogDescription>Mettez à jour les informations de &quot;{logement.title}&quot;.</DialogDescription>
-                </DialogHeader>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader><DialogTitle>Modifier le logement</DialogTitle></DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                         <FormField control={form.control} name="title" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Titre</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            <FormItem><FormLabel>Titre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                         <FormField control={form.control} name="address" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Adresse</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                        <FormField control={form.control} name="address" render={({ field }) => (
+                            <FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="description" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Description</FormLabel>
-                                <FormControl><Textarea {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                         <FormField control={form.control} name="pricePerMonth" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Prix par mois (USD)</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                        <FormField control={form.control} name="pricePerMonth" render={({ field }) => (
+                            <FormItem><FormLabel>Prix ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                         <FormField control={form.control} name="amenities" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Commodités (séparées par une virgule)</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                        <FormField control={form.control} name="amenities" render={({ field }) => (
+                            <FormItem><FormLabel>Commodités</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <DialogFooter>
-                             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuler</Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Enregistrer
-                            </Button>
+                            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Annuler</Button>
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Enregistrer</Button>
                         </DialogFooter>
                     </form>
                 </Form>
@@ -323,23 +219,16 @@ const EditLogementDialog = ({ open, onOpenChange, logement }: { open: boolean, o
     );
 };
 
-
-// --- Admin Dashboard (conditionally rendered) ---
 const AdminDashboard = () => (
-    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Card className="bg-primary/5 border-primary/20">
-            <CardHeader>
-                <CardTitle>Tableau de Bord Administrateur</CardTitle>
-                <CardDescription>Gérez les appartements disponibles sur la plateforme.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <AddLogementDialog />
-            </CardContent>
-        </Card>
-    </motion.div>
+    <Card className="bg-primary/5 border-primary/20">
+        <CardHeader>
+            <CardTitle>Administration Logement</CardTitle>
+            <CardDescription>Gérez les appartements de court séjour.</CardDescription>
+        </CardHeader>
+        <CardContent><AddLogementDialog /></CardContent>
+    </Card>
 );
 
-// --- Logement Application Dialog ---
 const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
     const [open, setOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -349,37 +238,11 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
 
     const form = useForm<LogementApplicationFormValues>({
         resolver: zodResolver(logementApplicationFormSchema),
-        defaultValues: {
-            name: user?.displayName || '',
-            email: user?.email || '',
-            address: '',
-            phone: '',
-            country: '',
-            city: '',
-            whatsapp: '',
-        },
+        defaultValues: { name: user?.displayName || '', email: user?.email || '', address: '', phone: '', country: '', city: '', whatsapp: '' },
     });
     
-    useEffect(() => {
-        if(user) {
-            form.reset({
-                name: user.displayName || '',
-                email: user.email || '',
-                phone: user.phoneNumber || '',
-                address: '',
-                country: '',
-                city: '',
-                whatsapp: '',
-            })
-        }
-    }, [user, form]);
-
     const onSubmit = async (data: LogementApplicationFormValues) => {
-        if (!user) {
-            toast({ title: "Connexion requise", description: "Vous devez être connecté pour postuler.", variant: "destructive" });
-            return router.push('/login');
-        }
-
+        if (!user) return router.push('/login');
         setIsSubmitting(true);
         const applicationData: Omit<LogementApplication, 'id' | 'createdAt'> = {
             ...data,
@@ -388,25 +251,18 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
             applicantId: user.uid,
             status: 'pending',
         };
-
         const newApplicationRef = doc(collection(firestore, 'logement_applications'));
-
         try {
             await setDoc(newApplicationRef, { ...applicationData, createdAt: serverTimestamp() });
-            toast({
-                title: "Candidature envoyée !",
-                description: "Votre demande a été soumise. Le propriétaire vous contactera bientôt."
-            });
+            toast({ title: "Candidature envoyée !" });
             setOpen(false);
             form.reset();
         } catch (error) {
-            console.error("Error submitting application:", error);
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: newApplicationRef.path,
                 operation: 'create',
                 requestResourceData: applicationData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
         } finally {
             setIsSubmitting(false);
         }
@@ -414,14 +270,9 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button>Postuler</Button>
-            </DialogTrigger>
+            <DialogTrigger asChild><Button>Postuler</Button></DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Postuler pour : {logement.title}</DialogTitle>
-                    <DialogDescription>Veuillez remplir vos informations. Le propriétaire vous contactera.</DialogDescription>
-                </DialogHeader>
+                <DialogHeader><DialogTitle>Postuler : {logement.title}</DialogTitle></DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                         <div className="grid md:grid-cols-2 gap-4">
@@ -446,15 +297,9 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
                                 <FormItem><FormLabel>Pays</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                         </div>
-                         <FormField control={form.control} name="whatsapp" render={({ field }) => (
-                            <FormItem><FormLabel>WhatsApp (Optionnel)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
                         <DialogFooter>
                             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Envoyer la candidature
-                            </Button>
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Envoyer</Button>
                         </DialogFooter>
                     </form>
                 </Form>
@@ -463,7 +308,6 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
     )
 }
 
-// --- Logement Card ---
 const LogementCard = ({ logement }: { logement: Logement & { id: string } }) => {
     const { user } = useUser();
     const { firestore, firebaseApp } = useFirebase();
@@ -472,35 +316,16 @@ const LogementCard = ({ logement }: { logement: Logement & { id: string } }) => 
     const [isDeleting, setIsDeleting] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-
     const handleDelete = async () => {
         if (!isAdmin) return;
-
         setIsDeleting(true);
         try {
             const storage = getStorage(firebaseApp);
-
-            // Delete associated images from Firebase Storage
-            const imageDeletePromises = logement.imageUrls.map(url => {
-                const imageRef = storageRef(storage, url);
-                return deleteObject(imageRef);
-            });
-            await Promise.all(imageDeletePromises);
-
-            // Delete the document from Firestore
+            await Promise.all(logement.imageUrls.map(url => deleteObject(storageRef(storage, url))));
             await deleteDoc(doc(firestore, 'logements', logement.id));
-
-            toast({
-                title: "Succès",
-                description: "Le logement a été supprimé.",
-            });
+            toast({ title: "Succès", description: "Le logement a été supprimé." });
         } catch (error) {
-            console.error("Error deleting logement:", error);
-            toast({
-                title: "Erreur",
-                description: "Impossible de supprimer le logement. Vérifiez les règles de sécurité et les permissions.",
-                variant: "destructive",
-            });
+            toast({ title: "Erreur", variant: "destructive" });
             setIsDeleting(false);
         }
     };
@@ -512,55 +337,26 @@ const LogementCard = ({ logement }: { logement: Logement & { id: string } }) => 
                 <CarouselContent>
                     {logement.imageUrls.map((url, index) => (
                         <CarouselItem key={index}>
-                            <div className="relative aspect-video bg-muted">
-                                <Image src={url} alt={logement.title} fill className="object-cover" data-ai-hint="apartment interior" />
-                            </div>
+                            <div className="relative aspect-video bg-muted"><Image src={url} alt={logement.title} fill className="object-cover" /></div>
                         </CarouselItem>
                     ))}
                 </CarouselContent>
-                {logement.imageUrls.length > 1 && <>
-                    <CarouselPrevious className="left-2" />
-                    <CarouselNext className="right-2" />
-                </>}
+                {logement.imageUrls.length > 1 && <><CarouselPrevious className="left-2" /><CarouselNext className="right-2" /></>}
             </Carousel>
             <CardHeader className="relative">
                 <CardTitle>{logement.title}</CardTitle>
                 <CardDescription className="flex items-center gap-1 pt-1"><Building className="h-4 w-4" /> {logement.address}</CardDescription>
-                
                 {isAdmin && (
                     <div className="absolute top-4 right-2">
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" disabled={isDeleting}>
-                                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
-                                </Button>
-                            </DropdownMenuTrigger>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" disabled={isDeleting}><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => setEditDialogOpen(true)} className="cursor-pointer">
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Modifier
-                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setEditDialogOpen(true)}><Pencil className="mr-2 h-4 w-4" />Modifier</DropdownMenuItem>
                                 <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive cursor-pointer">
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Supprimer
-                                        </DropdownMenuItem>
-                                    </AlertDialogTrigger>
+                                    <AlertDialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" />Supprimer</DropdownMenuItem></AlertDialogTrigger>
                                     <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Êtes-vous absolument sûr?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Cette action est irréversible. Le logement et toutes ses images seront définitivement supprimés.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Supprimer
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
+                                        <AlertDialogHeader><AlertDialogTitle>Supprimer ?</AlertDialogTitle><AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription></AlertDialogHeader>
+                                        <AlertDialogFooter><AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel><AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive">Supprimer</AlertDialogAction></AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
                             </DropdownMenuContent>
@@ -570,15 +366,10 @@ const LogementCard = ({ logement }: { logement: Logement & { id: string } }) => 
             </CardHeader>
             <CardContent className="flex-1">
                 <p className="text-sm text-muted-foreground mb-4">{logement.description}</p>
-                <div className="flex flex-wrap gap-2">
-                    {logement.amenities.map(amenity => <Badge key={amenity} variant="secondary">{amenity}</Badge>)}
-                </div>
+                <div className="flex flex-wrap gap-2">{logement.amenities.map(amenity => <Badge key={amenity} variant="secondary">{amenity}</Badge>)}</div>
             </CardContent>
             <CardFooter className="bg-muted/50 p-4 flex justify-between items-center">
-                <div className="font-bold text-lg flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    {logement.pricePerMonth} <span className="text-sm font-normal text-muted-foreground">/ mois</span>
-                </div>
+                <div className="font-bold text-lg flex items-center gap-2"><DollarSign className="h-5 w-5" />{logement.pricePerMonth} <span className="text-sm font-normal">/ mois</span></div>
                 <ApplyDialog logement={logement} />
             </CardFooter>
         </Card>
@@ -587,98 +378,22 @@ const LogementCard = ({ logement }: { logement: Logement & { id: string } }) => 
     );
 };
 
-// --- Skeleton Loader ---
-const LogementSkeleton = () => (
-    <Card className="overflow-hidden">
-        <Skeleton className="w-full aspect-video" />
-        <CardHeader>
-            <Skeleton className="h-6 w-3/4" />
-            <Skeleton className="h-4 w-1/2 mt-1" />
-        </CardHeader>
-        <CardContent>
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-5/6" />
-            <div className="flex gap-2 mt-4">
-                <Skeleton className="h-6 w-20" />
-                <Skeleton className="h-6 w-24" />
-            </div>
-        </CardContent>
-        <CardFooter className="p-4">
-             <Skeleton className="h-10 w-full" />
-        </CardFooter>
-    </Card>
-);
-
-
-// --- Main Page Component ---
 export default function LogementPage() {
     const { user } = useUser();
     const { firestore } = useFirebase();
     const isAdmin = user?.email === 'drnduwa@gmail.com';
-
-    const logementsCollection = useMemoFirebase(() => collection(firestore, 'logements'), [firestore]);
-    const logementsQuery = useMemoFirebase(() => query(logementsCollection, orderBy('createdAt', 'desc')), [logementsCollection]);
+    const logementsQuery = useMemoFirebase(() => query(collection(firestore, 'logements'), orderBy('createdAt', 'desc')), [firestore]);
     const { data: logements, isLoading } = useCollection<Logement>(logementsQuery);
 
     return (
         <div className="w-full h-full overflow-y-auto pr-2">
             <div className="space-y-8 max-w-7xl mx-auto py-4">
                 {isAdmin && <AdminDashboard />}
-
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-                    <div className="text-center">
-                        <h1 className="text-3xl md:text-4xl font-bold flex items-center justify-center gap-3"><BedDouble className="h-8 w-8 text-primary"/>Logements de Court Séjour à Kinshasa</h1>
-                        <p className="mt-2 text-lg text-muted-foreground">Votre confort, notre priorité. Trouvez l'appartement idéal pour votre séjour.</p>
-                    </div>
-                </motion.div>
-
-                {isLoading ? (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <LogementSkeleton />
-                        <LogementSkeleton />
-                        <LogementSkeleton />
-                    </div>
-                ) : logements && logements.length > 0 ? (
-                    <motion.div 
-                        className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-                        initial="hidden"
-                        animate="visible"
-                        variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-                    >
-                        <AnimatePresence>
-                            {logements.map(logement => (
-                               <motion.div key={logement.id} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} layout>
-                                 <LogementCard logement={logement} />
-                               </motion.div>
-                            ))}
-                        </AnimatePresence>
-                    </motion.div>
-                ) : (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-                        <Card className="text-center py-12">
-                            <CardContent>
-                                <p className="text-muted-foreground">Aucun logement disponible pour le moment.</p>
-                                <p className="text-sm text-muted-foreground">Revenez bientôt pour découvrir nos offres.</p>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                )}
-
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
-                    <Card className="bg-accent/50 border-accent">
-                        <CardHeader className="items-center text-center">
-                            <CardTitle className="flex items-center gap-2"><Phone /> Publiez votre appartement</CardTitle>
-                            <CardDescription>
-                                Vous êtes propriétaire et souhaitez que votre bien soit visible sur Kinshasa Flow ? <br/>Contactez notre service client pour en savoir plus.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-center">
-                            <a href="tel:0857767040" className="text-2xl font-bold text-primary hover:underline">
-                                0857767040
-                            </a>
-                        </CardContent>
-                    </Card>
-                </motion.div>
+                <div className="text-center">
+                    <h1 className="text-3xl md:text-4xl font-bold flex items-center justify-center gap-3"><BedDouble className="h-8 w-8 text-primary"/>Logements Kinshasa</h1>
+                    <p className="mt-2 text-lg text-muted-foreground">Appartements et studios meublés de court séjour.</p>
+                </div>
+                {isLoading ? <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"><Skeleton className="h-64 w-full" /><Skeleton className="h-64 w-full" /></div> : logements?.map(logement => <LogementCard key={logement.id} logement={logement} />)}
             </div>
         </div>
     );

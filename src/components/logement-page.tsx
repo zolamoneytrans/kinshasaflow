@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -380,7 +381,7 @@ const ApplyDialog = ({ logement }: { logement: Logement & { id: string } }) => {
         }
 
         setIsSubmitting(true);
-        const applicationData: Omit<LogementApplication, 'createdAt'> = {
+        const applicationData: Omit<LogementApplication, 'id' | 'createdAt'> = {
             ...data,
             logementId: logement.id,
             logementTitle: logement.title,

@@ -91,6 +91,14 @@ export const reportHazardFormSchema = z.object({
 });
 export type ReportHazardFormValues = z.infer<typeof reportHazardFormSchema>;
 
+// Traffic Incident Reports (Community)
+export const reportFormSchema = z.object({
+  location: z.string().min(2, "Le lieu est requis"),
+  description: z.string().min(5, "La description est trop courte"),
+  severity: z.enum(["low", "medium", "high"]),
+});
+export type ReportFormValues = z.infer<typeof reportFormSchema>;
+
 // User profile extension for Stars System
 export const userProfileSchema = z.object({
   id: z.string(),

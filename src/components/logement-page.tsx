@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -174,7 +173,7 @@ const EditLogementDialog = ({ open, onOpenChange, logement }: { open: boolean, o
     };
 
     return (
-        <Dialog open={open} onOpenChange={setEditDialogOpen}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader><DialogTitle>Modifier le logement</DialogTitle></DialogHeader>
                 <Form {...form}>

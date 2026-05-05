@@ -171,7 +171,7 @@ export default function LocalTrafficSummary() {
                     <CardHeader className="p-4 border-b border-slate-100 flex-row items-center justify-between space-y-0">
                         <div className="flex items-center gap-3">
                             <div className="bg-primary p-2 rounded-xl relative">
-                                <Radar className="text-white h-5 w-5 animate-spin duration-[4000ms]" />
+                                <Radar className="text-white h-5 w-5 animate-spin" style={{ animationDuration: '4s' }} />
                                 <span className="absolute inset-0 bg-primary/20 rounded-xl animate-ping"></span>
                             </div>
                             <div>

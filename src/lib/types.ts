@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { Timestamp } from "firebase/firestore";
 
 /**
  * Re-export FirestorePermissionError for components that expect it in lib/types
@@ -99,7 +98,7 @@ export const reportFormSchema = z.object({
 });
 export type ReportFormValues = z.infer<typeof reportFormSchema>;
 
-// User profile extension for Stars System
+// User profile
 export const userProfileSchema = z.object({
   id: z.string(),
   email: z.string().email(),

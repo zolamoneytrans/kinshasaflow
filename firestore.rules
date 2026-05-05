@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -26,6 +25,17 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isSignedIn(); // allow votes
       allow delete: if isAdmin();
+    }
+
+    /** Daily Traffic Audit & Insights */
+    match /daily_traffic_reports/{reportId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /traffic_insights/{id} {
+      allow read: if true;
+      allow write: if isSignedIn();
     }
 
     /** Application Settings */
@@ -61,8 +71,29 @@ service cloud.firestore {
       }
     }
     
-    // ... existing rules for other collections
-    match /notifications/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
-    match /events/{id} { allow read, create: if isSignedIn(); allow update, delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId); }
+    /** Community & Content */
+    match /notifications/{id} { allow read: if true; allow create: if isSignedIn(); allow update, delete: if isAdmin(); }
+    match /events/{id} { 
+      allow read, create: if isSignedIn(); 
+      allow update, delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId); 
+      match /comments/{commentId} { allow read, create: if isSignedIn(); }
+    }
+    match /videos/{id} { 
+      allow read: if true; 
+      allow create: if isSignedIn(); 
+      allow update: if isSignedIn();
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
+      match /comments/{commentId} { allow read, create: if isSignedIn(); }
+    }
+    match /adverts/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    /** Business Services */
+    match /logements/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /logement_applications/{id} { allow read: if isAdmin(); allow create: if isSignedIn(); }
+    match /tourism_events/{id} { allow read: if true; allow write: if isAdmin() || request.auth.token.email == 'contact.congonamotema@gmail.com'; }
+    match /tourism_bookings/{id} { allow read: if isAdmin() || request.auth.token.email == 'contact.congonamotema@gmail.com'; allow create: if isSignedIn(); }
+    match /car_bookings/{id} { allow read: if isAdmin(); allow create: if isSignedIn(); }
+    match /inquiries/{id} { allow read: if isAdmin(); allow create: if isSignedIn(); }
+    match /police_reports/{id} { allow read: if true; allow create: if isSignedIn(); allow delete: if isAdmin(); }
   }
 }

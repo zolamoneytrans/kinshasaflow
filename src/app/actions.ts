@@ -8,11 +8,21 @@ import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsIn
 import * as webpush from 'web-push';
 
 export async function getTrafficTipsAction(input: TrafficTipsInput) {
-    return await getTrafficTips(input);
+    try {
+        return await getTrafficTips(input);
+    } catch (e) {
+        console.error("Traffic Tips Error:", e);
+        return { tips: ["Restez vigilant", "Vérifiez votre GPS"] };
+    }
 }
 
 export async function askAssistantAction(input: AssistantInput) {
-    return await askAssistant(input);
+    try {
+        return await askAssistant(input);
+    } catch (e) {
+        console.error("Assistant Error:", e);
+        return { answer: "Désolé, je rencontre une difficulté technique. Réessayez dans un instant." };
+    }
 }
 
 /**

@@ -23,7 +23,9 @@ import {
   ArrowRight,
   Volume2,
   VolumeX,
-  ShieldAlert
+  ShieldAlert,
+  Zap,
+  MapPin
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,9 +63,6 @@ interface LocalAnalysis {
   lastUpdated: Date;
 }
 
-/**
- * Native Google Maps Circle for @vis.gl/react-google-maps
- */
 function Circle(props: google.maps.CircleOptions) {
   const map = useMap();
   const circleRef = useRef<google.maps.Circle | null>(null);
@@ -80,9 +79,6 @@ function Circle(props: google.maps.CircleOptions) {
   return null;
 }
 
-/**
- * Native Google Maps Traffic Layer
- */
 const TrafficLayer = () => {
   const map = useMap();
   useEffect(() => {
@@ -94,7 +90,6 @@ const TrafficLayer = () => {
   return null;
 };
 
-// Haversine Distance
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -120,7 +115,6 @@ export default function LocalTrafficSummary() {
   const { toast } = useToast();
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
 
-  // Watch Position
   useEffect(() => {
     if (typeof window !== 'undefined' && navigator.geolocation) {
       const watchId = navigator.geolocation.watchPosition(
@@ -147,7 +141,7 @@ export default function LocalTrafficSummary() {
       .slice(0, 30);
 
       if (nearbyAxes.length === 0) {
-          if (!silent) toast({ title: "Zone peu dense", description: "Aucun axe majeur détecté dans ce rayon." });
+          if (!silent) toast({ title: "Périmètre désert", description: "Aucun axe majeur détecté dans ce rayon." });
           setIsAnalyzing(false);
           return;
       }
@@ -184,11 +178,11 @@ export default function LocalTrafficSummary() {
       if (!silent) setIsResultsVisible(true);
 
       if (isAudioEnabled && !silent) {
-        let text = `Radar de proximité actif. `;
+        let text = `Scan de proximité terminé. `;
         if (blocked.length > 0) {
-            text += `J'ai détecté ${blocked.length} zones de blocage sévère autour de vous. `;
+            text += `J'ai détecté ${blocked.length} zones critiques autour de vous. `;
         } else {
-            text += `La circulation est plutôt bonne dans votre secteur. `;
+            text += `La circulation est fluide dans votre secteur immédiat. `;
         }
         generateSpeechAction(text).then(res => {
             if (res?.media) new Audio(res.media).play().catch(e => console.warn("Audio blocked"));
@@ -202,7 +196,6 @@ export default function LocalTrafficSummary() {
     }
   }, [location, radius, user, isAudioEnabled, toast]);
 
-  // Trigger analysis when location is found
   useEffect(() => {
     if (location && !analysis) {
         handleStartAnalysis(true);
@@ -223,10 +216,8 @@ export default function LocalTrafficSummary() {
     <div className="w-full h-full flex flex-col bg-[#0b121e] overflow-hidden rounded-[2.5rem] border border-slate-800 shadow-2xl relative">
       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
         
-        {/* Radar UI Overlay */}
         <div className="absolute inset-0 z-10 pointer-events-none p-4 flex flex-col justify-between">
             
-            {/* Top Control Card */}
             <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-xl mx-auto pointer-events-auto">
                 <Card className="bg-white/90 backdrop-blur-xl border-none shadow-2xl rounded-3xl overflow-hidden">
                     <CardHeader className="p-4 border-b border-slate-100 flex-row items-center justify-between space-y-0">
@@ -236,8 +227,8 @@ export default function LocalTrafficSummary() {
                                 {isAnalyzing && <span className="absolute inset-0 bg-primary/20 rounded-xl animate-ping"></span>}
                             </div>
                             <div>
-                                <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Radar Local</CardTitle>
-                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Périmètre: {radius} km</p>
+                                <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Radar K-Flow</CardTitle>
+                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Rayon: {radius} km</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -281,7 +272,6 @@ export default function LocalTrafficSummary() {
                 </Card>
             </motion.div>
 
-            {/* Bottom Analysis Panel */}
             <AnimatePresence>
                 {analysis && (
                     <motion.div 
@@ -300,7 +290,7 @@ export default function LocalTrafficSummary() {
                             <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-white/5">
                                 <div className="p-6 lg:p-8 flex flex-row lg:flex-col items-center justify-between lg:justify-center gap-4 lg:w-48 shrink-0 bg-white/5">
                                     <div className="text-center">
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Score Fluidité</p>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Score Secteur</p>
                                         <p className={cn(
                                             "text-6xl font-black tracking-tighter leading-none",
                                             analysis.globalScore > 70 ? "text-emerald-400" : analysis.globalScore > 40 ? "text-amber-400" : "text-red-500"
@@ -312,7 +302,6 @@ export default function LocalTrafficSummary() {
                                 </div>
 
                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/5 h-[340px]">
-                                    {/* Column: Embouteillages */}
                                     <div className="p-5 space-y-3 overflow-hidden flex flex-col">
                                         <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
                                             <AlertOctagon className="h-3 w-3" /> Embouteillages
@@ -324,22 +313,21 @@ export default function LocalTrafficSummary() {
                                                     onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }}
                                                     className="w-full text-left bg-red-500/10 p-3 rounded-2xl border border-red-500/20 flex justify-between items-center hover:bg-red-500/20 transition-all"
                                                 >
-                                                    <div className="min-w-0">
-                                                        <p className="text-xs font-bold text-red-200 truncate">{p.road}</p>
-                                                        <p className="text-[9px] text-red-400/80 font-black">+{p.delay} min • {p.speed} km/h</p>
+                                                    <div className="min-w-0 text-white">
+                                                        <p className="text-xs font-bold truncate">{p.road}</p>
+                                                        <p className="text-[9px] text-red-400 font-black">+{p.delay} min • {p.speed} km/h</p>
                                                     </div>
                                                     <ArrowRight className="h-3 w-3 text-red-500 shrink-0" />
                                                 </button>
                                             )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-10">Périmètre fluide</p>
+                                                <p className="text-[10px] text-white/20 italic text-center py-10">Aucun blocage</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Column: Dense */}
                                     <div className="p-5 space-y-3 overflow-hidden flex flex-col">
                                         <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                                            <Car className="h-3 w-3" /> Trafic Dense
+                                            <Car className="h-3 w-3" /> Trafic Moyen
                                         </h3>
                                         <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
                                             {analysis.dense.length > 0 ? analysis.dense.map((p, i) => (
@@ -348,34 +336,33 @@ export default function LocalTrafficSummary() {
                                                     onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }}
                                                     className="w-full text-left bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10 flex justify-between items-center hover:bg-amber-500/15 transition-all"
                                                 >
-                                                    <div className="min-w-0">
-                                                        <p className="text-xs font-bold text-amber-100 truncate">{p.road}</p>
+                                                    <div className="min-w-0 text-white">
+                                                        <p className="text-xs font-bold truncate">{p.road}</p>
                                                         <p className="text-[9px] text-amber-500/60 font-black">+{p.delay} min</p>
                                                     </div>
                                                 </button>
                                             )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-10">Rien à signaler</p>
+                                                <p className="text-[10px] text-white/20 italic text-center py-10">Secteur libre</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Column: Fluide */}
                                     <div className="p-5 space-y-3 overflow-hidden flex flex-col">
                                         <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
-                                            <CheckCircle2 className="h-3 w-3" /> Voies Libres
+                                            <CheckCircle2 className="h-3 w-3" /> Voies Fluides
                                         </h3>
-                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin text-white">
                                             {analysis.fluide.length > 0 ? analysis.fluide.map((p, i) => (
                                                 <button 
                                                     key={i} 
                                                     onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }}
                                                     className="w-full text-left bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10 flex items-center gap-3 hover:bg-emerald-500/15 transition-all"
                                                 >
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                                                    <p className="text-xs font-bold text-emerald-100/80 truncate">{p.road}</p>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                    <p className="text-xs font-bold truncate opacity-80">{p.road}</p>
                                                 </button>
                                             )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-10">Scan requis</p>
+                                                <p className="text-[10px] text-white/20 italic text-center py-10">En attente de scan</p>
                                             )}
                                         </div>
                                     </div>
@@ -387,7 +374,6 @@ export default function LocalTrafficSummary() {
             </AnimatePresence>
         </div>
 
-        {/* Map View */}
         <div className="flex-1 relative">
             <Map
                 defaultCenter={location || KINSHASA_CENTER}
@@ -396,7 +382,7 @@ export default function LocalTrafficSummary() {
                 onZoomChanged={(e) => setZoom(e.detail.zoom)}
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
-                mapId="local_radar_live_v10"
+                mapId="local_radar_live_v11"
                 className="w-full h-full"
                 onCameraChanged={(e) => mapInstanceRef.current = e.map}
             >
@@ -404,7 +390,6 @@ export default function LocalTrafficSummary() {
               
               {location && (
                 <>
-                    {/* User Position: High-vis Pin */}
                     <Marker 
                         position={location}
                         zIndex={2000}
@@ -418,7 +403,6 @@ export default function LocalTrafficSummary() {
                         } as any}
                     />
 
-                    {/* Scan Radar Circle */}
                     <Circle 
                         center={location}
                         radius={radius * 1000}
@@ -430,7 +414,6 @@ export default function LocalTrafficSummary() {
                         clickable={false}
                     />
 
-                    {/* Analysis Markers (Road Bubbles) */}
                     {analysis?.allProbes.map((p) => (
                         <Marker 
                             key={p.id}

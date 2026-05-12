@@ -371,7 +371,7 @@ export default function KFlowNav() {
                 provideRouteAlternatives: true,
                 drivingOptions: { 
                     departureTime: new Date(), 
-                    trafficModel: 'bestguess'
+                    trafficModel: g.maps.TrafficModel.BEST_GUESS
                 }
             });
 
@@ -734,12 +734,10 @@ export default function KFlowNav() {
                         gestureHandling={'greedy'}
                         disableDefaultUI={true}
                         onDragstart={() => setAutoFollow(false)}
+                        onZoomChanged={() => setAutoFollow(false)}
                         restriction={{ latLngBounds: KINSHASA_BOUNDS, strictBounds: false }}
                         mapId="kflow_nav_dark_v1"
                         className="w-full h-full"
-                        onCameraChanged={(e) => {
-                            if (e.detail.gesture) setAutoFollow(false);
-                        }}
                     >
                         <TrafficLayerComponent />
                         
@@ -861,7 +859,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
             provideRouteAlternatives: true,
             drivingOptions: { 
                 departureTime: new Date(), 
-                trafficModel: 'bestguess'
+                trafficModel: g.maps.TrafficModel.BEST_GUESS
             }
         }, (result: any, status: any) => {
             if (status === g.maps.DirectionsStatus.OK && result) {

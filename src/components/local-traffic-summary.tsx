@@ -93,9 +93,9 @@ function Circle(props: google.maps.CircleOptions) {
   return null;
 }
 
-// Calcul de distance (Haversine) - Correction de la typo Lon -> dLon
+// Calcul de distance (Haversine)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const R = 6371;
+    const R = 6371; // Rayon de la terre en km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -131,7 +131,7 @@ export default function LocalTrafficSummary() {
   
   const { user, firestore } = useFirebase();
   const { toast } = useToast();
-  const mapRef = useRef<any>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
 
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc<UserProfile>(userProfileRef);
@@ -142,7 +142,7 @@ export default function LocalTrafficSummary() {
       const watchId = navigator.geolocation.watchPosition(
         (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
         (err) => console.warn("GPS error", err),
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
       return () => navigator.geolocation.clearWatch(watchId);
     }
@@ -160,7 +160,7 @@ export default function LocalTrafficSummary() {
       }))
       .filter(axis => axis.dist <= radius)
       .sort((a, b) => a.dist - b.dist)
-      .slice(0, 20);
+      .slice(0, 25);
 
       if (nearbyAxes.length === 0) {
           if (!silent) toast({ title: "Zone peu dense", description: "Aucun axe majeur détecté dans ce rayon." });
@@ -226,20 +226,20 @@ export default function LocalTrafficSummary() {
     if (location && (isLoading || analysis === null)) {
         handleStartAnalysis(true);
     }
-  }, [location, radius, handleStartAnalysis, isLoading, analysis]);
+  }, [location, handleStartAnalysis, isLoading, analysis]);
 
   const handleReCenter = () => {
-    if (!location) return;
-    mapRef.current?.setCenter(location);
+    if (!location || !mapInstanceRef.current) return;
+    mapInstanceRef.current.panTo(location);
     setZoom(15);
   };
 
   const getStatusColor = (status: TrafficProbe['status']) => {
     switch (status) {
       case 'EMBOUTEILLAGE': return '#ef4444'; 
-      case 'DENSE': return '#f59e0b'; 
-      case 'MODÉRÉ': return '#fcd34d'; 
-      case 'FLUIDE': return '#10b981'; 
+      case 'DENSE': return '#f97316'; 
+      case 'MODÉRÉ': return '#eab308'; 
+      case 'FLUIDE': return '#22c55e'; 
       default: return '#94a3b8'; 
     }
   };
@@ -265,7 +265,7 @@ export default function LocalTrafficSummary() {
                             </div>
                             <div>
                                 <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Radar Local</CardTitle>
-                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Rayon de scan: {radius} km</p>
+                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Rayon: {radius} km</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -292,8 +292,8 @@ export default function LocalTrafficSummary() {
                             <div className="flex-1 space-y-1">
                                 <Slider 
                                     value={[radius]} 
-                                    min={1} 
-                                    max={5} 
+                                    min={0.5} 
+                                    max={10} 
                                     step={0.5} 
                                     onValueChange={(v) => setRadius(v[0])}
                                     className="py-2"
@@ -316,13 +316,13 @@ export default function LocalTrafficSummary() {
                 {analysis && (
                     <motion.div 
                         initial={{ y: 300, opacity: 0 }}
-                        animate={{ y: isResultsVisible ? 0 : 230, opacity: 1 }}
+                        animate={{ y: isResultsVisible ? 0 : 250, opacity: 1 }}
                         className="w-full max-w-4xl mx-auto pointer-events-auto"
                     >
                         <Card className="bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-t-[2.5rem] overflow-hidden">
                             <button 
                                 onClick={() => setIsResultsVisible(!isResultsVisible)}
-                                className="w-full h-10 flex items-center justify-center hover:bg-white/5 transition-colors border-b border-white/5"
+                                className="w-full h-12 flex items-center justify-center hover:bg-white/5 transition-colors border-b border-white/5"
                             >
                                 {isResultsVisible ? <ChevronDown className="h-6 w-6 text-slate-500" /> : <ChevronUp className="h-6 w-6 text-primary animate-bounce" />}
                             </button>
@@ -330,7 +330,7 @@ export default function LocalTrafficSummary() {
                             <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-white/5">
                                 <div className="p-6 lg:p-8 flex flex-row lg:flex-col items-center justify-between lg:justify-center gap-4 lg:w-48 shrink-0 bg-white/5">
                                     <div className="text-center">
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Fluidité Locale</p>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Score Fluidité</p>
                                         <div className="relative inline-block">
                                             <p className={cn(
                                                 "text-5xl font-black tracking-tighter",
@@ -339,11 +339,11 @@ export default function LocalTrafficSummary() {
                                         </div>
                                     </div>
                                     <Badge variant="outline" className="border-white/10 text-white/40 text-[8px] uppercase px-2">
-                                        {format(analysis.lastUpdated, 'HH:mm:ss')}
+                                        MàJ {format(analysis.lastUpdated, 'HH:mm')}
                                     </Badge>
                                 </div>
 
-                                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/5 h-[300px]">
+                                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/5 h-[320px]">
                                     <div className="p-5 space-y-3 overflow-hidden flex flex-col">
                                         <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
                                             <AlertOctagon className="h-3 w-3" /> Embouteillages
@@ -352,8 +352,8 @@ export default function LocalTrafficSummary() {
                                             {analysis.blocked.length > 0 ? analysis.blocked.map((p, i) => (
                                                 <button 
                                                     key={i} 
-                                                    onClick={() => { setSelectedProbe(p); mapRef.current?.setCenter(p.coords); }}
-                                                    className="w-full text-left bg-red-500/10 p-3 rounded-2xl border border-red-500/20 flex justify-between items-center group"
+                                                    onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }}
+                                                    className="w-full text-left bg-red-500/10 p-3 rounded-2xl border border-red-500/20 flex justify-between items-center group transition-all hover:bg-red-500/20"
                                                 >
                                                     <div className="min-w-0">
                                                         <p className="text-xs font-bold text-red-200 truncate">{p.road}</p>
@@ -362,7 +362,7 @@ export default function LocalTrafficSummary() {
                                                     <ArrowRight className="h-3 w-3 text-red-500" />
                                                 </button>
                                             )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-4">Secteur fluide</p>
+                                                <p className="text-[10px] text-white/20 italic text-center py-10">Aucun point noir</p>
                                             )}
                                         </div>
                                     </div>
@@ -375,8 +375,8 @@ export default function LocalTrafficSummary() {
                                             {analysis.dense.length > 0 ? analysis.dense.map((p, i) => (
                                                 <button 
                                                     key={i} 
-                                                    onClick={() => { setSelectedProbe(p); mapRef.current?.setCenter(p.coords); }}
-                                                    className="w-full text-left bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10 flex justify-between items-center group"
+                                                    onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }}
+                                                    className="w-full text-left bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10 flex justify-between items-center group transition-all hover:bg-amber-500/15"
                                                 >
                                                     <div className="min-w-0">
                                                         <p className="text-xs font-bold text-amber-100 truncate">{p.road}</p>
@@ -384,7 +384,7 @@ export default function LocalTrafficSummary() {
                                                     </div>
                                                 </button>
                                             )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-4">Peu de ralentissements</p>
+                                                <p className="text-[10px] text-white/20 italic text-center py-10">Flux dégagé</p>
                                             )}
                                         </div>
                                     </div>
@@ -397,14 +397,14 @@ export default function LocalTrafficSummary() {
                                             {analysis.fluide.length > 0 ? analysis.fluide.map((p, i) => (
                                                 <button 
                                                     key={i} 
-                                                    onClick={() => { setSelectedProbe(p); mapRef.current?.setCenter(p.coords); }}
-                                                    className="w-full text-left bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10 flex items-center gap-3"
+                                                    onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }}
+                                                    className="w-full text-left bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10 flex items-center gap-3 transition-all hover:bg-emerald-500/15"
                                                 >
                                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                                     <p className="text-xs font-bold text-emerald-100 truncate">{p.road}</p>
                                                 </button>
                                             )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-4">Scanner pour voir les rues libres</p>
+                                                <p className="text-[10px] text-white/20 italic text-center py-10">Scan requis</p>
                                             )}
                                         </div>
                                     </div>
@@ -416,7 +416,7 @@ export default function LocalTrafficSummary() {
             </AnimatePresence>
         </div>
 
-        {/* Map Engine */}
+        {/* Map View */}
         <div className="flex-1 relative">
             <Map
                 defaultCenter={location || { lat: -4.330, lng: 15.313 }}
@@ -425,15 +425,15 @@ export default function LocalTrafficSummary() {
                 onZoomChanged={(e) => setZoom(e.detail.zoom)}
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
-                mapId="local_radar_live_v5"
+                mapId="local_radar_live_v6"
                 className="w-full h-full"
-                onCameraChanged={(e) => mapRef.current = e.map}
+                onCameraChanged={(e) => mapInstanceRef.current = e.map}
             >
               <TrafficLayerComponent />
               
               {location && (
                 <>
-                    {/* User Pin - Blue Dot with high priority */}
+                    {/* Position de l'utilisateur - Point bleu avec Pin */}
                     <Marker 
                         position={location}
                         zIndex={1000}
@@ -443,11 +443,11 @@ export default function LocalTrafficSummary() {
                             fillOpacity: 1,
                             strokeColor: 'white',
                             strokeWeight: 2,
-                            scale: 1.8
+                            scale: 2
                         } as any}
                     />
 
-                    {/* Scan Visualizer Circle */}
+                    {/* Cercle du radar */}
                     <Circle 
                         center={location}
                         radius={radius * 1000}
@@ -455,11 +455,11 @@ export default function LocalTrafficSummary() {
                         strokeOpacity={0.3}
                         strokeWeight={2}
                         fillColor="#248eeb"
-                        fillOpacity={0.05}
+                        fillOpacity={0.08}
                         clickable={false}
                     />
 
-                    {/* Traffic Report Pins for all probed axes */}
+                    {/* Résultats du scan (Marqueurs de trafic) */}
                     {analysis?.allProbes.map((p) => (
                         <Marker 
                             key={p.id}
@@ -471,9 +471,9 @@ export default function LocalTrafficSummary() {
                                 fillColor: getStatusColor(p.status),
                                 fillOpacity: 0.9,
                                 strokeColor: 'white',
-                                strokeWeight: 1.5,
-                                scale: p.status === 'EMBOUTEILLAGE' ? 10 : 8
-                            }}
+                                strokeWeight: 2,
+                                scale: p.status === 'EMBOUTEILLAGE' ? 12 : 9
+                            } as any}
                         />
                     ))}
 
@@ -485,14 +485,17 @@ export default function LocalTrafficSummary() {
                             <div className="p-2 space-y-2 min-w-[200px]">
                                 <h4 className="font-black text-slate-900 leading-tight">{selectedProbe.road}</h4>
                                 <div className="flex justify-between items-center border-t border-slate-100 pt-2">
-                                    <Badge style={{ backgroundColor: getStatusColor(selectedProbe.status) }} className="text-[9px] font-black text-white">
+                                    <Badge style={{ backgroundColor: getStatusColor(selectedProbe.status) }} className="text-[10px] font-black text-white">
                                         {selectedProbe.status}
                                     </Badge>
                                     {selectedProbe.delay > 0 && (
-                                      <span className="text-[10px] font-bold text-red-600">+{selectedProbe.delay} min</span>
+                                      <span className="text-[11px] font-black text-red-600">+{selectedProbe.delay} min</span>
                                     )}
                                 </div>
-                                <p className="text-[10px] font-medium text-slate-500">Vitesse moyenne: {selectedProbe.speed} km/h</p>
+                                <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1.5">
+                                    <Clock className="h-3 w-3" />
+                                    Vitesse: {selectedProbe.speed} km/h
+                                </p>
                             </div>
                         </InfoWindow>
                     )}

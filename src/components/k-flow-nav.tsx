@@ -54,7 +54,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection, query, orderBy, limit } from 'firebase/firestore';
 import { STAR_COSTS, UserProfile, EventReport, WithId } from '@/lib/types';
-import { generateSpeechAction } from '@/app/actions';
+import { generateSpeechAction, askAssistantAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -297,14 +297,12 @@ export default function KFlowNav() {
         }
     }, []);
 
-    // Monitoring Actif de l'Itinéraire (Scanner de dangers)
     useEffect(() => {
         if (!isNavigating || !routeInfo?.allRoutes) return;
         
         const currentRoute = routeInfo.allRoutes[selectedRouteIndex];
         const now = Date.now();
 
-        // Alerte si le retard dépasse 5 min sur le trajet actif
         if (currentRoute.delayMinutes > 5 && (now - lastAlertTimestamp.current) > 60000) {
             lastAlertTimestamp.current = now;
             const msg = `Attention : un retard de ${currentRoute.delayMinutes} minutes est détecté sur votre itinéraire.`;
@@ -323,7 +321,6 @@ export default function KFlowNav() {
         }
     }, [isNavigating, routeInfo, selectedRouteIndex, isAudioEnabled, toast]);
 
-    // Vocal Instruction Logic
     useEffect(() => {
         if (!isAudioEnabled || !isNavigating || !routeInfo?.currentStep) return;
         

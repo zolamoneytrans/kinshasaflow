@@ -384,7 +384,10 @@ export default function LocalTrafficSummary() {
                 disableDefaultUI={true}
                 mapId="local_radar_live_v11"
                 className="w-full h-full"
-                onCameraChanged={(e) => mapInstanceRef.current = e.map}
+                onCameraChanged={(e) => {
+                    mapInstanceRef.current = e.map;
+                }}
+                onDragstart={() => setAutoFollow(false)}
             >
               <TrafficLayer />
               

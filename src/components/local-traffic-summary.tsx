@@ -93,14 +93,14 @@ function Circle(props: google.maps.CircleOptions) {
   return null;
 }
 
-// Calcul de distance (Haversine)
+// Calcul de distance (Haversine) - Correction de la typo Lon -> dLon
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
               Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-              Math.sin(Lon / 2) * Math.sin(Lon / 2);
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
@@ -425,7 +425,7 @@ export default function LocalTrafficSummary() {
                 onZoomChanged={(e) => setZoom(e.detail.zoom)}
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
-                mapId="local_radar_live_v4"
+                mapId="local_radar_live_v5"
                 className="w-full h-full"
                 onCameraChanged={(e) => mapRef.current = e.map}
             >
@@ -433,10 +433,10 @@ export default function LocalTrafficSummary() {
               
               {location && (
                 <>
-                    {/* User Pin - Blue Dot */}
+                    {/* User Pin - Blue Dot with high priority */}
                     <Marker 
                         position={location}
-                        zIndex={100}
+                        zIndex={1000}
                         icon={{
                             path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z",
                             fillColor: '#248eeb',
@@ -447,7 +447,7 @@ export default function LocalTrafficSummary() {
                         } as any}
                     />
 
-                    {/* Scan Visualizer */}
+                    {/* Scan Visualizer Circle */}
                     <Circle 
                         center={location}
                         radius={radius * 1000}
@@ -459,19 +459,20 @@ export default function LocalTrafficSummary() {
                         clickable={false}
                     />
 
-                    {/* Traffic Report Pins */}
+                    {/* Traffic Report Pins for all probed axes */}
                     {analysis?.allProbes.map((p) => (
                         <Marker 
                             key={p.id}
                             position={p.coords}
                             onClick={() => setSelectedProbe(p)}
+                            zIndex={100}
                             icon={{
                                 path: (window as any).google?.maps?.SymbolPath?.CIRCLE || 0,
                                 fillColor: getStatusColor(p.status),
                                 fillOpacity: 0.9,
                                 strokeColor: 'white',
                                 strokeWeight: 1.5,
-                                scale: p.status === 'EMBOUTEILLAGE' ? 8 : 6
+                                scale: p.status === 'EMBOUTEILLAGE' ? 10 : 8
                             }}
                         />
                     ))}
@@ -487,8 +488,11 @@ export default function LocalTrafficSummary() {
                                     <Badge style={{ backgroundColor: getStatusColor(selectedProbe.status) }} className="text-[9px] font-black text-white">
                                         {selectedProbe.status}
                                     </Badge>
-                                    <span className="text-[10px] font-bold text-red-600">+{selectedProbe.delay} min</span>
+                                    {selectedProbe.delay > 0 && (
+                                      <span className="text-[10px] font-bold text-red-600">+{selectedProbe.delay} min</span>
+                                    )}
                                 </div>
+                                <p className="text-[10px] font-medium text-slate-500">Vitesse moyenne: {selectedProbe.speed} km/h</p>
                             </div>
                         </InfoWindow>
                     )}

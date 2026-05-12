@@ -290,7 +290,7 @@ export default function KFlowNav() {
                 (pos) => {
                     setRawLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
                 },
-                (err) => console.warn("GPS Access Denied", err),
+                (err) => console.warn("GPS error", err),
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
             return () => navigator.geolocation.clearWatch(watchId);

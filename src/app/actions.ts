@@ -61,7 +61,7 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
     return { success: false, error: "VAPID keys are not configured on the server." };
   }
 
-  const webPushSubscription = subscription as webpush.PushSubscription;
+  const webPushSubscription = subscription as any;
 
   webpush.setVapidDetails(
     'mailto:drnduwa@gmail.com',
@@ -75,7 +75,6 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
   } catch (error: any) {
     console.error('Error sending push notification:', error);
     if (error.statusCode === 410) {
-      console.log('Subscription has expired or is no longer valid.');
       return { success: false, error: 'Subscription expired.' };
     }
     return { success: false, error: error.message };
@@ -88,11 +87,6 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
 export async function getGoogleTrafficStatusAction(axes: { name: string, origin: { lat: number, lng: number }, destination: { lat: number, lng: number } }[]) {
   const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
   
-  if (!GOOGLE_API_KEY) {
-    console.error("CRITICAL: GOOGLE_ROUTES_API_KEY is missing.");
-    return axes.map(a => ({ road: a.name, status: "INCONNU" as const, speed: 0, delay: 0 }));
-  }
-
   if (!axes?.length) return [];
 
   const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
@@ -137,23 +131,12 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
         
         const delaySeconds = Math.max(0, duration - staticDuration);
         const delayMinutes = Math.round(delaySeconds / 60);
-        
-        // Calcul plus précis de la vitesse
-        const speedKmh = duration > 0 && distance > 0
-          ? Math.round((distance / 1000) / (duration / 3600))
-          : 0;
+        const speedKmh = duration > 0 && distance > 0 ? Math.round((distance / 1000) / (duration / 3600)) : 0;
 
         let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" | "INCONNU" = "FLUIDE";
-        
-        if (speedKmh <= 8 || delayMinutes > 10) {
-          status = "EMBOUTEILLAGE";
-        } else if (speedKmh <= 20 || delayMinutes >= 5) {
-          status = "DENSE";
-        } else if (speedKmh <= 35 || delayMinutes >= 2) {
-          status = "MODÉRÉ";
-        } else {
-          status = "FLUIDE";
-        }
+        if (speedKmh <= 8 || delayMinutes > 10) status = "EMBOUTEILLAGE";
+        else if (speedKmh <= 20 || delayMinutes >= 5) status = "DENSE";
+        else if (speedKmh <= 35 || delayMinutes >= 2) status = "MODÉRÉ";
 
         return {
           road: axes[index].name,
@@ -172,112 +155,54 @@ export async function getGoogleTrafficStatusAction(axes: { name: string, origin:
   }
 }
 
-/**
- * Initialise un paiement via MbiyoPay pour la RDC (CD).
- */
 export async function initiateMbiyoPaymentAction(data: {
     amount: number;
     currency: string;
     phone: string;
     network: string;
     order_id: string;
-}): Promise<{ success: boolean; data?: { id: string; status: string }; error?: string }> {
+}) {
     try {
         const phoneWithPlus = data.phone.startsWith('+') ? data.phone : `+${data.phone}`;
-        
         const payload = {
             amount: data.amount,
             currency: data.currency,
             payment_method: "mobile_money",
             order_id: data.order_id,
             callback_url: "https://kinshasaflow.online/api/payment-callback",
-            metadata: {
-                network: data.network.toLowerCase(),
-                phone_number: phoneWithPlus,
-                country_code: "CD"
-            }
+            metadata: { network: data.network.toLowerCase(), phone_number: phoneWithPlus, country_code: "CD" }
         };
 
-        const response = await fetch(
-            "https://dashboard.mbiyo.africa/api/v1/merchant/payin",
-            {
-                method: "POST",
-                headers: {
-                    "Authorization": "Bearer COjbIMdkfbeZ8RJUH03oj0kNKJLzCK",
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload)
-            }
-        );
+        const response = await fetch("https://dashboard.mbiyo.africa/api/v1/merchant/payin", {
+            method: "POST",
+            headers: { "Authorization": "Bearer COjbIMdkfbeZ8RJUH03oj0kNKJLzCK", "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
 
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            return { success: false, error: "Réponse invalide du serveur de paiement." };
-        }
-
-        if (!response.ok) {
-            const errorJson = await response.json();
-            return { success: false, error: errorJson.message || `Erreur API (${response.status})` };
-        }
-
+        if (!response.ok) return { success: false, error: "Erreur serveur de paiement." };
         const result = await response.json();
-        
         if (result.status === "success" && result.data) {
-            return {
-                success: true,
-                data: {
-                    id: result.data.id,
-                    status: result.data.status || 'pending'
-                }
-            };
+            return { success: true, data: { id: result.data.id, status: result.data.status || 'pending' } };
         }
-
-        return { success: false, error: result.message || "L'API MbiyoPay a renvoyé un succès sans données." };
-    } catch (error: any) {
+        return { success: false, error: result.message || "Erreur de paiement." };
+    } catch (error) {
         return { success: false, error: "Impossible de joindre le service de paiement." };
     }
 }
 
-/**
- * Vérifie le statut d'une transaction via l'API MbiyoPay.
- */
-export async function checkMbiyoTransactionStatusAction(transactionId: string): Promise<{ success: boolean; data?: { status: string }; error?: string }> {
+export async function checkMbiyoTransactionStatusAction(transactionId: string) {
     try {
-        const response = await fetch(
-            `https://dashboard.mbiyo.africa/api/v1/merchant/transactions/${transactionId}`,
-            {
-                method: "GET",
-                headers: {
-                    "Authorization": "Bearer COjbIMdkfbeZ8RJUH03oj0kNKJLzCK",
-                    "Content-Type": "application/json",
-                }
-            }
-        );
-
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            return { success: false, error: "Réponse invalide." };
-        }
-
-        if (!response.ok) {
-            const errorJson = await response.json();
-            return { success: false, error: errorJson.message || `Erreur serveur (${response.status})` };
-        }
-
+        const response = await fetch(`https://dashboard.mbiyo.africa/api/v1/merchant/transactions/${transactionId}`, {
+            method: "GET",
+            headers: { "Authorization": "Bearer COjbIMdkfbeZ8RJUH03oj0kNKJLzCK", "Content-Type": "application/json" }
+        });
+        if (!response.ok) return { success: false, error: "Erreur serveur." };
         const result = await response.json();
-        
         if (result.status === "success" && result.data) {
-            const txStatus = String(result.data.status).toLowerCase();
-            return {
-                success: true,
-                data: {
-                    status: txStatus
-                }
-            };
+            return { success: true, data: { status: String(result.data.status).toLowerCase() } };
         }
-
-        return { success: false, error: result.message || "La réponse de MbiyoPay est incomplète." };
-    } catch (error: any) {
-        return { success: false, error: "Erreur réseau lors de la vérification." };
+        return { success: false, error: "Réponse incomplète." };
+    } catch (error) {
+        return { success: false, error: "Erreur réseau." };
     }
 }

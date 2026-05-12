@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   APIProvider, 
   Map, 
@@ -12,7 +12,6 @@ import {
   Radar, 
   LocateFixed, 
   Loader2, 
-  Activity, 
   RefreshCw, 
   ChevronUp, 
   ChevronDown, 
@@ -23,17 +22,13 @@ import {
   ArrowRight,
   Volume2,
   VolumeX,
-  ShieldAlert,
-  Zap,
   MapPin
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { UserProfile } from '@/lib/types';
+import { useFirebase } from '@/firebase';
 import { generateSpeechAction, getGoogleTrafficStatusAction } from '@/app/actions';
 import { MAJOR_AXES } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
@@ -50,16 +45,16 @@ interface TrafficProbe {
   status: 'FLUIDE' | 'MODÉRÉ' | 'DENSE' | 'EMBOUTEILLAGE' | 'INCONNU';
   delay: number;
   speed: number;
-  distance: number; 
   coords: { lat: number, lng: number };
+  distance: number;
 }
 
 interface LocalAnalysis {
   globalScore: number;
-  allProbes: TrafficProbe[];
   blocked: TrafficProbe[];
   dense: TrafficProbe[];
   fluide: TrafficProbe[];
+  allProbes: TrafficProbe[];
   lastUpdated: Date;
 }
 
@@ -79,17 +74,6 @@ function Circle(props: google.maps.CircleOptions) {
   return null;
 }
 
-const TrafficLayer = () => {
-  const map = useMap();
-  useEffect(() => {
-    if (!map) return;
-    const trafficLayer = new google.maps.TrafficLayer();
-    trafficLayer.setMap(map);
-    return () => trafficLayer.setMap(null);
-  }, [map]);
-  return null;
-};
-
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -101,6 +85,17 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
     return R * c;
 }
 
+const TrafficLayer = () => {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const trafficLayer = new google.maps.TrafficLayer();
+    trafficLayer.setMap(map);
+    return () => trafficLayer.setMap(null);
+  }, [map]);
+  return null;
+};
+
 export default function LocalTrafficSummary() {
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [radius, setRadius] = useState<number>(2);
@@ -109,26 +104,22 @@ export default function LocalTrafficSummary() {
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isResultsVisible, setIsResultsVisible] = useState(true);
   const [selectedProbe, setSelectedProbe] = useState<TrafficProbe | null>(null);
-  const [mapZoom, setZoom] = useState(14);
   
-  const { user, firestore } = useFirebase();
   const { toast } = useToast();
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
+      navigator.geolocation.getCurrentPosition(
         (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => console.warn("GPS error", err),
-        { enableHighAccuracy: true }
+        (err) => console.warn("GPS error", err)
       );
-      return () => navigator.geolocation.clearWatch(watchId);
     }
   }, []);
 
-  const handleStartAnalysis = useCallback(async (silent = false) => {
-    if (!location || !user) return;
-    if (!silent) setIsAnalyzing(true);
+  const handleStartAnalysis = useCallback(async () => {
+    if (!location) return;
+    setIsAnalyzing(true);
 
     try {
       const nearbyAxes = MAJOR_AXES.map((axis, idx) => ({
@@ -141,7 +132,7 @@ export default function LocalTrafficSummary() {
       .slice(0, 30);
 
       if (nearbyAxes.length === 0) {
-          if (!silent) toast({ title: "Périmètre désert", description: "Aucun axe majeur détecté dans ce rayon." });
+          toast({ title: "Périmètre désert", description: "Aucun axe majeur détecté dans ce rayon." });
           setIsAnalyzing(false);
           return;
       }
@@ -154,8 +145,8 @@ export default function LocalTrafficSummary() {
         status: r.status as any,
         delay: r.delay,
         speed: r.speed,
-        distance: nearbyAxes[i].dist,
-        coords: nearbyAxes[i].origin
+        coords: nearbyAxes[i].origin,
+        distance: nearbyAxes[i].dist
       }));
 
       const blocked = probes.filter(p => p.status === 'EMBOUTEILLAGE' || (p.status === 'DENSE' && p.delay > 5));
@@ -163,72 +154,59 @@ export default function LocalTrafficSummary() {
       const fluide = probes.filter(p => p.status === 'FLUIDE');
 
       const avgDelay = probes.reduce((acc, p) => acc + p.delay, 0) / probes.length;
-      const score = Math.max(0, 100 - (avgDelay * 12));
+      const score = Math.max(0, 100 - (avgDelay * 15));
 
-      const newAnalysis: LocalAnalysis = {
+      setAnalysis({
           globalScore: Math.round(score),
           allProbes: probes,
           blocked: blocked.sort((a, b) => b.delay - a.delay),
           dense: dense.sort((a, b) => b.delay - a.delay),
           fluide: fluide,
           lastUpdated: new Date()
-      };
+      });
 
-      setAnalysis(newAnalysis);
-      if (!silent) setIsResultsVisible(true);
-
-      if (isAudioEnabled && !silent) {
-        let text = `Scan de proximité terminé. `;
-        if (blocked.length > 0) {
-            text += `J'ai détecté ${blocked.length} zones critiques autour de vous. `;
-        } else {
-            text += `La circulation est fluide dans votre secteur immédiat. `;
-        }
+      if (isAudioEnabled) {
+        const text = `Radar local actualisé. J'ai détecté ${blocked.length} zones de blocage dans un rayon de ${radius} kilomètres.`;
         generateSpeechAction(text).then(res => {
             if (res?.media) new Audio(res.media).play().catch(e => console.warn("Audio blocked"));
         });
       }
     } catch (e) {
-      console.error(e);
       toast({ title: "Erreur radar", description: "Impossible de scanner le secteur.", variant: "destructive" });
     } finally {
       setIsAnalyzing(false);
     }
-  }, [location, radius, user, isAudioEnabled, toast]);
+  }, [location, radius, isAudioEnabled, toast]);
 
   useEffect(() => {
-    if (location && !analysis) {
-        handleStartAnalysis(true);
-    }
+    if (location && !analysis) handleStartAnalysis();
   }, [location, analysis, handleStartAnalysis]);
 
   const getStatusColor = (status: TrafficProbe['status']) => {
     switch (status) {
-      case 'EMBOUTEILLAGE': return '#ef4444'; 
-      case 'DENSE': return '#f97316'; 
-      case 'MODÉRÉ': return '#eab308'; 
-      case 'FLUIDE': return '#22c55e'; 
-      default: return '#94a3b8'; 
+      case 'EMBOUTEILLAGE': return '#ef4444';
+      case 'DENSE': return '#f97316';
+      case 'MODÉRÉ': return '#eab308';
+      case 'FLUIDE': return '#22c55e';
+      default: return '#94a3b8';
     }
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#0b121e] overflow-hidden rounded-[2.5rem] border border-slate-800 shadow-2xl relative">
+    <div className="w-full h-full flex flex-col bg-[#0b121e] overflow-hidden rounded-[2rem] border border-slate-800 shadow-2xl relative">
       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
         
         <div className="absolute inset-0 z-10 pointer-events-none p-4 flex flex-col justify-between">
-            
             <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-xl mx-auto pointer-events-auto">
-                <Card className="bg-white/90 backdrop-blur-xl border-none shadow-2xl rounded-3xl overflow-hidden">
-                    <CardHeader className="p-4 border-b border-slate-100 flex-row items-center justify-between space-y-0">
+                <Card className="bg-white/95 backdrop-blur-md border-none shadow-2xl rounded-2xl overflow-hidden">
+                    <CardHeader className="p-4 border-b flex-row items-center justify-between space-y-0">
                         <div className="flex items-center gap-3">
-                            <div className="bg-primary p-2 rounded-xl relative shadow-lg">
+                            <div className="bg-primary p-2 rounded-xl">
                                 <Radar className={cn("text-white h-5 w-5", isAnalyzing && "animate-spin")} />
-                                {isAnalyzing && <span className="absolute inset-0 bg-primary/20 rounded-xl animate-ping"></span>}
                             </div>
                             <div>
-                                <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Radar K-Flow</CardTitle>
-                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Rayon: {radius} km</p>
+                                <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Radar Local</CardTitle>
+                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Scanner les rues alentours</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -236,36 +214,28 @@ export default function LocalTrafficSummary() {
                                 variant="ghost" 
                                 size="icon" 
                                 onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-                                className={cn("rounded-full h-10 w-10 transition-all", isAudioEnabled ? "text-primary bg-primary/10" : "text-slate-400 hover:bg-slate-100")}
+                                className={cn("rounded-full h-9 w-9", isAudioEnabled ? "text-primary bg-primary/10" : "text-slate-400")}
                             >
-                                {isAudioEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                                {isAudioEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                             </Button>
-                            <Button 
-                                variant="outline" 
-                                size="icon" 
-                                onClick={() => { if (location) mapInstanceRef.current?.panTo(location); }}
-                                className="rounded-full h-10 w-10 border-slate-200"
-                            >
-                                <LocateFixed className="h-5 w-5 text-primary" />
+                            <Button variant="outline" size="icon" onClick={() => location && mapInstanceRef.current?.panTo(location)} className="rounded-full h-9 w-9">
+                                <LocateFixed className="h-4 w-4 text-primary" />
                             </Button>
                         </div>
                     </CardHeader>
                     <CardContent className="p-4">
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-4">
                             <div className="flex-1 space-y-1">
-                                <Slider 
-                                    value={[radius]} 
-                                    min={0.5} max={10} step={0.5} 
-                                    onValueChange={(v) => setRadius(v[0])}
-                                    className="py-2"
-                                />
+                                <Slider value={[radius]} min={0.5} max={5} step={0.5} onValueChange={(v) => setRadius(v[0])} />
+                                <div className="flex justify-between text-[8px] font-black text-slate-400 uppercase">
+                                    <span>0.5 km</span>
+                                    <span>Rayon: {radius} km</span>
+                                    <span>5 km</span>
+                                </div>
                             </div>
-                            <Button 
-                                onClick={() => handleStartAnalysis()} 
-                                disabled={isAnalyzing || !location}
-                                className="h-12 w-12 rounded-2xl shadow-xl bg-primary hover:bg-primary/90 transition-all active:scale-90"
-                            >
-                                {isAnalyzing ? <Loader2 className="animate-spin h-5 w-5" /> : <RefreshCw className="h-5 w-5" />}
+                            <Button onClick={handleStartAnalysis} disabled={isAnalyzing || !location} className="rounded-xl h-10 px-4 font-bold shadow-lg">
+                                {isAnalyzing ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                                SCAN
                             </Button>
                         </div>
                     </CardContent>
@@ -276,94 +246,64 @@ export default function LocalTrafficSummary() {
                 {analysis && (
                     <motion.div 
                         initial={{ y: 300, opacity: 0 }}
-                        animate={{ y: isResultsVisible ? 0 : 260, opacity: 1 }}
+                        animate={{ y: isResultsVisible ? 0 : 250, opacity: 1 }}
                         className="w-full max-w-4xl mx-auto pointer-events-auto"
                     >
-                        <Card className="bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-t-[3rem] overflow-hidden">
+                        <Card className="bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-t-3xl overflow-hidden">
                             <button 
                                 onClick={() => setIsResultsVisible(!isResultsVisible)}
-                                className="w-full h-10 flex items-center justify-center hover:bg-white/5 transition-colors border-b border-white/5"
+                                className="w-full h-8 flex items-center justify-center hover:bg-white/5 border-b border-white/5"
                             >
-                                {isResultsVisible ? <ChevronDown className="h-6 w-6 text-slate-500" /> : <ChevronUp className="h-6 w-6 text-primary animate-bounce" />}
+                                {isResultsVisible ? <ChevronDown className="text-slate-500" /> : <ChevronUp className="text-primary animate-bounce" />}
                             </button>
 
                             <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-white/5">
-                                <div className="p-6 lg:p-8 flex flex-row lg:flex-col items-center justify-between lg:justify-center gap-4 lg:w-48 shrink-0 bg-white/5">
-                                    <div className="text-center">
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Score Secteur</p>
-                                        <p className={cn(
-                                            "text-6xl font-black tracking-tighter leading-none",
-                                            analysis.globalScore > 70 ? "text-emerald-400" : analysis.globalScore > 40 ? "text-amber-400" : "text-red-500"
-                                        )}>{analysis.globalScore}%</p>
-                                    </div>
-                                    <Badge variant="outline" className="border-white/10 text-white/40 text-[8px] uppercase px-2">
-                                        MàJ {format(analysis.lastUpdated, 'HH:mm')}
-                                    </Badge>
+                                <div className="p-6 text-center lg:w-40 shrink-0 bg-white/5">
+                                    <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Fluidité</p>
+                                    <p className={cn(
+                                        "text-5xl font-black tracking-tighter",
+                                        analysis.globalScore > 70 ? "text-emerald-400" : analysis.globalScore > 40 ? "text-amber-400" : "text-red-500"
+                                    )}>{analysis.globalScore}%</p>
                                 </div>
 
-                                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/5 h-[340px]">
-                                    <div className="p-5 space-y-3 overflow-hidden flex flex-col">
+                                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 h-[300px]">
+                                    <div className="p-4 space-y-3 overflow-hidden flex flex-col">
                                         <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
                                             <AlertOctagon className="h-3 w-3" /> Embouteillages
                                         </h3>
-                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
-                                            {analysis.blocked.length > 0 ? analysis.blocked.map((p, i) => (
-                                                <button 
-                                                    key={i} 
-                                                    onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }}
-                                                    className="w-full text-left bg-red-500/10 p-3 rounded-2xl border border-red-500/20 flex justify-between items-center hover:bg-red-500/20 transition-all"
-                                                >
-                                                    <div className="min-w-0 text-white">
-                                                        <p className="text-xs font-bold truncate">{p.road}</p>
-                                                        <p className="text-[9px] text-red-400 font-black">+{p.delay} min • {p.speed} km/h</p>
-                                                    </div>
-                                                    <ArrowRight className="h-3 w-3 text-red-500 shrink-0" />
+                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                                            {analysis.blocked.map((p, i) => (
+                                                <button key={i} onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }} className="w-full text-left bg-red-500/10 p-2 rounded-xl border border-red-500/20 flex justify-between items-center group">
+                                                    <div className="min-w-0"><p className="text-xs font-bold text-white truncate">{p.road}</p></div>
+                                                    <ArrowRight className="h-3 w-3 text-red-500 opacity-0 group-hover:opacity-100 transition-all" />
                                                 </button>
-                                            )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-10">Aucun blocage</p>
-                                            )}
+                                            ))}
                                         </div>
                                     </div>
 
-                                    <div className="p-5 space-y-3 overflow-hidden flex flex-col">
+                                    <div className="p-4 space-y-3 overflow-hidden flex flex-col border-x border-white/5">
                                         <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
                                             <Car className="h-3 w-3" /> Trafic Moyen
                                         </h3>
-                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
-                                            {analysis.dense.length > 0 ? analysis.dense.map((p, i) => (
-                                                <button 
-                                                    key={i} 
-                                                    onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }}
-                                                    className="w-full text-left bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10 flex justify-between items-center hover:bg-amber-500/15 transition-all"
-                                                >
-                                                    <div className="min-w-0 text-white">
-                                                        <p className="text-xs font-bold truncate">{p.road}</p>
-                                                        <p className="text-[9px] text-amber-500/60 font-black">+{p.delay} min</p>
-                                                    </div>
+                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                                            {analysis.dense.map((p, i) => (
+                                                <button key={i} onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }} className="w-full text-left bg-amber-500/5 p-2 rounded-xl border border-amber-500/10">
+                                                    <p className="text-xs font-bold text-white/80 truncate">{p.road}</p>
                                                 </button>
-                                            )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-10">Secteur libre</p>
-                                            )}
+                                            ))}
                                         </div>
                                     </div>
 
-                                    <div className="p-5 space-y-3 overflow-hidden flex flex-col">
+                                    <div className="p-4 space-y-3 overflow-hidden flex flex-col">
                                         <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
                                             <CheckCircle2 className="h-3 w-3" /> Voies Fluides
                                         </h3>
-                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin text-white">
-                                            {analysis.fluide.length > 0 ? analysis.fluide.map((p, i) => (
-                                                <button 
-                                                    key={i} 
-                                                    onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }}
-                                                    className="w-full text-left bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10 flex items-center gap-3 hover:bg-emerald-500/15 transition-all"
-                                                >
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                                    <p className="text-xs font-bold truncate opacity-80">{p.road}</p>
+                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                                            {analysis.fluide.map((p, i) => (
+                                                <button key={i} onClick={() => { setSelectedProbe(p); mapInstanceRef.current?.panTo(p.coords); }} className="w-full text-left bg-emerald-500/5 p-2 rounded-xl border border-emerald-500/10">
+                                                    <p className="text-xs font-bold text-white/60 truncate">{p.road}</p>
                                                 </button>
-                                            )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-10">En attente de scan</p>
-                                            )}
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
@@ -376,18 +316,16 @@ export default function LocalTrafficSummary() {
 
         <div className="flex-1 relative">
             <Map
-                defaultCenter={location || KINSHASA_CENTER}
+                defaultCenter={KINSHASA_CENTER}
                 center={location}
-                zoom={mapZoom}
-                onZoomChanged={(e) => setZoom(e.detail.zoom)}
+                zoom={14}
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
-                mapId="local_radar_live_v11"
+                mapId="local_radar_live_v1"
                 className="w-full h-full"
                 onCameraChanged={(e) => {
-                    mapInstanceRef.current = e.map;
+                  mapInstanceRef.current = e.map;
                 }}
-                onDragstart={() => setAutoFollow(false)}
             >
               <TrafficLayer />
               
@@ -411,10 +349,9 @@ export default function LocalTrafficSummary() {
                         radius={radius * 1000}
                         strokeColor="#248eeb"
                         strokeOpacity={0.5}
-                        strokeWeight={3}
+                        strokeWeight={2}
                         fillColor="#248eeb"
-                        fillOpacity={0.12}
-                        clickable={false}
+                        fillOpacity={0.1}
                     />
 
                     {analysis?.allProbes.map((p) => (
@@ -429,7 +366,7 @@ export default function LocalTrafficSummary() {
                                 fillOpacity: 0.9,
                                 strokeColor: 'white',
                                 strokeWeight: 2,
-                                scale: p.status === 'EMBOUTEILLAGE' ? 14 : 10
+                                scale: p.status === 'EMBOUTEILLAGE' ? 12 : 8
                             } as any}
                         />
                     ))}
@@ -439,20 +376,15 @@ export default function LocalTrafficSummary() {
                             position={selectedProbe.coords}
                             onCloseClick={() => setSelectedProbe(null)}
                         >
-                            <div className="p-2 space-y-2 min-w-[200px]">
-                                <h4 className="font-black text-slate-900 leading-tight pr-4">{selectedProbe.road}</h4>
-                                <div className="flex justify-between items-center border-t border-slate-100 pt-2">
-                                    <Badge style={{ backgroundColor: getStatusColor(selectedProbe.status) }} className="text-[10px] font-black text-white px-2">
+                            <div className="p-1 space-y-1">
+                                <h4 className="font-bold text-sm">{selectedProbe.road}</h4>
+                                <div className="flex justify-between items-center gap-4">
+                                    <Badge style={{ backgroundColor: getStatusColor(selectedProbe.status) }} className="text-[9px] font-black text-white px-2">
                                         {selectedProbe.status}
                                     </Badge>
-                                    {selectedProbe.delay > 0 && (
-                                      <span className="text-[11px] font-black text-red-600">+{selectedProbe.delay} min</span>
-                                    )}
+                                    <span className="text-[10px] font-bold text-red-600">+{selectedProbe.delay} min</span>
                                 </div>
-                                <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1.5">
-                                    <Clock className="h-3 w-3" />
-                                    Vitesse estimée: {selectedProbe.speed} km/h
-                                </p>
+                                <p className="text-[9px] text-slate-500 italic">Vitesse: {selectedProbe.speed} km/h</p>
                             </div>
                         </InfoWindow>
                     )}

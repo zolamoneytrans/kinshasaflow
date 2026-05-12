@@ -6,6 +6,7 @@ import {
   Map, 
   useMap, 
   Marker,
+  InfoWindow
 } from '@vis.gl/react-google-maps';
 import { 
   Radar, 
@@ -21,7 +22,12 @@ import {
   CheckCircle2,
   AlertOctagon,
   Waves,
-  Car
+  Car,
+  ChevronUp,
+  ChevronDown,
+  X,
+  MapPin,
+  Clock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +46,7 @@ import { format } from 'date-fns';
 const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
 interface TrafficProbe {
+  id: string;
   road: string;
   status: 'FLUIDE' | 'MODÉRÉ' | 'DENSE' | 'EMBOUTEILLAGE' | 'INCONNU';
   delay: number;
@@ -50,6 +57,7 @@ interface TrafficProbe {
 
 interface LocalAnalysis {
   globalScore: number;
+  allProbes: TrafficProbe[];
   blocked: TrafficProbe[];
   dense: TrafficProbe[];
   fluide: TrafficProbe[];
@@ -117,6 +125,8 @@ export default function LocalTrafficSummary() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [mapZoom, setZoom] = useState(14);
+  const [isResultsVisible, setIsResultsVisible] = useState(true);
+  const [selectedProbe, setSelectedProbe] = useState<TrafficProbe | null>(null);
   
   const { user, firestore } = useFirebase();
   const { toast } = useToast();
@@ -142,8 +152,9 @@ export default function LocalTrafficSummary() {
     if (!silent) setIsAnalyzing(true);
 
     try {
-      const nearbyAxes = MAJOR_AXES.map(axis => ({
+      const nearbyAxes = MAJOR_AXES.map((axis, idx) => ({
           ...axis,
+          id: `local-${idx}`,
           dist: calculateDistance(location.lat, location.lng, axis.origin.lat, axis.origin.lng)
       }))
       .filter(axis => axis.dist <= radius)
@@ -160,6 +171,7 @@ export default function LocalTrafficSummary() {
       const results = await getGoogleTrafficStatusAction(nearbyAxes as any);
       
       const probes: TrafficProbe[] = results.map((r, i) => ({
+        id: nearbyAxes[i].id,
         road: r.road,
         status: r.status as any,
         delay: r.delay,
@@ -177,6 +189,7 @@ export default function LocalTrafficSummary() {
 
       const newAnalysis: LocalAnalysis = {
           globalScore: Math.round(score),
+          allProbes: probes,
           blocked: blocked.sort((a, b) => b.delay - a.delay),
           dense: dense.sort((a, b) => b.delay - a.delay),
           fluide: fluide,
@@ -184,6 +197,7 @@ export default function LocalTrafficSummary() {
       };
 
       setAnalysis(newAnalysis);
+      if (!silent) setIsResultsVisible(true);
 
       if (isAudioEnabled && !silent) {
         let text = `Radar local actualisé. `;
@@ -224,12 +238,24 @@ export default function LocalTrafficSummary() {
     setZoom(15);
   };
 
+  const getStatusColor = (status: TrafficProbe['status']) => {
+    switch (status) {
+      case 'EMBOUTEILLAGE': return '#ef4444'; // Red
+      case 'DENSE': return '#f59e0b'; // Amber
+      case 'MODÉRÉ': return '#fcd34d'; // Yellow
+      case 'FLUIDE': return '#10b981'; // Green
+      default: return '#94a3b8'; // Slate
+    }
+  };
+
   return (
     <div className="w-full h-full flex flex-col bg-[#0b121e] overflow-hidden rounded-[2.5rem] border border-slate-800 shadow-2xl relative">
       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
         
+        {/* Overlays */}
         <div className="absolute inset-0 z-10 pointer-events-none p-4 flex flex-col justify-between">
             
+            {/* Top Control Card */}
             <motion.div 
                 initial={{ y: -50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -270,7 +296,7 @@ export default function LocalTrafficSummary() {
                         <div className="flex items-center justify-between gap-6">
                             <div className="flex-1 space-y-1.5">
                                 <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
-                                    <span>Distance de Scan</span>
+                                    <span>Rayon de scan</span>
                                     <span className="text-primary font-mono bg-primary/5 px-2 py-0.5 rounded">{radius} km</span>
                                 </div>
                                 <Slider 
@@ -294,19 +320,29 @@ export default function LocalTrafficSummary() {
                 </Card>
             </motion.div>
 
+            {/* Bottom Analysis Panel */}
             <AnimatePresence>
                 {analysis && (
                     <motion.div 
-                        initial={{ y: 100, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
+                        initial={{ y: 300, opacity: 0 }}
+                        animate={{ y: isResultsVisible ? 0 : 220, opacity: 1 }}
                         className="w-full max-w-4xl mx-auto pointer-events-auto"
                     >
-                        <Card className="bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[2.5rem] overflow-hidden">
+                        <Card className="bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-t-[2.5rem] rounded-b-none lg:rounded-b-[2.5rem] overflow-hidden">
+                            {/* Toggle Handle */}
+                            <button 
+                                onClick={() => setIsResultsVisible(!isResultsVisible)}
+                                className="w-full h-10 flex items-center justify-center hover:bg-white/5 transition-colors border-b border-white/5"
+                            >
+                                {isResultsVisible ? <ChevronDown className="h-6 w-6 text-slate-500" /> : <ChevronUp className="h-6 w-6 text-primary animate-bounce" />}
+                            </button>
+
                             <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-white/5">
                                 
+                                {/* Score Circle Section */}
                                 <div className="p-6 lg:p-8 flex flex-row lg:flex-col items-center justify-between lg:justify-center gap-4 lg:w-48 shrink-0 bg-white/5">
                                     <div className="text-center">
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Indice Fluidité</p>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Indice Local</p>
                                         <div className="relative inline-block">
                                             <p className={cn(
                                                 "text-5xl font-black tracking-tighter",
@@ -329,57 +365,73 @@ export default function LocalTrafficSummary() {
                                     </div>
                                 </div>
 
+                                {/* Columns Section */}
                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/5">
                                     
+                                    {/* Column 1: Blocked */}
                                     <div className="p-5 space-y-3">
                                         <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
                                             <AlertOctagon className="h-3 w-3" /> Points Noirs
                                         </h3>
                                         <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
                                             {analysis.blocked.length > 0 ? analysis.blocked.map((p, i) => (
-                                                <div key={i} className="bg-red-500/10 p-3 rounded-2xl border border-red-500/20 flex justify-between items-center group hover:bg-red-500/20 transition-colors">
+                                                <button 
+                                                    key={i} 
+                                                    onClick={() => { setSelectedProbe(p); mapRef.current?.setCenter(p.coords); }}
+                                                    className="w-full text-left bg-red-500/10 p-3 rounded-2xl border border-red-500/20 flex justify-between items-center group hover:bg-red-500/20 transition-colors"
+                                                >
                                                     <div className="min-w-0">
                                                         <p className="text-xs font-bold text-red-200 truncate">{p.road}</p>
                                                         <p className="text-[9px] text-red-400/80 font-black">+{p.delay} min • {p.speed} km/h</p>
                                                     </div>
                                                     <ArrowRight className="h-3 w-3 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                </div>
+                                                </button>
                                             )) : (
                                                 <p className="text-[10px] text-white/20 italic text-center py-4">Aucun blocage majeur</p>
                                             )}
                                         </div>
                                     </div>
 
+                                    {/* Column 2: Dense */}
                                     <div className="p-5 space-y-3">
                                         <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
                                             <Car className="h-3 w-3" /> Zones Denses
                                         </h3>
                                         <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
                                             {analysis.dense.length > 0 ? analysis.dense.map((p, i) => (
-                                                <div key={i} className="bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10 flex justify-between items-center">
+                                                <button 
+                                                    key={i} 
+                                                    onClick={() => { setSelectedProbe(p); mapRef.current?.setCenter(p.coords); }}
+                                                    className="w-full text-left bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10 flex justify-between items-center group hover:bg-amber-500/10 transition-colors"
+                                                >
                                                     <div className="min-w-0">
                                                         <p className="text-xs font-bold text-amber-100 truncate">{p.road}</p>
                                                         <p className="text-[9px] text-amber-500/60 font-black">+{p.delay} min • {p.speed} km/h</p>
                                                     </div>
-                                                </div>
+                                                </button>
                                             )) : (
                                                 <p className="text-[10px] text-white/20 italic text-center py-4">Secteur dégagé</p>
                                             )}
                                         </div>
                                     </div>
 
+                                    {/* Column 3: Fluid */}
                                     <div className="p-5 space-y-3">
                                         <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
                                             <CheckCircle2 className="h-3 w-3" /> Voies Fluides
                                         </h3>
                                         <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
                                             {analysis.fluide.length > 0 ? analysis.fluide.map((p, i) => (
-                                                <div key={i} className="bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10 flex items-center gap-3">
+                                                <button 
+                                                    key={i} 
+                                                    onClick={() => { setSelectedProbe(p); mapRef.current?.setCenter(p.coords); }}
+                                                    className="w-full text-left bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10 flex items-center gap-3 group hover:bg-emerald-500/10 transition-colors"
+                                                >
                                                     <div className="w-1 h-1 rounded-full bg-emerald-500" />
                                                     <p className="text-xs font-bold text-emerald-100 truncate">{p.road}</p>
-                                                </div>
+                                                </button>
                                             )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-4">Secteur saturé</p>
+                                                <p className="text-[10px] text-white/20 italic text-center py-4">Scan en cours...</p>
                                             )}
                                         </div>
                                     </div>
@@ -391,6 +443,7 @@ export default function LocalTrafficSummary() {
             </AnimatePresence>
         </div>
 
+        {/* The Map Component */}
         <div className="flex-1 relative">
             <Map
                 defaultCenter={location || { lat: -4.330, lng: 15.313 }}
@@ -399,7 +452,7 @@ export default function LocalTrafficSummary() {
                 onZoomChanged={(e) => setZoom(e.detail.zoom)}
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
-                mapId="local_radar_map_dark_v2"
+                mapId="local_radar_map_dark_v3"
                 className="w-full h-full"
                 onCameraChanged={(e) => mapRef.current = e.map}
             >
@@ -407,8 +460,10 @@ export default function LocalTrafficSummary() {
               
               {location && (
                 <>
+                    {/* User Position Marker */}
                     <Marker 
                         position={location}
+                        zIndex={100}
                         icon={{
                             path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z",
                             fillColor: '#248eeb',
@@ -419,21 +474,7 @@ export default function LocalTrafficSummary() {
                         } as any}
                     />
 
-                    {analysis?.blocked.map((p, i) => (
-                        <Marker 
-                            key={`blocked-${i}`}
-                            position={p.coords}
-                            icon={{
-                                path: (window as any).google?.maps?.SymbolPath?.CIRCLE || 0,
-                                fillColor: '#ef4444',
-                                fillOpacity: 0.8,
-                                strokeColor: 'white',
-                                strokeWeight: 1,
-                                scale: 6
-                            }}
-                        />
-                    ))}
-
+                    {/* Scan Perimeter Visualizer */}
                     <Circle 
                         center={location}
                         radius={radius * 1000}
@@ -444,6 +485,50 @@ export default function LocalTrafficSummary() {
                         fillOpacity={0.05}
                         clickable={false}
                     />
+
+                    {/* Dynamic Status Markers (The "Pins" user requested) */}
+                    {analysis?.allProbes.map((p) => (
+                        <Marker 
+                            key={p.id}
+                            position={p.coords}
+                            onClick={() => setSelectedProbe(p)}
+                            icon={{
+                                path: (window as any).google?.maps?.SymbolPath?.CIRCLE || 0,
+                                fillColor: getStatusColor(p.status),
+                                fillOpacity: 0.9,
+                                strokeColor: 'white',
+                                strokeWeight: 1.5,
+                                scale: p.status === 'EMBOUTEILLAGE' ? 8 : 6
+                            }}
+                        />
+                    ))}
+
+                    {/* Info Window for Map Interactivity */}
+                    {selectedProbe && (
+                        <InfoWindow
+                            position={selectedProbe.coords}
+                            onCloseClick={() => setSelectedProbe(null)}
+                        >
+                            <div className="p-2 space-y-2 min-w-[200px]">
+                                <div className="flex justify-between items-start gap-2">
+                                    <h4 className="font-black text-slate-900 leading-tight">{selectedProbe.road}</h4>
+                                    <Badge className={cn("text-[9px] font-black")} style={{ backgroundColor: getStatusColor(selectedProbe.status) }}>
+                                        {selectedProbe.status}
+                                    </Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                                    <div className="flex items-center gap-1">
+                                        <Clock className="h-3 w-3 text-slate-400" />
+                                        <span className="text-[10px] font-bold text-red-500">+{selectedProbe.delay} min</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 justify-end">
+                                        <Activity className="h-3 w-3 text-slate-400" />
+                                        <span className="text-[10px] font-bold text-slate-700">{selectedProbe.speed} km/h</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </InfoWindow>
+                    )}
                 </>
               )}
             </Map>

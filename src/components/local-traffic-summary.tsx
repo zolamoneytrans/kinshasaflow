@@ -6,29 +6,24 @@ import {
   Map, 
   useMap, 
   Marker,
-  Circle
 } from '@vis.gl/react-google-maps';
 import { 
   Radar, 
   LocateFixed, 
-  Star, 
   Loader2, 
   Activity, 
   TrendingUp, 
   AlertTriangle,
-  Zap,
   Volume2,
   VolumeX,
   RefreshCw,
-  Clock,
   ArrowRight,
   CheckCircle2,
   AlertOctagon,
   Waves,
-  MapPin,
   Car
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
@@ -49,7 +44,7 @@ interface TrafficProbe {
   status: 'FLUIDE' | 'MODÉRÉ' | 'DENSE' | 'EMBOUTEILLAGE' | 'INCONNU';
   delay: number;
   speed: number;
-  distance: number; // en km du user
+  distance: number; 
   coords: { lat: number, lng: number };
 }
 
@@ -59,6 +54,34 @@ interface LocalAnalysis {
   dense: TrafficProbe[];
   fluide: TrafficProbe[];
   lastUpdated: Date;
+}
+
+/**
+ * Composant Cercle personnalisé pour @vis.gl/react-google-maps
+ */
+function Circle(props: google.maps.CircleOptions) {
+  const map = useMap();
+  const circleRef = useRef<google.maps.Circle | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+    if (!circleRef.current) {
+      circleRef.current = new google.maps.Circle();
+    }
+
+    circleRef.current.setOptions({
+      ...props,
+      map
+    });
+
+    return () => {
+      if (circleRef.current) {
+        circleRef.current.setMap(null);
+      }
+    };
+  }, [map, props]);
+
+  return null;
 }
 
 // Calcul de distance (Haversine)
@@ -119,14 +142,13 @@ export default function LocalTrafficSummary() {
     if (!silent) setIsAnalyzing(true);
 
     try {
-      // 1. Filtrer les axes à proximité du rayon choisi
       const nearbyAxes = MAJOR_AXES.map(axis => ({
           ...axis,
           dist: calculateDistance(location.lat, location.lng, axis.origin.lat, axis.origin.lng)
       }))
       .filter(axis => axis.dist <= radius)
       .sort((a, b) => a.dist - b.dist)
-      .slice(0, 15); // Scanner max 15 axes pour la performance
+      .slice(0, 15);
 
       if (nearbyAxes.length === 0) {
           if (!silent) toast({ title: "Zone peu dense", description: "Aucun axe majeur détecté dans ce rayon." });
@@ -135,7 +157,6 @@ export default function LocalTrafficSummary() {
           return;
       }
 
-      // 2. Récupérer le statut réel via l'API Google
       const results = await getGoogleTrafficStatusAction(nearbyAxes as any);
       
       const probes: TrafficProbe[] = results.map((r, i) => ({
@@ -147,12 +168,10 @@ export default function LocalTrafficSummary() {
         coords: nearbyAxes[i].origin
       }));
 
-      // 3. Catégorisation
       const blocked = probes.filter(p => p.status === 'EMBOUTEILLAGE' || (p.status === 'DENSE' && p.delay > 5));
       const dense = probes.filter(p => p.status === 'DENSE' || p.status === 'MODÉRÉ');
       const fluide = probes.filter(p => p.status === 'FLUIDE');
 
-      // 4. Calcul du score local
       const avgDelay = probes.reduce((acc, p) => acc + p.delay, 0) / probes.length;
       const score = Math.max(0, 100 - (avgDelay * 12));
 
@@ -166,13 +185,12 @@ export default function LocalTrafficSummary() {
 
       setAnalysis(newAnalysis);
 
-      // 5. Briefing Vocal IA (si activé)
       if (isAudioEnabled && !silent) {
-        let text = `Radar actualisé. `;
+        let text = `Radar local actualisé. `;
         if (blocked.length > 0) {
             text += `Attention, j'ai détecté ${blocked.length} points noirs à proximité, notamment sur ${blocked[0].road}. `;
         } else if (dense.length > 0) {
-            text += `Ralentissements modérés détectés. `;
+            text += `Ralentissements modérés détectés dans votre zone. `;
         } else {
             text += `La circulation est globalement fluide autour de vous. `;
         }
@@ -181,7 +199,7 @@ export default function LocalTrafficSummary() {
         generateSpeechAction(text).then(res => {
             if (res?.media) {
                 const audio = new Audio(res.media);
-                audio.play().catch(e => console.warn("Audio bloqué par le navigateur"));
+                audio.play().catch(e => console.warn("Audio bloqué"));
             }
         });
       }
@@ -194,7 +212,6 @@ export default function LocalTrafficSummary() {
     }
   }, [location, radius, user, isAudioEnabled, toast]);
 
-  // Déclencher un scan automatique au chargement ou changement de rayon
   useEffect(() => {
     if (location && (isLoading || analysis === null)) {
         handleStartAnalysis(true);
@@ -211,10 +228,8 @@ export default function LocalTrafficSummary() {
     <div className="w-full h-full flex flex-col bg-[#0b121e] overflow-hidden rounded-[2.5rem] border border-slate-800 shadow-2xl relative">
       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
         
-        {/* Radar UI Overlay */}
         <div className="absolute inset-0 z-10 pointer-events-none p-4 flex flex-col justify-between">
             
-            {/* Top Control Card */}
             <motion.div 
                 initial={{ y: -50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -279,7 +294,6 @@ export default function LocalTrafficSummary() {
                 </Card>
             </motion.div>
 
-            {/* Bottom Analysis Results */}
             <AnimatePresence>
                 {analysis && (
                     <motion.div 
@@ -290,7 +304,6 @@ export default function LocalTrafficSummary() {
                         <Card className="bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[2.5rem] overflow-hidden">
                             <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-white/5">
                                 
-                                {/* Score Panel */}
                                 <div className="p-6 lg:p-8 flex flex-row lg:flex-col items-center justify-between lg:justify-center gap-4 lg:w-48 shrink-0 bg-white/5">
                                     <div className="text-center">
                                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Indice Fluidité</p>
@@ -316,10 +329,8 @@ export default function LocalTrafficSummary() {
                                     </div>
                                 </div>
 
-                                {/* Lists Panel */}
                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/5">
                                     
-                                    {/* Points Noirs */}
                                     <div className="p-5 space-y-3">
                                         <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
                                             <AlertOctagon className="h-3 w-3" /> Points Noirs
@@ -339,10 +350,9 @@ export default function LocalTrafficSummary() {
                                         </div>
                                     </div>
 
-                                    {/* Ralentissements */}
                                     <div className="p-5 space-y-3">
                                         <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                                            <Car className="h-3 w-3" /> Ralentis
+                                            <Car className="h-3 w-3" /> Zones Denses
                                         </h3>
                                         <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
                                             {analysis.dense.length > 0 ? analysis.dense.map((p, i) => (
@@ -358,7 +368,6 @@ export default function LocalTrafficSummary() {
                                         </div>
                                     </div>
 
-                                    {/* Voies Fluides */}
                                     <div className="p-5 space-y-3">
                                         <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
                                             <CheckCircle2 className="h-3 w-3" /> Voies Fluides
@@ -370,7 +379,7 @@ export default function LocalTrafficSummary() {
                                                     <p className="text-xs font-bold text-emerald-100 truncate">{p.road}</p>
                                                 </div>
                                             )) : (
-                                                <p className="text-[10px] text-white/20 italic text-center py-4">Tout est bouché !</p>
+                                                <p className="text-[10px] text-white/20 italic text-center py-4">Secteur saturé</p>
                                             )}
                                         </div>
                                     </div>
@@ -382,7 +391,6 @@ export default function LocalTrafficSummary() {
             </AnimatePresence>
         </div>
 
-        {/* Fullscreen Map Background */}
         <div className="flex-1 relative">
             <Map
                 defaultCenter={location || { lat: -4.330, lng: 15.313 }}
@@ -399,7 +407,6 @@ export default function LocalTrafficSummary() {
               
               {location && (
                 <>
-                    {/* User Marker */}
                     <Marker 
                         position={location}
                         icon={{
@@ -412,13 +419,12 @@ export default function LocalTrafficSummary() {
                         } as any}
                     />
 
-                    {/* Probes Visualization */}
                     {analysis?.blocked.map((p, i) => (
                         <Marker 
                             key={`blocked-${i}`}
                             position={p.coords}
                             icon={{
-                                path: google.maps.SymbolPath.CIRCLE,
+                                path: (window as any).google?.maps?.SymbolPath?.CIRCLE || 0,
                                 fillColor: '#ef4444',
                                 fillOpacity: 0.8,
                                 strokeColor: 'white',
@@ -428,7 +434,6 @@ export default function LocalTrafficSummary() {
                         />
                     ))}
 
-                    {/* Radius Circle */}
                     <Circle 
                         center={location}
                         radius={radius * 1000}

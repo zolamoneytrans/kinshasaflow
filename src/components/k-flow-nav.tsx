@@ -46,7 +46,9 @@ import {
   ArrowUpLeft,
   CornerUpRight,
   CornerUpLeft,
-  Spline
+  Spline,
+  Radar,
+  ShieldAlert
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -54,12 +56,13 @@ import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection, query, orderBy, limit } from 'firebase/firestore';
 import { STAR_COSTS, UserProfile, EventReport, WithId } from '@/lib/types';
-import { generateSpeechAction, askAssistantAction } from '@/app/actions';
+import { generateSpeechAction, getGoogleTrafficStatusAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { MAJOR_AXES } from '@/lib/constants';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
 
@@ -71,15 +74,6 @@ const KINSHASA_BOUNDS = {
 };
 
 const KINSHASA_CENTER = { lat: -4.330, lng: 15.313 };
-
-type TrafficAlertType = 'red' | 'yellow' | 'green' | 'info';
-interface TrafficAlert {
-    id: string;
-    message: string;
-    type: TrafficAlertType;
-    distance?: string;
-    timestamp: number;
-}
 
 interface RouteSummary {
     index: number;
@@ -107,8 +101,6 @@ interface TrafficSegment {
     status: 'fluide' | 'congestionné' | 'bloqué' | 'inconnu';
     delayMinutes: number;
     distanceText: string;
-    isIncident?: boolean;
-    debugRatio?: number;
 }
 
 interface SummaryData {
@@ -270,10 +262,12 @@ export default function KFlowNav() {
     const [autoFollow, setAutoFollow] = useState(true);
     const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
     const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanResults, setScanResults] = useState<any[] | null>(null);
+    
     const lastSpokenStep = useRef<string | null>(null);
     const lastAlertTimestamp = useRef<number>(0);
     
-    const containerRef = useRef<HTMLDivElement>(null);
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
     const { data: profile } = useDoc<UserProfile>(userRef);
 
@@ -296,45 +290,6 @@ export default function KFlowNav() {
             return () => navigator.geolocation.clearWatch(watchId);
         }
     }, []);
-
-    useEffect(() => {
-        if (!isNavigating || !routeInfo?.allRoutes) return;
-        
-        const currentRoute = routeInfo.allRoutes[selectedRouteIndex];
-        const now = Date.now();
-
-        if (currentRoute.delayMinutes > 5 && (now - lastAlertTimestamp.current) > 60000) {
-            lastAlertTimestamp.current = now;
-            const msg = `Attention : un retard de ${currentRoute.delayMinutes} minutes est détecté sur votre itinéraire.`;
-            
-            toast({
-                title: "Alerte Trafic K-Flow",
-                description: msg,
-                variant: "destructive"
-            });
-
-            if (isAudioEnabled) {
-                generateSpeechAction(msg).then(res => {
-                    if (res?.media) new Audio(res.media).play().catch(e => console.warn("Audio blocked"));
-                });
-            }
-        }
-    }, [isNavigating, routeInfo, selectedRouteIndex, isAudioEnabled, toast]);
-
-    useEffect(() => {
-        if (!isAudioEnabled || !isNavigating || !routeInfo?.currentStep) return;
-        
-        const stepText = translateInstruction(routeInfo.currentStep.instructions.replace(/<[^>]*>?/gm, ''));
-        if (stepText !== lastSpokenStep.current) {
-            lastSpokenStep.current = stepText;
-            generateSpeechAction(stepText).then(res => {
-                if (res?.media) {
-                    const audio = new Audio(res.media);
-                    audio.play().catch(e => console.error("Audio play blocked", e));
-                }
-            });
-        }
-    }, [isAudioEnabled, isNavigating, routeInfo?.currentStep]);
 
     const handleAnalyzeRoute = async () => {
         if (!user || !profile) return;
@@ -408,7 +363,6 @@ export default function KFlowNav() {
                     status,
                     delayMinutes: Math.max(0, Math.round((currentDuration - typicalDuration) / 60)),
                     distanceText: step.distance?.text || '',
-                    debugRatio: ratio
                 };
             });
 
@@ -445,15 +399,12 @@ export default function KFlowNav() {
             });
 
             let bestIdx = 0;
-            const problematicSegments = mergedSegments.filter(s => s.status !== 'fluide').length;
-            const congestionPerc = Math.round((problematicSegments / mergedSegments.length) * 100);
-
             let rec = `Conditions excellentes : le flux est fluide sur l'ensemble de votre trajet.`;
             
             if (blockedCount > 0) {
                 rec = `Flux critique : ${blockedCount} zone(s) de blocage total détectée(s). Retard estimé de ${globalDelay} min.`;
             } else if (congestedCount > 1) {
-                rec = `Ralentissements détectés sur ${congestionPerc}% du parcours. Prévoyez environ ${globalDelay} min de retard.`;
+                rec = `Ralentissements détectés. Prévoyez environ ${globalDelay} min de retard.`;
             }
 
             if (result.routes.length > 1) {
@@ -505,6 +456,35 @@ export default function KFlowNav() {
         }
     };
 
+    const handleScanSector = async () => {
+        if (!smoothLocation) return;
+        setIsScanning(true);
+        try {
+            const nearby = MAJOR_AXES.map((axis, idx) => ({
+                ...axis,
+                dist: Math.sqrt(Math.pow(axis.origin.lat - smoothLocation.lat, 2) + Math.pow(axis.origin.lng - smoothLocation.lng, 2)) * 111
+            })).filter(a => a.dist <= 2).slice(0, 10);
+
+            if (nearby.length > 0) {
+                const results = await getGoogleTrafficStatusAction(nearby as any);
+                setScanResults(results);
+            } else {
+                setScanResults([]);
+            }
+            
+            if (isAudioEnabled) {
+                const msg = "Radar activé. Analyse des axes dans un rayon de deux kilomètres terminée.";
+                generateSpeechAction(msg).then(res => {
+                    if (res?.media) new Audio(res.media).play();
+                });
+            }
+        } catch (e) {
+            toast({ title: "Radar indisponible" });
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
     const handleStartNavigation = () => {
         setIsNavigating(true);
         setShowSummary(false);
@@ -522,19 +502,19 @@ export default function KFlowNav() {
     };
 
     return (
-        <div 
-            ref={containerRef}
-            className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-[#0b121e] flex flex-col border border-slate-800"
-        >
+        <div className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-[#0b121e] flex flex-col border border-slate-800">
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="fr">
-                {isNavigating && (
-                    <>
-                        <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
-                            <motion.div 
-                                initial={{ y: -100, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                className="w-full max-w-xl bg-[#00695c] shadow-2xl rounded-3xl p-5 flex items-center gap-6 pointer-events-auto border-t border-white/20"
-                            >
+                
+                {/* ── Instructions Banner (Google Style) ── */}
+                <AnimatePresence>
+                    {isNavigating && (
+                        <motion.div 
+                            initial={{ y: -100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: -100, opacity: 0 }}
+                            className="absolute top-4 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none"
+                        >
+                            <div className="w-full max-w-xl bg-[#00695c] shadow-2xl rounded-3xl p-5 flex items-center gap-6 pointer-events-auto border-t border-white/20">
                                 <div className="text-white bg-[#004d40] p-3 rounded-2xl shadow-inner">
                                     {getDirectionIcon(routeInfo?.currentStep?.instructions || "")}
                                 </div>
@@ -543,73 +523,19 @@ export default function KFlowNav() {
                                         {translateInstruction(routeInfo?.currentStep?.instructions.replace(/<[^>]*>?/gm, '').split(',')[0] || "Suivre l'itinéraire")}
                                     </p>
                                     <div className="flex items-center gap-2 mt-1 opacity-80">
-                                        <p className="text-xs font-bold uppercase tracking-widest">Ensuite :</p>
-                                        <p className="text-xs font-medium">{translateInstruction(routeInfo?.nextStep?.instructions.replace(/<[^>]*>?/gm, '').split(',')[0] || "--")}</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Ensuite :</p>
+                                        <p className="text-xs font-bold">{translateInstruction(routeInfo?.nextStep?.instructions.replace(/<[^>]*>?/gm, '').split(',')[0] || "--")}</p>
                                     </div>
                                 </div>
                                 <div className="bg-white/10 p-3 rounded-full">
                                     <Mic className="text-white h-5 w-5" />
                                 </div>
-                            </motion.div>
-                        </div>
-
-                        <div className="absolute bottom-0 left-0 right-0 z-30 flex justify-center p-4 bg-black/40 backdrop-blur-xl border-t border-white/5">
-                            <motion.div 
-                                initial={{ y: 100 }}
-                                animate={{ y: 0 }}
-                                className="w-full max-w-3xl flex items-center justify-between gap-4"
-                            >
-                                <button onClick={() => setIsNavigating(false)} className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
-                                    <X className="text-white h-7 w-7" />
-                                </button>
-                                
-                                <div className="flex items-center gap-8">
-                                    <div className="text-center">
-                                        <p className="text-3xl font-black text-emerald-400">
-                                            {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic.split(' ')[0] || '--'}
-                                            <span className="text-sm ml-1 uppercase">min</span>
-                                        </p>
-                                        <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-white/50 uppercase tracking-widest">
-                                            <span>{routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || '--'}</span>
-                                            <span>•</span>
-                                            <span>{format(new Date(Date.now() + (routeInfo?.allRoutes?.[selectedRouteIndex]?.delayMinutes || 0) * 60000), 'HH:mm')}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
-                                    <Spline className="text-white h-7 w-7" />
-                                </button>
-                            </motion.div>
-                        </div>
-
-                        <div className="absolute top-32 right-4 z-30 flex flex-col gap-4">
-                            <button onClick={handleReCenter} className="h-14 w-14 rounded-full bg-[#1c2331] border border-white/10 shadow-2xl flex items-center justify-center text-white/70">
-                                <Compass className="h-7 w-7" />
-                            </button>
-                            <button className="h-14 w-14 rounded-full bg-[#1c2331] border border-white/10 shadow-2xl flex items-center justify-center text-white/70">
-                                <Search className="h-7 w-7" />
-                            </button>
-                            <button 
-                                onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-                                className={cn(
-                                    "h-14 w-14 rounded-full border shadow-2xl flex items-center justify-center transition-all",
-                                    isAudioEnabled ? "bg-primary border-primary text-white" : "bg-[#1c2331] border-white/10 text-white/70"
-                                )}
-                            >
-                                {isAudioEnabled ? <Volume2 className="h-7 w-7" /> : <VolumeX className="h-7 w-7" />}
-                            </button>
-                        </div>
-
-                        <div className="absolute bottom-24 left-6 z-30">
-                            <div className="bg-[#1c2331]/90 backdrop-blur-md border border-white/10 h-20 w-20 rounded-full flex flex-col items-center justify-center shadow-2xl">
-                                <p className="text-2xl font-black text-white leading-none">{speed}</p>
-                                <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1">km/h</p>
                             </div>
-                        </div>
-                    </>
-                )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
+                {/* ── Top Bar (Search Mode) ── */}
                 {!isNavigating && !showSummary && (
                     <div className="absolute top-4 left-0 right-0 z-30 flex justify-center px-4">
                         <motion.div 
@@ -622,8 +548,8 @@ export default function KFlowNav() {
                                     <NavigationIcon className="text-white h-5 w-5" />
                                 </div>
                                 <div className="flex-1">
-                                    <h2 className="text-lg font-black text-slate-900 tracking-tight">K-Flow Nav</h2>
-                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Navigation Temps Réel Kinshasa</p>
+                                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Navigation GPS</h2>
+                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Kinshasa Flow Engine</p>
                                 </div>
                                 <Badge variant="secondary" className="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full border-amber-200">
                                     {STAR_COSTS.NAVIGATION_SESSION} ⭐
@@ -642,81 +568,191 @@ export default function KFlowNav() {
                                     disabled={isUnlocking || !destination}
                                     className="h-12 px-6 rounded-xl font-black shadow-xl"
                                 >
-                                    {isUnlocking ? <Loader2 className="animate-spin" /> : "GUIDAGE"}
+                                    {isUnlocking ? <Loader2 className="animate-spin" /> : "CHERCHER"}
                                 </Button>
                             </div>
                         </motion.div>
                     </div>
                 )}
 
+                {/* ── Bottom Info Bar (Nav Mode) ── */}
+                <AnimatePresence>
+                    {isNavigating && (
+                        <motion.div 
+                            initial={{ y: 100 }}
+                            animate={{ y: 0 }}
+                            exit={{ y: 100 }}
+                            className="absolute bottom-0 left-0 right-0 z-40 flex justify-center p-4 bg-black/40 backdrop-blur-xl border-t border-white/5"
+                        >
+                            <div className="w-full max-w-3xl flex items-center justify-between gap-4">
+                                <button onClick={() => setIsNavigating(false)} className="h-14 w-14 rounded-full bg-red-600/20 text-red-500 border border-red-600/30 flex items-center justify-center hover:bg-red-600/30 transition-all">
+                                    <X className="h-7 w-7" />
+                                </button>
+                                
+                                <div className="flex-1 flex justify-center items-center gap-8">
+                                    <div className="text-center">
+                                        <p className="text-3xl font-black text-emerald-400">
+                                            {routeInfo?.allRoutes?.[selectedRouteIndex]?.durationInTraffic.split(' ')[0] || '--'}
+                                            <span className="text-sm ml-1 uppercase">min</span>
+                                        </p>
+                                        <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-white/50 uppercase tracking-widest mt-1">
+                                            <span>{routeInfo?.allRoutes?.[selectedRouteIndex]?.distance || '--'}</span>
+                                            <span>•</span>
+                                            <span>ETA {format(new Date(Date.now() + (routeInfo?.allRoutes?.[selectedRouteIndex]?.delayMinutes || 0) * 60000), 'HH:mm')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button onClick={handleReCenter} className="h-14 w-14 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10">
+                                    <Compass className="h-7 w-7" />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* ── Floating Controls ── */}
+                <div className="absolute right-4 top-32 z-30 flex flex-col gap-4">
+                    <button 
+                        onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+                        className={cn(
+                            "h-14 w-14 rounded-full border shadow-2xl flex items-center justify-center transition-all",
+                            isAudioEnabled ? "bg-primary border-primary text-white" : "bg-[#1c2331]/90 border-white/10 text-white/70"
+                        )}
+                    >
+                        {isAudioEnabled ? <Volume2 className="h-7 w-7" /> : <VolumeX className="h-7 w-7" />}
+                    </button>
+                    
+                    <button 
+                        onClick={handleScanSector}
+                        disabled={isScanning}
+                        className="h-14 w-14 rounded-full bg-emerald-600 text-white shadow-2xl flex items-center justify-center border border-emerald-500/50 relative overflow-hidden"
+                    >
+                        {isScanning ? <Loader2 className="h-7 w-7 animate-spin" /> : <Radar className="h-7 w-7" />}
+                        {isScanning && <div className="absolute inset-0 bg-white/20 animate-pulse" />}
+                    </button>
+                </div>
+
+                {/* ── Speedometer ── */}
+                <div className="absolute bottom-24 left-6 z-30">
+                    <div className="bg-[#1c2331]/90 backdrop-blur-md border border-white/10 h-20 w-20 rounded-full flex flex-col items-center justify-center shadow-2xl ring-4 ring-black/20">
+                        <p className="text-3xl font-black text-white leading-none">{speed}</p>
+                        <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1">km/h</p>
+                    </div>
+                </div>
+
+                {/* ── Smart Whiteboard Overlay ── */}
+                <AnimatePresence>
+                    {scanResults && (
+                        <motion.div 
+                            initial={{ x: -400, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: -400, opacity: 0 }}
+                            className="absolute top-24 left-4 bottom-24 z-50 w-72 bg-white/95 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden flex flex-col"
+                        >
+                            <div className="bg-emerald-600 p-6 text-white flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-lg font-black uppercase tracking-tight">Whiteboard</h3>
+                                    <p className="text-[9px] font-black uppercase opacity-60">Radar 2km Kinshasa</p>
+                                </div>
+                                <button onClick={() => setScanResults(null)} className="p-2 hover:bg-white/10 rounded-full transition-all">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                {scanResults.length > 0 ? scanResults.map((res, i) => (
+                                    <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-slate-800 text-xs truncate">{res.road}</p>
+                                            <p className={cn(
+                                                "text-[9px] font-black uppercase",
+                                                res.status === 'EMBOUTEILLAGE' ? "text-red-500" :
+                                                res.status === 'DENSE' ? "text-orange-500" : "text-emerald-500"
+                                            )}>{res.status}</p>
+                                        </div>
+                                        <div className="text-right shrink-0 ml-2">
+                                            <p className="text-[10px] font-black text-slate-400">+{res.delay}m</p>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="py-10 text-center space-y-4">
+                                        <ShieldCheck className="h-10 w-10 text-emerald-500 mx-auto opacity-20" />
+                                        <p className="text-xs font-bold text-slate-400 uppercase">Secteur Fluide</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="p-6 bg-slate-50 border-t">
+                                <Badge className="w-full justify-center py-1.5 bg-primary/10 text-primary border-none text-[8px] font-black">SCAN RÉEL</Badge>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* ── Summary Overlay ── */}
                 <AnimatePresence>
                     {showSummary && summaryData && (
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 z-50 bg-[#0b121e]/90 backdrop-blur-xl p-0 sm:p-4 md:p-8 flex items-center justify-center overflow-y-auto"
+                            className="absolute inset-0 z-50 bg-[#0b121e]/90 backdrop-blur-xl p-4 flex items-center justify-center"
                         >
-                            <div className="w-full max-w-2xl bg-white sm:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col my-auto">
+                            <div className="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
                                 <div className="bg-primary p-8 text-white relative">
                                     <button onClick={() => setShowSummary(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
                                         <X className="h-6 w-6" />
                                     </button>
                                     <div className="space-y-4">
-                                        <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">SYNTHÈSE DE TRAJET</Badge>
+                                        <Badge className="bg-white/20 border-white/30 text-white font-bold mb-2">DÉTAILS DU TRAJET</Badge>
                                         <h2 className="text-3xl font-black tracking-tight leading-tight">{summaryData.destination}</h2>
                                         
-                                        {summaryData.allRoutes && summaryData.allRoutes.length > 1 && (
-                                            <div className="flex gap-2">
-                                                {summaryData.allRoutes.map((route: any, i: number) => (
-                                                    <button
-                                                        key={i}
-                                                        onClick={() => setSelectedRouteIndex(i)}
-                                                        className={cn(
-                                                            "flex-1 p-4 rounded-2xl border-2 transition-all text-left relative",
-                                                            selectedRouteIndex === i ? "bg-white/20 border-white" : "bg-black/10 border-white/10"
-                                                        )}
-                                                    >
-                                                        <p className="text-[9px] font-black uppercase mb-1 opacity-70">{route.isSmart ? "K-Flow Smart" : "Standard"}</p>
-                                                        <p className="text-xl font-black">{route.durationInTraffic}</p>
-                                                        {selectedRouteIndex === i && <CheckCircle2 className="absolute top-2 right-2 h-4 w-4" />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="flex gap-2">
+                                            {summaryData.allRoutes?.map((route, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => setSelectedRouteIndex(i)}
+                                                    className={cn(
+                                                        "flex-1 p-4 rounded-2xl border-2 transition-all text-left relative",
+                                                        selectedRouteIndex === i ? "bg-white/20 border-white" : "bg-black/10 border-white/10"
+                                                    )}
+                                                >
+                                                    <p className="text-[9px] font-black uppercase mb-1 opacity-70">{route.isSmart ? "Plus Rapide" : "Standard"}</p>
+                                                    <p className="text-xl font-black">{route.durationInTraffic}</p>
+                                                    {selectedRouteIndex === i && <CheckCircle2 className="absolute top-2 right-2 h-4 w-4" />}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="p-8 space-y-6">
-                                    <div className="space-y-4">
-                                        <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Tronçons routiers critiques</h3>
-                                        <div className="space-y-3">
-                                            {summaryData.segments.map((seg, i) => (
-                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={cn(
-                                                            "w-3 h-3 rounded-full",
-                                                            seg.status === 'fluide' ? "bg-emerald-500" :
-                                                            seg.status === 'congestionné' ? "bg-amber-500" : "bg-red-500"
-                                                        )} />
-                                                        <p className="font-bold text-slate-800 text-sm">{seg.from}</p>
-                                                    </div>
-                                                    {seg.delayMinutes > 0 && <span className="text-xs font-black text-red-500">+{seg.delayMinutes}m</span>}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
                                     <div className="p-6 bg-blue-50 rounded-[1.5rem] border border-blue-100 flex items-start gap-4">
                                         <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
                                         <p className="text-sm text-slate-700 font-bold leading-relaxed">{summaryData.recommendation}</p>
                                     </div>
+
+                                    <div className="space-y-3">
+                                        <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Analyse par tronçons</h3>
+                                        {summaryData.segments.slice(0, 3).map((seg, i) => (
+                                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn(
+                                                        "w-2.5 h-2.5 rounded-full",
+                                                        seg.status === 'fluide' ? "bg-emerald-500" :
+                                                        seg.status === 'congestionné' ? "bg-amber-500" : "bg-red-500"
+                                                    )} />
+                                                    <p className="font-bold text-slate-700 text-xs">{seg.from}</p>
+                                                </div>
+                                                {seg.delayMinutes > 0 && <span className="text-[10px] font-black text-red-500">+{seg.delayMinutes}m</span>}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
 
-                                <div className="p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-4">
-                                    <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-16 rounded-2xl font-black flex-1">ANNULER</Button>
-                                    <Button onClick={handleStartNavigation} className="h-16 rounded-2xl bg-primary text-white font-black text-lg flex-[2] shadow-2xl shadow-primary/30">
-                                        DÉMARRER GUIDAGE
+                                <div className="p-8 bg-slate-50 border-t flex gap-4">
+                                    <Button variant="ghost" onClick={() => setShowSummary(false)} className="h-16 rounded-2xl font-black flex-1">RETOUR</Button>
+                                    <Button onClick={handleStartNavigation} className="h-16 rounded-2xl bg-primary text-white font-black text-lg flex-[2] shadow-2xl shadow-primary/30 uppercase tracking-widest">
+                                        DÉMARRER
                                     </Button>
                                 </div>
                             </div>
@@ -724,6 +760,7 @@ export default function KFlowNav() {
                     )}
                 </AnimatePresence>
 
+                {/* ── Map Canvas ── */}
                 <div className="flex-1 relative">
                     <Map
                         defaultCenter={KINSHASA_CENTER}
@@ -732,8 +769,6 @@ export default function KFlowNav() {
                         disableDefaultUI={true}
                         onDragstart={() => setAutoFollow(false)}
                         onZoomChanged={() => setAutoFollow(false)}
-                        restriction={{ latLngBounds: KINSHASA_BOUNDS, strictBounds: false }}
-                        mapId="kflow_nav_dark_v1"
                         className="w-full h-full"
                     >
                         <TrafficLayerComponent />
@@ -771,7 +806,13 @@ export default function KFlowNav() {
                             onRouteUpdate={onRouteUpdate}
                         />
                         
-                        <IncidentMarkers incidents={incidents || []} />
+                        {incidents?.map((incident) => (
+                            <Marker 
+                                key={incident.id} 
+                                position={(incident as any).coords || KINSHASA_CENTER} 
+                                label={incident.severity === 'high' ? "🚨" : "⚠️"}
+                            />
+                        ))}
                     </Map>
                 </div>
             </APIProvider>
@@ -802,12 +843,12 @@ function AutocompleteInput({ value, onChange, onSearch, isLoading }: { value: st
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <Input 
                 ref={inputRef}
-                placeholder="Destination..." 
+                placeholder="Où allez-vous à Kinshasa ?" 
                 value={value}
                 onChange={e => onChange(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && onSearch()}
                 disabled={isLoading}
-                className="pl-12 h-14 rounded-2xl border-none bg-slate-100 font-bold"
+                className="pl-12 h-14 rounded-2xl border-none bg-slate-100 font-bold text-slate-800"
             />
         </div>
     );
@@ -828,20 +869,20 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
         if (!routesLibrary || !map) return;
         
         const g = (window as any).google;
-        const rendererNormal = new g.maps.DirectionsRenderer({
+        const r1 = new g.maps.DirectionsRenderer({
             map,
             suppressMarkers: true,
             polylineOptions: { strokeColor: '#3b82f6', strokeWeight: 8, strokeOpacity: 0.5, zIndex: 10 }
         });
 
-        const rendererSmart = new g.maps.DirectionsRenderer({
+        const r2 = new g.maps.DirectionsRenderer({
             map,
             suppressMarkers: true,
             polylineOptions: { strokeColor: '#a855f7', strokeWeight: 12, strokeOpacity: 0.9, zIndex: 20 }
         });
 
-        setRenderers([rendererNormal, rendererSmart]);
-        return () => { rendererNormal.setMap(null); rendererSmart.setMap(null); };
+        setRenderers([r1, r2]);
+        return () => { r1.setMap(null); r2.setMap(null); };
     }, [routesLibrary, map]);
 
     useEffect(() => {
@@ -854,10 +895,7 @@ function DirectionsHandler({ origin, destination, isNavigating, selectedRouteInd
             destination: destination,
             travelMode: g.maps.TravelMode.DRIVING,
             provideRouteAlternatives: true,
-            drivingOptions: { 
-                departureTime: new Date(), 
-                trafficModel: g.maps.TrafficModel.BEST_GUESS
-            }
+            drivingOptions: { departureTime: new Date(), trafficModel: g.maps.TrafficModel.BEST_GUESS }
         }, (result: any, status: any) => {
             if (status === g.maps.DirectionsStatus.OK && result) {
                 const routes = result.routes;
@@ -911,25 +949,4 @@ const TrafficLayerComponent = () => {
         return () => layer.setMap(null);
     }, [map]);
     return null;
-};
-
-const IncidentMarkers = ({ incidents }: { incidents: WithId<EventReport>[] }) => {
-    const map = useMap();
-    const g = (window as any).google;
-    if (!map || !g?.maps?.Size) return null;
-
-    return (
-        <>
-            {incidents.map((incident) => (
-                <Marker 
-                    key={incident.id} 
-                    position={(incident as any).coords || KINSHASA_CENTER} 
-                    icon={{
-                        url: incident.severity === 'high' ? 'https://maps.google.com/mapfiles/ms/icons/red-pushpin.png' : 'https://maps.google.com/mapfiles/ms/icons/yellow-pushpin.png',
-                        scaledSize: new g.maps.Size(32, 32)
-                    }}
-                />
-            ))}
-        </>
-    );
 };

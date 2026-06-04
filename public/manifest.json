@@ -1,25 +1,24 @@
 {
   "name": "Kinshasa Flow",
   "short_name": "K-Flow",
-  "description": "Trafic en temps réel et navigation intelligente à Kinshasa.",
+  "description": "Trafic en temps réel et mobilité intelligente à Kinshasa.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#248eeb",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=KFlow",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
-      "src": "https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=KFlow",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
   ],
-  "orientation": "portrait",
-  "scope": "/"
+  "categories": ["navigation", "travel"]
 }

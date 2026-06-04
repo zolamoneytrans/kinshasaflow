@@ -1,7 +1,16 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase';
+
+export const viewport: Viewport = {
+  themeColor: '#248eeb',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://kinshasaflow.online'),
@@ -23,6 +32,11 @@ export const metadata: Metadata = {
     languages: {
       'fr-FR': '/',
     },
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'Kinshasa Flow',
+    statusBarStyle: 'black-translucent',
   },
   openGraph: {
     type: 'website',
@@ -86,15 +100,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Kinshasa Flow" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-TileColor" content="#248eeb" />
-        <meta name="msapplication-tap-highlight" content="no" />
-        <meta name="theme-color" content="#f7f9fb" />
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         
         <script
           type="application/ld+json"
@@ -109,7 +114,6 @@ export default function RootLayout({
                   var error = e.error || e.reason || e;
                   var msg = error && (error.message || error.toString()) || "";
                   
-                  // Detect ChunkLoadErrors, timeouts, or HTML returned instead of JS (SyntaxError)
                   var isChunkError = msg.indexOf("Loading chunk") > -1 || 
                                     msg.indexOf("ChunkLoadError") > -1 || 
                                     msg.indexOf("timeout") > -1 ||
@@ -120,11 +124,9 @@ export default function RootLayout({
                     var lastReload = sessionStorage.getItem("last-chunk-reload");
                     var now = Date.now();
                     
-                    // Only reload if we haven't reloaded in the last 8 seconds to prevent infinite loops
                     if (!lastReload || (now - parseInt(lastReload)) > 8000) {
                       sessionStorage.setItem("last-chunk-reload", now);
                       
-                      // Unregister service workers as they are often the source of stale chunk manifests
                       if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.getRegistrations().then(function(registrations) {
                           for(var registration of registrations) {

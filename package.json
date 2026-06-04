@@ -9,12 +9,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ios:sync": "npx cap sync ios",
+    "ios:open": "npx cap open ios"
   },
   "engines": {
     "node": "20"
   },
   "dependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
     "@ducanh2912/next-pwa": "^10.2.7",
     "@genkit-ai/google-genai": "^1.29.0",
     "@genkit-ai/next": "^1.29.0",

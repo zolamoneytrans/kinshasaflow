@@ -1,0 +1,46 @@
+name: Build and Upload to App Store
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Next.js Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_VAPID_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_KEY }}
+
+      - name: Capacitor Sync
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Build and Sign iOS App
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Upload to TestFlight / App Store
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: 'ios/App/App.ipa'
+          issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          api-key-content: ${{ secrets.APPLE_API_KEY_CONTENT }}

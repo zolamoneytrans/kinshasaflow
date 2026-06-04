@@ -6,10 +6,17 @@ const config: CapacitorConfig = {
   webDir: 'out',
   server: {
     url: 'https://kinshasaflow.online',
+    allowNavigation: [
+      'kinshasaflow.online',
+      '*.firebaseapp.com',
+      '*.google.com',
+      '*.googleapis.com'
+    ],
     cleartext: true
   },
   ios: {
-    contentInset: 'always'
+    contentInset: 'always',
+    preferredContentMode: 'mobile'
   },
   plugins: {
     PushNotifications: {

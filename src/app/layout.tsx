@@ -78,7 +78,7 @@ export default function RootLayout({
     "name": "Kinshasa Flow",
     "operatingSystem": "Android, iOS, Web",
     "applicationCategory": "TravelApplication, NavigationApplication",
-    "description": "Application de gestion de trafic et de mobilité pour la ville de Kinshasa, RDC.",
+    "description": "Application de gestion de trafic et de mobility pour la ville de Kinshasa, RDC.",
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.8",

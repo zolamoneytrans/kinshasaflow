@@ -108,13 +108,35 @@ export default function RootLayout({
                 var handleError = function(e) {
                   var error = e.error || e.reason || e;
                   var msg = error && (error.message || error.toString()) || "";
-                  if (msg.indexOf("Loading chunk") > -1 || msg.indexOf("ChunkLoadError") > -1 || msg.indexOf("timeout") > -1) {
-                    console.warn("Problème de module détecté, rechargement de sécurité...");
+                  
+                  // Detect ChunkLoadErrors, timeouts, or HTML returned instead of JS (SyntaxError)
+                  var isChunkError = msg.indexOf("Loading chunk") > -1 || 
+                                    msg.indexOf("ChunkLoadError") > -1 || 
+                                    msg.indexOf("timeout") > -1 ||
+                                    msg.indexOf("Unexpected token '<'") > -1;
+                  
+                  if (isChunkError) {
+                    console.warn("K-Flow: Module load failure detected. Clearing cache and reloading...");
                     var lastReload = sessionStorage.getItem("last-chunk-reload");
                     var now = Date.now();
-                    if (!lastReload || (now - parseInt(lastReload)) > 5000) {
+                    
+                    // Only reload if we haven't reloaded in the last 8 seconds to prevent infinite loops
+                    if (!lastReload || (now - parseInt(lastReload)) > 8000) {
                       sessionStorage.setItem("last-chunk-reload", now);
-                      window.location.reload();
+                      
+                      // Unregister service workers as they are often the source of stale chunk manifests
+                      if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                          for(var registration of registrations) {
+                            registration.unregister();
+                          }
+                          window.location.reload(true);
+                        }).catch(function() {
+                          window.location.reload(true);
+                        });
+                      } else {
+                        window.location.reload(true);
+                      }
                     }
                   }
                 };

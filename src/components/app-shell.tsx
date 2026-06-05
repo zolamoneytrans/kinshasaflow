@@ -7,7 +7,8 @@ import {
   Landmark, Video, AreaChart, Bot, Map, Hotel, Bus, Shield, BedDouble, 
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
   Palmtree, Compass, LayoutGrid, Utensils, Bell, Send, Navigation,
-  BarChart3, Zap, Smartphone, Monitor, Radar, Construction, ShieldAlert as HazardIcon
+  BarChart3, Zap, Smartphone, Monitor, Radar, Construction, ShieldAlert as HazardIcon,
+  MessagesSquare
 } from 'lucide-react';
 import {
   Sidebar,
@@ -213,6 +214,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       '/map': 'Carte',
       '/assistant': 'Assistant IA',
       '/notifications': 'Notifications',
+      '/community-chat': 'K-Flow Chat',
       '/mes-stars': subSettings?.mode === 'cash' ? 'Mon Abonnement' : 'Mes Stars',
       '/privacy': 'Confidentialité',
     };
@@ -247,6 +249,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <span>Rapports</span>
                       </div>
                       {unreadReports > 0 && <Badge variant="destructive" className="h-5 px-1.5 min-w-[20px] justify-center text-[10px] rounded-full font-black">{unreadReports}</Badge>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isEnabled('communityChat') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/community-chat'} className={cn(pathname === '/community-chat' && "bg-white/10")}>
+                    <Link href="/community-chat" className="font-bold flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <MessagesSquare className={cn("h-5 w-5", pathname === '/community-chat' ? "text-accent" : "text-primary")} />
+                      <span>Chat Direct</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

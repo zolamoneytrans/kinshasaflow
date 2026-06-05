@@ -22,7 +22,7 @@ export const STAR_COSTS = {
 export const navFeatures = [
   'reports', 'liveTraffic', 'localTraffic', 'map', 'hazardMap', 'assistant', 'notifications', 'myStars', 'report', 'police', 
   'routes', 'announcements', 'logement', 'transport', 'carRental', 'tourism', 
-  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share', 'fluxInfrastructure', 'kFlowNav', 'insights'
+  'events', 'videos', 'kinshasa', 'restaurants', 'contact', 'share', 'fluxInfrastructure', 'kFlowNav', 'insights', 'communityChat'
 ] as const;
 export type NavFeature = typeof navFeatures[number];
 
@@ -52,12 +52,25 @@ export const appNavigationSettingsSchema = z.object({
   fluxInfrastructure: z.boolean().default(true),
   kFlowNav: z.boolean().default(true),
   insights: z.boolean().default(true),
+  communityChat: z.boolean().default(true),
 });
 export type AppNavigationSettings = z.infer<typeof appNavigationSettingsSchema>;
 
 export interface AppSubscriptionSettings {
   mode: 'stars' | 'cash';
   lastUpdated?: any;
+}
+
+// Community Chat
+export interface CommunityMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  text?: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video' | 'audio';
+  timestamp: any;
 }
 
 // Road Condition Reports

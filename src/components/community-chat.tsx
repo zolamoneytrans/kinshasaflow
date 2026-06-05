@@ -157,7 +157,7 @@ export default function CommunityChat() {
       if (mediaFile) {
         const storage = getStorage(firebaseApp);
         
-        // Nom de fichier ultra-sécurisé pour éviter les problèmes de règles Storage
+        // Nom de fichier ultra-sécurisé et simplifié
         const extension = mediaFile.name.split('.').pop() || 'file';
         const fileName = `${Date.now()}_upload.${extension}`;
         
@@ -174,8 +174,8 @@ export default function CommunityChat() {
           
           if (storageError.code === 'storage/unauthorized') {
             toast({ 
-              title: "Accès refusé au stockage", 
-              description: "Vos permissions ne permettent pas l'envoi de fichiers. Veuillez réessayer.", 
+              title: "Accès refusé (Storage)", 
+              description: "Erreur de permission lors du téléversement. Veuillez réessayer.", 
               variant: "destructive" 
             });
           } else {

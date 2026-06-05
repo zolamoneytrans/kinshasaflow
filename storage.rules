@@ -2,57 +2,54 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // 1. Accès public en lecture pour tous les fichiers (images, vidéos, audios)
+    // Accès en lecture publique pour tous les fichiers (images, vidéos, audios)
     match /{allPaths=**} {
       allow read: if true;
     }
 
-    // Fonctions de vérification
-    function isSignedIn() {
-      return request.auth != null;
+    // Règle pour le Salon de discussion (Chat)
+    match /chat/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && (
+        request.auth.uid == userId || 
+        request.auth.token.email == 'drnduwa@gmail.com'
+      );
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    // Règle pour les Photos de profil (Avatars)
+    match /avatars/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && (
+        request.auth.uid == userId || 
+        request.auth.token.email == 'drnduwa@gmail.com'
+      );
     }
 
-    function isAdmin() {
-      return isSignedIn() && (
+    // Règle pour les Signalements de dangers (Hazards)
+    match /hazards/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && (
+        request.auth.uid == userId || 
+        request.auth.token.email == 'drnduwa@gmail.com'
+      );
+    }
+
+    // Règle pour le Flux Vidéos (Social)
+    match /videos/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && (
+        request.auth.uid == userId || 
+        request.auth.token.email == 'drnduwa@gmail.com'
+      );
+    }
+
+    // Règle pour le Dossier Tourisme (Admins uniquement)
+    match /tourism/{allPaths=**} {
+      allow write: if request.auth != null && (
         request.auth.token.email == 'drnduwa@gmail.com' ||
         request.auth.token.email == 'contact.congonamotema@gmail.com'
       );
     }
 
-    // 2. Règles spécifiques par dossier
-    
-    // Salon de discussion (Chat)
-    match /chat/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId) || isAdmin();
-    }
-
-    // Photos de profil (Avatars)
-    match /avatars/{userId} {
-      allow write: if isOwner(userId) || isAdmin();
-    }
-
-    // Signalements de dangers (Hazards)
-    match /hazards/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId) || isAdmin();
-    }
-
-    // Flux Vidéos (Social)
-    match /videos/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId) || isAdmin();
-    }
-
-    // Dossier Tourisme (Admin uniquement)
-    match /tourism/{allPaths=**} {
-      allow write: if isAdmin();
-    }
-
-    // 3. Fallback global pour l'administrateur système
+    // Règle de secours globale pour l'administrateur principal
     match /{allPaths=**} {
-      allow write: if isAdmin();
+      allow write: if request.auth != null && request.auth.token.email == 'drnduwa@gmail.com';
     }
   }
 }

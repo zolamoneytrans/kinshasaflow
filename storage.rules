@@ -2,46 +2,33 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Accès en lecture publique pour tous les fichiers (images, vidéos, audios)
+    // 1. LECTURE : Accès public pour tous les médias
     match /{allPaths=**} {
       allow read: if true;
     }
 
-    // Règle de secours : l'administrateur a tous les droits d'écriture
-    // On vérifie l'UID ou l'email pour plus de robustesse
+    // 2. ÉCRITURE : Règles consolidées pour éviter les conflits d'autorisation
     match /{allPaths=**} {
       allow write: if request.auth != null && (
+        // Accès total pour l'administrateur
         request.auth.token.email == 'drnduwa@gmail.com' ||
-        request.auth.uid == 'kTFPpztAXQUgLVUAX8M4A2CwMdE3'
-      );
-    }
-
-    // Permissions spécifiques par dossier utilisateur
-    // Dossier Chat
-    match /chat/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Dossier Avatars
-    match /avatars/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Dossier Signalements de dangers (Hazards)
-    match /hazards/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Dossier Flux Vidéos (Social)
-    match /videos/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Dossier Tourisme (Accès Partenaire)
-    match /tourism/{allPaths=**} {
-      allow write: if request.auth != null && (
-        request.auth.token.email == 'contact.congonamotema@gmail.com' ||
-        request.auth.token.email == 'drnduwa@gmail.com'
+        request.auth.uid == 'kTFPpztAXQUgLVUAX8M4A2CwMdE3' ||
+        
+        // Accès propriétaire pour les dossiers de services (chat, avatars, hazards, videos)
+        // La structure attendue est /{service}/{userId}/...
+        (
+          (request.path[0] == 'chat' || 
+           request.path[0] == 'avatars' || 
+           request.path[0] == 'hazards' || 
+           request.path[0] == 'videos') && 
+          request.auth.uid == request.path[1]
+        ) ||
+        
+        // Accès partenaire pour le tourisme
+        (
+          request.path[0] == 'tourism' && 
+          request.auth.token.email == 'contact.congonamotema@gmail.com'
+        )
       );
     }
   }

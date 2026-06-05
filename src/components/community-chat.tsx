@@ -154,34 +154,32 @@ export default function CommunityChat() {
     try {
       let mediaUrl = "";
       if (mediaFile) {
-        console.log(`[Chat] Début du transfert pour l'utilisateur: ${user.uid}`);
         const storage = getStorage(firebaseApp);
         
-        // Nom de fichier normalisé sans caractères spéciaux
+        // Nom de fichier normalisé
         const extension = mediaFile.name.split('.').pop() || 'file';
         const fileName = `${Date.now()}_upload.${extension}`;
-        
-        // Chemin structuré pour correspondre aux règles Storage
         const path = `chat/${user.uid}/${fileName}`;
-        console.log(`[Chat] Chemin cible Storage: ${path}`);
+        
+        console.log(`[Chat] Tentative d'envoi vers: ${path}`);
         
         const fileRef = storageRef(storage, path);
         
         try {
           const snapshot = await uploadBytes(fileRef, mediaFile);
           mediaUrl = await getDownloadURL(snapshot.ref);
-          console.log(`[Chat] Transfert réussi: ${mediaUrl}`);
+          console.log(`[Chat] Transfert réussi.`);
         } catch (storageError: any) {
-          console.error("[Chat] Erreur Storage critique:", storageError.code, storageError.message);
+          console.error("[Chat] Échec critique Firebase Storage:", storageError.code, storageError.message);
           setIsUploading(false);
           
           let errorMsg = "Une erreur est survenue lors de l'envoi du fichier.";
           if (storageError.code === 'storage/unauthorized') {
-            errorMsg = "Permission Storage refusée. Vérifiez que vous êtes bien connecté.";
+            errorMsg = "Autorisation refusée par le serveur de stockage. Vérifiez votre profil.";
           }
 
           toast({ 
-            title: "Échec du transfert", 
+            title: "Erreur de permission", 
             description: errorMsg, 
             variant: "destructive" 
           });
@@ -203,7 +201,7 @@ export default function CommunityChat() {
       setInputText('');
     } catch (e: any) {
       console.error("[Chat] Erreur Firestore:", e);
-      toast({ title: "Erreur d'envoi", description: "Le message n'a pas pu être enregistré dans la base de données.", variant: "destructive" });
+      toast({ title: "Erreur d'envoi", description: "Impossible d'enregistrer le message dans le salon.", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }

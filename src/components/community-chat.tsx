@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useFirebase, useUser, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
+import { useFirebase, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { CommunityMessage, WithId, FirestorePermissionError } from '@/lib/types';
+import { CommunityMessage, WithId } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -150,18 +150,17 @@ export default function CommunityChat() {
     if (!text?.trim() && !mediaFile) return;
 
     setIsUploading(true);
-    const chatCollection = collection(firestore, 'community_chat');
     
     try {
       let mediaUrl = "";
       if (mediaFile) {
         const storage = getStorage(firebaseApp);
         
-        // Nom de fichier ultra-sécurisé et simplifié
+        // Nom de fichier normalisé
         const extension = mediaFile.name.split('.').pop() || 'file';
         const fileName = `${Date.now()}_upload.${extension}`;
         
-        // Chemin explicite : chat / UID / nom_fichier
+        // Chemin structuré pour correspondre aux règles Storage
         const path = `chat/${user.uid}/${fileName}`;
         const fileRef = storageRef(storage, path);
         
@@ -169,19 +168,19 @@ export default function CommunityChat() {
           const snapshot = await uploadBytes(fileRef, mediaFile);
           mediaUrl = await getDownloadURL(snapshot.ref);
         } catch (storageError: any) {
-          console.error("Storage Error:", storageError);
+          console.error("Storage Error Detail:", storageError);
           setIsUploading(false);
           
           if (storageError.code === 'storage/unauthorized') {
             toast({ 
-              title: "Accès refusé (Storage)", 
-              description: "Erreur de permission lors du téléversement. Veuillez réessayer.", 
+              title: "Permission refusée", 
+              description: "Votre compte n'a pas les droits pour envoyer ce média. Vérifiez votre connexion.", 
               variant: "destructive" 
             });
           } else {
             toast({ 
               title: "Échec du transfert", 
-              description: "Une erreur réseau a interrompu l'envoi du média.", 
+              description: "Une erreur est survenue lors de l'envoi du fichier.", 
               variant: "destructive" 
             });
           }
@@ -199,11 +198,11 @@ export default function CommunityChat() {
         timestamp: serverTimestamp(),
       };
 
-      await addDoc(chatCollection, messageData);
+      await addDoc(collection(firestore, 'community_chat'), messageData);
       setInputText('');
     } catch (e: any) {
-      console.error("Firestore Error:", e);
-      toast({ title: "Erreur d'envoi", description: "Impossible de poster le message sur le salon.", variant: "destructive" });
+      console.error("Chat Post Error:", e);
+      toast({ title: "Erreur d'envoi", description: "Impossible de poster votre message.", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }

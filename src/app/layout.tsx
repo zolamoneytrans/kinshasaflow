@@ -106,6 +106,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
 
+        {/* Script de récupération automatique en cas d'erreur de chargement des ressources (Chunks) */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -114,23 +115,23 @@ export default function RootLayout({
                   var error = e.error || e.reason || e;
                   var msg = error && (error.message || error.toString()) || "";
                   
-                  var isChunkError = msg.indexOf("Loading chunk") > -1 || 
-                                    msg.indexOf("ChunkLoadError") > -1 || 
-                                    msg.indexOf("timeout") > -1 ||
-                                    msg.indexOf("Unexpected token '<'") > -1;
+                  // Détection des erreurs de type ChunkLoadError ou timeout de module
+                  var isChunkError = /Loading chunk|ChunkLoadError|timeout|Unexpected token '<'/.test(msg);
                   
                   if (isChunkError) {
-                    console.warn("K-Flow: Module load failure detected. Clearing cache and reloading...");
-                    var lastReload = sessionStorage.getItem("last-chunk-reload");
+                    console.warn("K-Flow: Échec de module détecté. Tentative de récupération...");
+                    var lastReload = sessionStorage.getItem("kflow-recovery-ts");
                     var now = Date.now();
                     
+                    // Empêcher les boucles de rechargement infinies (max 1 fois toutes les 8s)
                     if (!lastReload || (now - parseInt(lastReload)) > 8000) {
-                      sessionStorage.setItem("last-chunk-reload", now);
+                      sessionStorage.setItem("kflow-recovery-ts", now);
                       
+                      // Purge des Service Workers qui peuvent stocker des chunks obsolètes
                       if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                          for(var registration of registrations) {
-                            registration.unregister();
+                          for(var i = 0; i < registrations.length; i++) {
+                            registrations[i].unregister();
                           }
                           window.location.reload(true);
                         }).catch(function() {

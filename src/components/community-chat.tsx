@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useFirebase, useUser, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
-import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { CommunityMessage, WithId, FirestorePermissionError } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,7 +18,6 @@ import {
   Mic, 
   MicOff, 
   Loader2, 
-  MapPin, 
   User, 
   Clock, 
   Play, 
@@ -76,13 +75,13 @@ const MessageBubble = ({ message, isOwn }: { message: WithId<CommunityMessage>, 
             : "bg-white border border-slate-100 text-slate-800 rounded-bl-none"
         )}>
           {message.mediaUrl && message.mediaType === 'image' && (
-            <div className="relative aspect-video rounded-xl overflow-hidden mb-3 border border-black/5">
+            <div className="relative aspect-video rounded-xl overflow-hidden mb-3 border border-black/5 min-w-[200px]">
               <Image src={message.mediaUrl} alt="Partage" fill className="object-cover" />
             </div>
           )}
 
           {message.mediaUrl && message.mediaType === 'video' && (
-            <video src={message.mediaUrl} controls className="rounded-xl mb-3 max-h-60 bg-black" />
+            <video src={message.mediaUrl} controls className="rounded-xl mb-3 max-h-60 bg-black min-w-[200px]" />
           )}
 
           {message.mediaUrl && message.mediaType === 'audio' && (
@@ -145,7 +144,7 @@ export default function CommunityChat() {
 
   const handleSend = async (text?: string, mediaFile?: File, mediaType?: 'image' | 'video' | 'audio') => {
     if (!user) {
-      toast({ title: "Connexion requise", variant: "destructive" });
+      toast({ title: "Connexion requise", description: "Vous devez être connecté pour participer.", variant: "destructive" });
       return;
     }
     if (!text?.trim() && !mediaFile) return;
@@ -158,11 +157,9 @@ export default function CommunityChat() {
       if (mediaFile) {
         const storage = getStorage(firebaseApp);
         
-        // Sanitization extrême du nom de fichier pour éviter les rejets de Storage Rules
+        // Nettoyage strict du nom de fichier pour les règles Storage
         const extension = mediaFile.name.split('.').pop() || 'file';
-        const rawName = mediaFile.name.split('.')[0] || 'upload';
-        const cleanName = rawName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-        const fileName = `${Date.now()}_${cleanName}.${extension}`;
+        const fileName = `${Date.now()}_upload.${extension}`;
         
         const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
         
@@ -170,10 +167,10 @@ export default function CommunityChat() {
           const snapshot = await uploadBytes(fileRef, mediaFile);
           mediaUrl = await getDownloadURL(snapshot.ref);
         } catch (storageError: any) {
-          console.error("Storage Error Detail:", storageError);
+          console.error("Storage Upload Error:", storageError);
           toast({ 
-            title: "Accès Storage refusé", 
-            description: "Vérifiez vos permissions ou réessayez.", 
+            title: "Échec du transfert média", 
+            description: "Permissions refusées ou erreur réseau. Réessayez.", 
             variant: "destructive" 
           });
           setIsUploading(false);
@@ -191,19 +188,11 @@ export default function CommunityChat() {
         timestamp: serverTimestamp(),
       };
 
-      await addDoc(chatCollection, messageData).catch((err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: chatCollection.path,
-          operation: 'create',
-          requestResourceData: messageData
-        }));
-        throw err;
-      });
-
+      await addDoc(chatCollection, messageData);
       setInputText('');
     } catch (e: any) {
       console.error("Global Send Error:", e);
-      toast({ title: "Erreur d'envoi", description: e.message || "Impossible de poster.", variant: "destructive" });
+      toast({ title: "Erreur d'envoi", description: "Impossible de poster le message.", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }
@@ -272,7 +261,7 @@ export default function CommunityChat() {
               <AlertTriangle className="h-6 w-6" />
             </div>
             <p className="text-xs font-bold text-slate-600 leading-relaxed italic">
-              "Signalez ici tout incident sur la route : inondations, bouchons anormaux, ou présence policière. Soyez courtois et aidez les autres conducteurs."
+              "Partagez l'état des routes avec les autres conducteurs. Les photos et vocaux aident la communauté à mieux circuler."
             </p>
           </div>
 
@@ -288,7 +277,7 @@ export default function CommunityChat() {
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="h-8 w-8 text-primary animate-spin" />
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Connexion au salon...</p>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Chargement...</p>
             </div>
           )}
         </div>

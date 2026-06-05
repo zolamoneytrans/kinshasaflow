@@ -7,7 +7,7 @@ service firebase.storage {
       allow read: if true;
     }
 
-    // 2. Fonctions de commodité
+    // 2. Fonctions de sécurité
     function isSignedIn() {
       return request.auth != null;
     }
@@ -23,34 +23,34 @@ service firebase.storage {
       );
     }
 
-    // 3. Règles par dossier (Propriétaire ou Admin)
+    // 3. Règles spécifiques par dossier
 
-    // Dossier Chat Communautaire
+    // Chat Communautaire : Autorise l'écriture si propriétaire ou admin
     match /chat/{userId}/{allPaths=**} {
       allow write: if isOwner(userId) || isAdmin();
     }
     
-    // Dossier Photos de profil
+    // Photos de profil
     match /avatars/{userId} {
       allow write: if isOwner(userId) || isAdmin();
     }
     
-    // Dossier Signalements Dangers
+    // Signalements Dangers (Hazard Map)
     match /hazards/{userId}/{allPaths=**} {
       allow write: if isOwner(userId) || isAdmin();
     }
     
-    // Dossier Vidéo Feed
+    // Vidéo Feed
     match /videos/{userId}/{allPaths=**} {
       allow write: if isOwner(userId) || isAdmin();
     }
 
-    // Dossier Tourisme
+    // Tourisme
     match /tourism/{allPaths=**} {
       allow write: if isAdmin();
     }
 
-    // 4. Permission globale d'écriture pour le super-admin
+    // Autorisation globale pour le super-admin sur tout le bucket
     match /{allPaths=**} {
       allow write: if isSignedIn() && request.auth.token.email == 'drnduwa@gmail.com';
     }

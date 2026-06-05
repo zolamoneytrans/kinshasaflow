@@ -28,7 +28,9 @@ jobs:
 
       - name: Capacitor Sync
         run: |
-          npx cap add ios
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
           npx cap sync ios
 
       - name: Build and Sign iOS App

@@ -1,24 +1,17 @@
 {
   "name": "Kinshasa Flow",
   "short_name": "K-Flow",
-  "description": "Trafic en temps réel et mobilité intelligente à Kinshasa.",
+  "description": "Navigation et Trafic en Temps Réel à Kinshasa",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#248eeb",
-  "orientation": "portrait",
   "icons": [
     {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
     }
-  ],
-  "categories": ["navigation", "travel"]
+  ]
 }

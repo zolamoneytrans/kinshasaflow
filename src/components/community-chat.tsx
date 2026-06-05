@@ -22,7 +22,8 @@ import {
   Clock,
   Play,
   Pause,
-  AlertTriangle
+  AlertTriangle,
+  MessagesSquare
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -333,4 +334,3 @@ export default function CommunityChat() {
     </div>
   );
 }
-

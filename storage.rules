@@ -1,44 +1,58 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // 1. Accès public en lecture pour tous les fichiers média
+    
+    // 1. Accès public en lecture pour tous les fichiers
     match /{allPaths=**} {
       allow read: if true;
     }
 
-    // 2. Règles d'écriture par dossier
-    
-    // Dossier pour le chat communautaire
+    // 2. Fonctions de commodité
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'drnduwa@gmail.com' ||
+        request.auth.token.email == 'contact.congonamotema@gmail.com'
+      );
+    }
+
+    // 3. Règles par dossier (Propriétaire ou Admin)
+
+    // Dossier Chat Communautaire
     match /chat/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if isOwner(userId) || isAdmin();
     }
     
-    // Dossier pour les photos de profil
+    // Dossier Photos de profil
     match /avatars/{userId} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if isOwner(userId) || isAdmin();
     }
     
-    // Dossier pour les signalements de dangers (Hazard Map)
+    // Dossier Signalements Dangers
     match /hazards/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if isOwner(userId) || isAdmin();
     }
     
-    // Dossier pour le feed vidéo
+    // Dossier Vidéo Feed
     match /videos/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if isOwner(userId) || isAdmin();
     }
 
-    // 3. Dossier Tourisme (Admins uniquement)
+    // Dossier Tourisme
     match /tourism/{allPaths=**} {
-      allow write: if request.auth != null && 
-                   (request.auth.token.email == 'drnduwa@gmail.com' || 
-                    request.auth.token.email == 'contact.congonamotema@gmail.com');
+      allow write: if isAdmin();
     }
 
-    // 4. Accès total pour l'administrateur système
+    // 4. Permission globale d'écriture pour le super-admin
     match /{allPaths=**} {
-      allow write: if request.auth != null && 
-                   request.auth.token.email == 'drnduwa@gmail.com';
+      allow write: if isSignedIn() && request.auth.token.email == 'drnduwa@gmail.com';
     }
   }
 }

@@ -157,24 +157,23 @@ export default function CommunityChat() {
       let mediaUrl = "";
       if (mediaFile) {
         const storage = getStorage(firebaseApp);
-        // Nettoyage strict pour éviter les erreurs de permission Storage
+        
+        // Sanitization extrême du nom de fichier pour éviter les rejets de Storage Rules
         const extension = mediaFile.name.split('.').pop() || 'file';
-        const cleanName = mediaFile.name
-          .replace(/\.[^/.]+$/, "") // Enlever l'extension
-          .replace(/\s+/g, '_') // Espaces en underscores
-          .replace(/[^a-zA-Z0-9_-]/g, ''); // Garder seulement l'essentiel
-          
+        const rawName = mediaFile.name.split('.')[0] || 'upload';
+        const cleanName = rawName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
         const fileName = `${Date.now()}_${cleanName}.${extension}`;
+        
         const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
         
         try {
-          await uploadBytes(fileRef, mediaFile);
-          mediaUrl = await getDownloadURL(fileRef);
+          const snapshot = await uploadBytes(fileRef, mediaFile);
+          mediaUrl = await getDownloadURL(snapshot.ref);
         } catch (storageError: any) {
-          console.error("Storage upload failed", storageError);
+          console.error("Storage Error Detail:", storageError);
           toast({ 
-            title: "Échec du transfert média", 
-            description: "Permissions refusées ou erreur réseau. Réessayez.", 
+            title: "Accès Storage refusé", 
+            description: "Vérifiez vos permissions ou réessayez.", 
             variant: "destructive" 
           });
           setIsUploading(false);
@@ -202,9 +201,9 @@ export default function CommunityChat() {
       });
 
       setInputText('');
-    } catch (e) {
-      console.error("Send error", e);
-      toast({ title: "Erreur d'envoi", description: "Impossible de poster votre message.", variant: "destructive" });
+    } catch (e: any) {
+      console.error("Global Send Error:", e);
+      toast({ title: "Erreur d'envoi", description: e.message || "Impossible de poster.", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }

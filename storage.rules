@@ -7,43 +7,42 @@ service firebase.storage {
       allow read: if true;
     }
 
-    // Fonction d'aide pour l'administrateur
-    function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'drnduwa@gmail.com';
-    }
-
-    // Règle pour le Salon de discussion (Chat)
-    // Permet à l'utilisateur d'écrire dans SON dossier ou à l'admin
-    match /chat/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-    }
-
-    // Règle pour les Photos de profil (Avatars)
-    match /avatars/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-    }
-
-    // Règle pour les Signalements de dangers (Hazards)
-    match /hazards/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-    }
-
-    // Règle pour le Flux Vidéos (Social)
-    match /videos/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-    }
-
-    // Règle pour le Dossier Tourisme
-    match /tourism/{allPaths=**} {
+    // Règle de secours : l'administrateur a tous les droits d'écriture
+    // On vérifie l'UID ou l'email pour plus de robustesse
+    match /{allPaths=**} {
       allow write: if request.auth != null && (
-        isAdmin() || 
-        request.auth.token.email == 'contact.congonamotema@gmail.com'
+        request.auth.token.email == 'drnduwa@gmail.com' ||
+        request.auth.uid == 'kTFPpztAXQUgLVUAX8M4A2CwMdE3'
       );
     }
 
-    // Sécurité globale de secours pour l'admin sur tout le bucket
-    match /{allPaths=**} {
-      allow write: if isAdmin();
+    // Permissions spécifiques par dossier utilisateur
+    // Dossier Chat
+    match /chat/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Dossier Avatars
+    match /avatars/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Dossier Signalements de dangers (Hazards)
+    match /hazards/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Dossier Flux Vidéos (Social)
+    match /videos/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Dossier Tourisme (Accès Partenaire)
+    match /tourism/{allPaths=**} {
+      allow write: if request.auth != null && (
+        request.auth.token.email == 'contact.congonamotema@gmail.com' ||
+        request.auth.token.email == 'drnduwa@gmail.com'
+      );
     }
   }
 }

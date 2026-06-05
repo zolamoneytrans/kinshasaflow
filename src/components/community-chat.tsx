@@ -154,36 +154,37 @@ export default function CommunityChat() {
     try {
       let mediaUrl = "";
       if (mediaFile) {
+        console.log(`[Chat] Début du transfert pour l'utilisateur: ${user.uid}`);
         const storage = getStorage(firebaseApp);
         
-        // Nom de fichier normalisé
+        // Nom de fichier normalisé sans caractères spéciaux
         const extension = mediaFile.name.split('.').pop() || 'file';
         const fileName = `${Date.now()}_upload.${extension}`;
         
         // Chemin structuré pour correspondre aux règles Storage
         const path = `chat/${user.uid}/${fileName}`;
+        console.log(`[Chat] Chemin cible Storage: ${path}`);
+        
         const fileRef = storageRef(storage, path);
         
         try {
           const snapshot = await uploadBytes(fileRef, mediaFile);
           mediaUrl = await getDownloadURL(snapshot.ref);
+          console.log(`[Chat] Transfert réussi: ${mediaUrl}`);
         } catch (storageError: any) {
-          console.error("Storage Error Detail:", storageError);
+          console.error("[Chat] Erreur Storage critique:", storageError.code, storageError.message);
           setIsUploading(false);
           
+          let errorMsg = "Une erreur est survenue lors de l'envoi du fichier.";
           if (storageError.code === 'storage/unauthorized') {
-            toast({ 
-              title: "Permission refusée", 
-              description: "Votre compte n'a pas les droits pour envoyer ce média. Vérifiez votre connexion.", 
-              variant: "destructive" 
-            });
-          } else {
-            toast({ 
-              title: "Échec du transfert", 
-              description: "Une erreur est survenue lors de l'envoi du fichier.", 
-              variant: "destructive" 
-            });
+            errorMsg = "Permission Storage refusée. Vérifiez que vous êtes bien connecté.";
           }
+
+          toast({ 
+            title: "Échec du transfert", 
+            description: errorMsg, 
+            variant: "destructive" 
+          });
           return;
         }
       }
@@ -201,8 +202,8 @@ export default function CommunityChat() {
       await addDoc(collection(firestore, 'community_chat'), messageData);
       setInputText('');
     } catch (e: any) {
-      console.error("Chat Post Error:", e);
-      toast({ title: "Erreur d'envoi", description: "Impossible de poster votre message.", variant: "destructive" });
+      console.error("[Chat] Erreur Firestore:", e);
+      toast({ title: "Erreur d'envoi", description: "Le message n'a pas pu être enregistré dans la base de données.", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }

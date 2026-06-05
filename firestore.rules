@@ -86,6 +86,12 @@ service cloud.firestore {
       match /comments/{commentId} { allow read, create: if isSignedIn(); }
     }
     match /adverts/{id} { allow read: if true; allow write: if isAdmin(); }
+    
+    /** Community Chat */
+    match /community_chat/{id} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
+    }
 
     /** Business Services */
     match /logements/{id} { allow read: if true; allow write: if isAdmin(); }

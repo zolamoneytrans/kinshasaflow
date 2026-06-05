@@ -1,38 +1,41 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // 1. Autorisation universelle en lecture pour tous les fichiers
+    // 1. Accès public en lecture pour tous les fichiers média
     match /{allPaths=**} {
       allow read: if true;
     }
 
-    // 2. Dossiers personnels pour utilisateurs connectés
-    // On sépare explicitement les chemins pour une meilleure détection des permissions
+    // 2. Règles d'écriture par dossier
     
-    match /avatars/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
+    // Dossier pour le chat communautaire
     match /chat/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Dossier pour les photos de profil
+    match /avatars/{userId} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Dossier pour les signalements de dangers (Hazard Map)
     match /hazards/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Dossier pour le feed vidéo
     match /videos/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // 3. Règle spécifique pour le dossier tourisme (Admins)
+    // 3. Dossier Tourisme (Admins uniquement)
     match /tourism/{allPaths=**} {
       allow write: if request.auth != null && 
                    (request.auth.token.email == 'drnduwa@gmail.com' || 
                     request.auth.token.email == 'contact.congonamotema@gmail.com');
     }
 
-    // 4. Règle de secours globale pour l'administrateur principal
+    // 4. Accès total pour l'administrateur système
     match /{allPaths=**} {
       allow write: if request.auth != null && 
                    request.auth.token.email == 'drnduwa@gmail.com';

@@ -157,9 +157,14 @@ export default function CommunityChat() {
       let mediaUrl = "";
       if (mediaFile) {
         const storage = getStorage(firebaseApp);
-        // Nettoyage du nom de fichier pour éviter les erreurs de permission liées aux caractères spéciaux
-        const cleanName = mediaFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const fileName = `${Date.now()}_${cleanName || 'attachment'}`;
+        // Nettoyage strict pour éviter les erreurs de permission Storage
+        const extension = mediaFile.name.split('.').pop() || 'file';
+        const cleanName = mediaFile.name
+          .replace(/\.[^/.]+$/, "") // Enlever l'extension
+          .replace(/\s+/g, '_') // Espaces en underscores
+          .replace(/[^a-zA-Z0-9_-]/g, ''); // Garder seulement l'essentiel
+          
+        const fileName = `${Date.now()}_${cleanName}.${extension}`;
         const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
         
         try {
@@ -169,7 +174,7 @@ export default function CommunityChat() {
           console.error("Storage upload failed", storageError);
           toast({ 
             title: "Échec du transfert média", 
-            description: "Permissions refusées ou fichier trop volumineux.", 
+            description: "Permissions refusées ou erreur réseau. Réessayez.", 
             variant: "destructive" 
           });
           setIsUploading(false);

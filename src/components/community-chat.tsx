@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { 
   Send, 
-  Image as ImageIcon, 
+  ImageIcon, 
   Video, 
   Mic, 
   MicOff, 
@@ -170,7 +170,7 @@ export default function CommunityChat() {
           console.error("Storage Upload Error:", storageError);
           toast({ 
             title: "Échec du transfert média", 
-            description: "Permissions refusées ou erreur réseau. Réessayez.", 
+            description: "Permissions refusées ou erreur réseau. Vérifiez votre connexion.", 
             variant: "destructive" 
           });
           setIsUploading(false);
@@ -192,7 +192,7 @@ export default function CommunityChat() {
       setInputText('');
     } catch (e: any) {
       console.error("Global Send Error:", e);
-      toast({ title: "Erreur d'envoi", description: "Impossible de poster le message.", variant: "destructive" });
+      toast({ title: "Erreur d'envoi", description: "Impossible de poster le message sur le serveur.", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }

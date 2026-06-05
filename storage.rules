@@ -12,10 +12,6 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'drnduwa@gmail.com' ||
@@ -23,34 +19,18 @@ service firebase.storage {
       );
     }
 
-    // 3. Règles spécifiques par dossier
-
-    // Chat Communautaire : Autorise l'écriture si propriétaire ou admin
-    match /chat/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId) || isAdmin();
-    }
-    
-    // Photos de profil
-    match /avatars/{userId} {
-      allow write: if isOwner(userId) || isAdmin();
-    }
-    
-    // Signalements Dangers (Hazard Map)
-    match /hazards/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId) || isAdmin();
-    }
-    
-    // Vidéo Feed
-    match /videos/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId) || isAdmin();
+    // 3. Règle universelle pour les dossiers utilisateurs (chat, avatars, hazards, videos)
+    // Cette règle autorise l'écriture si l'UID de l'utilisateur correspond au nom du dossier
+    match /{folder}/{userId}/{allPaths=**} {
+      allow write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
     }
 
-    // Tourisme
+    // 4. Dossier spécifique au Tourisme
     match /tourism/{allPaths=**} {
       allow write: if isAdmin();
     }
 
-    // Autorisation globale pour le super-admin sur tout le bucket
+    // 5. Autorisation globale pour le super-admin (sécurité supplémentaire)
     match /{allPaths=**} {
       allow write: if isSignedIn() && request.auth.token.email == 'drnduwa@gmail.com';
     }

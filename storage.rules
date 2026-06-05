@@ -6,25 +6,21 @@ service firebase.storage {
       allow read: if true;
     }
 
-    // 2. Règle prioritaire pour le dossier tourisme
-    // Autorise l'admin principal ET l'admin tourisme spécifique
+    // 2. Dossiers personnels pour utilisateurs connectés
+    // Permet de gérer avatars, médias de chat, signalements de dangers et vidéos
+    match /{folder}/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId 
+                   && folder in ['avatars', 'chat', 'hazards', 'videos'];
+    }
+
+    // 3. Règle prioritaire pour le dossier tourisme (Admins)
     match /tourism/{allPaths=**} {
       allow write: if request.auth != null && 
                    (request.auth.token.email == 'drnduwa@gmail.com' || 
                     request.auth.token.email == 'contact.congonamotema@gmail.com');
     }
-    
-    // 3. Gestion des avatars personnels
-    match /avatars/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // 4. Gestion des vidéos communautaires
-    match /videos/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
 
-    // 5. Règle de secours pour l'administrateur principal sur toute la structure
+    // 4. Règle de secours pour l'administrateur principal sur toute la structure
     match /{allPaths=**} {
       allow write: if request.auth != null && 
                    request.auth.token.email == 'drnduwa@gmail.com';

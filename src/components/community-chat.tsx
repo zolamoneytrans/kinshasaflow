@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useFirebase, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { useFirebase, useUser, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { CommunityMessage, WithId } from '@/lib/types';
+import { CommunityMessage, WithId, FirestorePermissionError } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,11 +20,11 @@ import {
   Loader2, 
   MapPin, 
   User, 
-  Clock,
-  Play,
-  Pause,
-  AlertTriangle,
-  MessagesSquare
+  Clock, 
+  Play, 
+  Pause, 
+  AlertTriangle, 
+  MessagesSquare 
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -122,7 +122,7 @@ const MessageBubble = ({ message, isOwn }: { message: WithId<CommunityMessage>, 
 
 export default function CommunityChat() {
   const [inputText, setInputText] = useState('');
-  const [isUploading, setIsRefreshing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -144,35 +144,58 @@ export default function CommunityChat() {
   }, [messages]);
 
   const handleSend = async (text?: string, mediaFile?: File, mediaType?: 'image' | 'video' | 'audio') => {
-    if (!user) return;
-    if (!text && !mediaFile) return;
+    if (!user) {
+      toast({ title: "Connexion requise", variant: "destructive" });
+      return;
+    }
+    if (!text?.trim() && !mediaFile) return;
 
-    setIsRefreshing(true);
+    setIsUploading(true);
+    const chatCollection = collection(firestore, 'community_chat');
+    
     try {
       let mediaUrl = "";
       if (mediaFile) {
         const storage = getStorage(firebaseApp);
         const fileName = `${Date.now()}_${mediaFile.name || 'voice.wav'}`;
         const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
-        await uploadBytes(fileRef, mediaFile);
-        mediaUrl = await getDownloadURL(fileRef);
+        
+        try {
+          await uploadBytes(fileRef, mediaFile);
+          mediaUrl = await getDownloadURL(fileRef);
+        } catch (storageError: any) {
+          console.error("Storage upload failed", storageError);
+          toast({ title: "Échec du transfert média", description: "Vérifiez votre connexion ou la taille du fichier.", variant: "destructive" });
+          setIsUploading(false);
+          return;
+        }
       }
 
-      await addDoc(collection(firestore, 'community_chat'), {
+      const messageData = {
         userId: user.uid,
         userName: user.displayName || "Kinois Anonyme",
         userAvatar: user.photoURL || "",
-        text: text || "",
+        text: text?.trim() || "",
         mediaUrl,
         mediaType: mediaType || null,
         timestamp: serverTimestamp(),
+      };
+
+      await addDoc(chatCollection, messageData).catch((err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: chatCollection.path,
+          operation: 'create',
+          requestResourceData: messageData
+        }));
+        throw err;
       });
 
       setInputText('');
     } catch (e) {
-      toast({ title: "Erreur d'envoi", variant: "destructive" });
+      console.error("Send error", e);
+      toast({ title: "Erreur d'envoi", description: "Impossible de poster votre message.", variant: "destructive" });
     } finally {
-      setIsRefreshing(false);
+      setIsUploading(false);
     }
   };
 
@@ -197,7 +220,7 @@ export default function CommunityChat() {
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
-      toast({ title: "Microphone inaccessible", variant: "destructive" });
+      toast({ title: "Microphone inaccessible", description: "Veuillez autoriser l'accès au micro.", variant: "destructive" });
     }
   };
 
@@ -245,7 +268,7 @@ export default function CommunityChat() {
 
           <div className="flex flex-col">
             <AnimatePresence>
-              {[...(messages || [])].reverse().map((msg, idx) => (
+              {[...(messages || [])].reverse().map((msg) => (
                 <MessageBubble key={msg.id} message={msg} isOwn={msg.userId === user?.uid} />
               ))}
             </AnimatePresence>
@@ -270,10 +293,11 @@ export default function CommunityChat() {
               id="chat-image" 
               className="hidden" 
               accept="image/*" 
+              disabled={isUploading}
               onChange={e => e.target.files?.[0] && handleSend(undefined, e.target.files[0], 'image')} 
             />
             <Button asChild variant="ghost" size="icon" className="rounded-full h-12 w-12 text-slate-400 hover:text-primary hover:bg-primary/5">
-              <label htmlFor="chat-image" className="cursor-pointer"><ImageIcon className="h-5 w-5" /></label>
+              <label htmlFor="chat-image" className={cn("cursor-pointer", isUploading && "opacity-50 pointer-events-none")}><ImageIcon className="h-5 w-5" /></label>
             </Button>
 
             <input 
@@ -281,10 +305,11 @@ export default function CommunityChat() {
               id="chat-video" 
               className="hidden" 
               accept="video/*" 
+              disabled={isUploading}
               onChange={e => e.target.files?.[0] && handleSend(undefined, e.target.files[0], 'video')} 
             />
             <Button asChild variant="ghost" size="icon" className="rounded-full h-12 w-12 text-slate-400 hover:text-primary hover:bg-primary/5">
-              <label htmlFor="chat-video" className="cursor-pointer"><Video className="h-5 w-5" /></label>
+              <label htmlFor="chat-video" className={cn("cursor-pointer", isUploading && "opacity-50 pointer-events-none")}><Video className="h-5 w-5" /></label>
             </Button>
           </div>
 
@@ -292,8 +317,9 @@ export default function CommunityChat() {
             <Input 
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend(inputText)}
+              onKeyDown={e => e.key === 'Enter' && !isUploading && handleSend(inputText)}
               placeholder="Écrivez un signalement..."
+              disabled={isUploading}
               className="h-14 rounded-2xl border-2 border-slate-100 bg-slate-50 focus-visible:ring-primary font-bold pl-6 pr-12"
             />
             {isUploading ? (
@@ -325,7 +351,7 @@ export default function CommunityChat() {
                 </Button>
               </div>
             ) : (
-              <Button onClick={startRecording} variant="outline" size="icon" className="h-12 w-12 rounded-full border-2 border-slate-100 text-slate-400 hover:border-primary hover:text-primary transition-all">
+              <Button onClick={startRecording} variant="outline" size="icon" disabled={isUploading} className="h-12 w-12 rounded-full border-2 border-slate-100 text-slate-400 hover:border-primary hover:text-primary transition-all">
                 <Mic className="h-5 w-5" />
               </Button>
             )}

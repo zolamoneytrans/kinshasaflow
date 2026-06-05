@@ -157,23 +157,34 @@ export default function CommunityChat() {
       if (mediaFile) {
         const storage = getStorage(firebaseApp);
         
-        // Nettoyage strict du nom de fichier pour les règles Storage
+        // Nom de fichier ultra-sécurisé pour éviter les problèmes de règles Storage
         const extension = mediaFile.name.split('.').pop() || 'file';
         const fileName = `${Date.now()}_upload.${extension}`;
         
-        const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
+        // Chemin explicite : chat / UID / nom_fichier
+        const path = `chat/${user.uid}/${fileName}`;
+        const fileRef = storageRef(storage, path);
         
         try {
           const snapshot = await uploadBytes(fileRef, mediaFile);
           mediaUrl = await getDownloadURL(snapshot.ref);
         } catch (storageError: any) {
-          console.error("Storage Upload Error:", storageError);
-          toast({ 
-            title: "Échec du transfert média", 
-            description: "Permissions refusées ou erreur réseau. Vérifiez votre connexion.", 
-            variant: "destructive" 
-          });
+          console.error("Storage Error:", storageError);
           setIsUploading(false);
+          
+          if (storageError.code === 'storage/unauthorized') {
+            toast({ 
+              title: "Accès refusé au stockage", 
+              description: "Vos permissions ne permettent pas l'envoi de fichiers. Veuillez réessayer.", 
+              variant: "destructive" 
+            });
+          } else {
+            toast({ 
+              title: "Échec du transfert", 
+              description: "Une erreur réseau a interrompu l'envoi du média.", 
+              variant: "destructive" 
+            });
+          }
           return;
         }
       }
@@ -191,8 +202,8 @@ export default function CommunityChat() {
       await addDoc(chatCollection, messageData);
       setInputText('');
     } catch (e: any) {
-      console.error("Global Send Error:", e);
-      toast({ title: "Erreur d'envoi", description: "Impossible de poster le message sur le serveur.", variant: "destructive" });
+      console.error("Firestore Error:", e);
+      toast({ title: "Erreur d'envoi", description: "Impossible de poster le message sur le salon.", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }

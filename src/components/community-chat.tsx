@@ -1,8 +1,9 @@
+
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useFirebase, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, setDoc, doc, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { CommunityMessage, WithId } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,21 +24,37 @@ import {
   Play, 
   Pause, 
   AlertTriangle, 
-  MessagesSquare 
+  MessagesSquare,
+  MapPin,
+  Siren,
+  Construction,
+  Users
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
 
 const MessageBubble = ({ message, isOwn }: { message: WithId<CommunityMessage>, isOwn: boolean }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const time = message.timestamp?.toDate ? formatDistanceToNow(message.timestamp.toDate(), { addSuffix: true, locale: fr }) : '...';
+  
+  const dateObj = message.timestamp?.toDate ? message.timestamp.toDate() : new Date();
+  const dayStr = format(dateObj, 'EEEE dd MMMM', { locale: fr });
+  const timeStr = format(dateObj, 'HH:mm', { locale: fr });
 
   const toggleAudio = () => {
+    if (!message.mediaUrl) return;
     if (!audioRef.current) {
       audioRef.current = new Audio(message.mediaUrl);
       audioRef.current.onended = () => setIsPlaying(false);
@@ -54,34 +71,47 @@ const MessageBubble = ({ message, isOwn }: { message: WithId<CommunityMessage>, 
     <motion.div 
       initial={{ opacity: 0, x: isOwn ? 20 : -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className={cn("flex items-end gap-2 mb-6", isOwn ? "flex-row-reverse" : "flex-row")}
+      className={cn("flex items-end gap-2 mb-8", isOwn ? "flex-row-reverse" : "flex-row")}
     >
-      <Avatar className="h-8 w-8 shrink-0 border border-slate-100 shadow-sm">
+      <Avatar className="h-8 w-8 shrink-0 border border-slate-100 shadow-sm mb-1">
         <AvatarImage src={message.userAvatar} />
         <AvatarFallback className="bg-slate-50 text-[10px] font-black uppercase text-slate-400">
           <User className="h-4 w-4" />
         </AvatarFallback>
       </Avatar>
 
-      <div className={cn("max-w-[75%] flex flex-col", isOwn ? "items-end" : "items-start")}>
-        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 px-1">
-          {isOwn ? "Moi" : message.userName}
-        </span>
+      <div className={cn("max-w-[85%] flex flex-col", isOwn ? "items-end" : "items-start")}>
+        <div className="flex items-center gap-2 mb-1.5 px-1">
+          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+            {isOwn ? "Moi" : message.userName}
+          </span>
+          <span className="text-[8px] font-bold text-slate-300 uppercase">{dayStr} • {timeStr}</span>
+        </div>
         
         <div className={cn(
-          "p-4 rounded-[1.5rem] shadow-sm relative",
+          "p-4 rounded-[1.75rem] shadow-sm relative",
           isOwn 
             ? "bg-primary text-white rounded-br-none" 
             : "bg-white border border-slate-100 text-slate-800 rounded-bl-none"
         )}>
+          {message.alertType && (
+            <Badge className={cn(
+              "mb-3 flex items-center gap-1.5 font-black text-[9px] uppercase py-1",
+              message.alertType === 'travaux' ? "bg-amber-500 text-white" : "bg-red-600 text-white"
+            )}>
+              {message.alertType === 'travaux' ? <Construction className="h-3 w-3" /> : <Siren className="h-3 w-3" />}
+              Alerte {message.alertType}
+            </Badge>
+          )}
+
           {message.mediaUrl && message.mediaType === 'image' && (
-            <div className="relative aspect-video rounded-xl overflow-hidden mb-3 border border-black/5 min-w-[200px]">
+            <div className="relative aspect-video rounded-2xl overflow-hidden mb-3 border border-black/5 min-w-[220px]">
               <Image src={message.mediaUrl} alt="Partage" fill className="object-cover" />
             </div>
           )}
 
           {message.mediaUrl && message.mediaType === 'video' && (
-            <video src={message.mediaUrl} controls className="rounded-xl mb-3 max-h-60 bg-black min-w-[200px]" />
+            <video src={message.mediaUrl} controls className="rounded-2xl mb-3 max-h-64 bg-black min-w-[220px]" />
           )}
 
           {message.mediaUrl && message.mediaType === 'audio' && (
@@ -94,8 +124,8 @@ const MessageBubble = ({ message, isOwn }: { message: WithId<CommunityMessage>, 
               >
                 {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 fill-current" />}
               </Button>
-              <div className="flex-1 h-1.5 bg-current/20 rounded-full min-w-[120px]">
-                <div className="h-full bg-current rounded-full" style={{ width: isPlaying ? '100%' : '0%', transition: 'width 2s linear' }} />
+              <div className="flex-1 h-1.5 bg-current/20 rounded-full min-w-[140px]">
+                <div className="h-full bg-current rounded-full transition-all" style={{ width: isPlaying ? '100%' : '0%', transitionDuration: '3s' }} />
               </div>
             </div>
           )}
@@ -106,13 +136,18 @@ const MessageBubble = ({ message, isOwn }: { message: WithId<CommunityMessage>, 
             </p>
           )}
 
-          <div className={cn(
-            "flex items-center gap-1.5 mt-2",
-            isOwn ? "text-white/60" : "text-slate-400"
-          )}>
-            <Clock className="h-2.5 w-2.5" />
-            <span className="text-[9px] font-black uppercase">{time}</span>
-          </div>
+          {(message.locationName || message.coords) && (
+            <div className={cn(
+              "flex items-center gap-1.5 mt-3 pt-2 border-t",
+              isOwn ? "border-white/10 text-white/70" : "border-slate-50 text-slate-400"
+            )}>
+              <MapPin className="h-2.5 w-2.5" />
+              <span className="text-[9px] font-black uppercase tracking-tighter truncate max-w-[200px]">
+                {message.locationName || "Position GPS"} 
+                {message.coords && ` (${message.coords.lat.toFixed(3)}, ${message.coords.lng.toFixed(3)})`}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -123,12 +158,38 @@ export default function CommunityChat() {
   const [inputText, setInputText] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [alertDialog, setAlertDialog] = useState<{ open: boolean, type: 'travaux' | 'police' }>({ open: false, type: 'travaux' });
+  const [alertLocation, setAlertLocation] = useState('');
+  const [onlineCount, setOnlineCount] = useState(0);
+  
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const { user, firestore, firebaseApp } = useFirebase();
   const { toast } = useToast();
+
+  // Presence logic (Simple heartbeat)
+  useEffect(() => {
+    if (!user) return;
+    const updatePresence = async () => {
+      await setDoc(doc(firestore, 'presence', user.uid), { lastSeen: serverTimestamp() });
+    };
+    updatePresence();
+    const interval = setInterval(updatePresence, 60000); // Every minute
+    return () => clearInterval(interval);
+  }, [user, firestore]);
+
+  // Online count calculation (active in last 5 mins)
+  const presenceQuery = useMemoFirebase(() => {
+    const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+    return query(collection(firestore, 'presence'), where('lastSeen', '>=', Timestamp.fromDate(fiveMinsAgo)));
+  }, [firestore]);
+  const { data: onlineUsers } = useCollection(presenceQuery);
+  
+  useEffect(() => {
+    if (onlineUsers) setOnlineCount(onlineUsers.length);
+  }, [onlineUsers]);
 
   const messagesQuery = useMemoFirebase(() => {
     return query(collection(firestore, 'community_chat'), orderBy('timestamp', 'desc'), limit(50));
@@ -142,66 +203,65 @@ export default function CommunityChat() {
     }
   }, [messages]);
 
-  const handleSend = async (text?: string, mediaFile?: File, mediaType?: 'image' | 'video' | 'audio') => {
+  const getCurrentCoords = (): Promise<{lat: number, lng: number} | undefined> => {
+    return new Promise((resolve) => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve(undefined),
+          { timeout: 5000 }
+        );
+      } else resolve(undefined);
+    });
+  };
+
+  const handleSend = async (params: { 
+    text?: string, 
+    mediaFile?: File, 
+    mediaType?: 'image' | 'video' | 'audio',
+    alertType?: 'travaux' | 'police',
+    locationName?: string
+  }) => {
     if (!user) {
-      toast({ title: "Connexion requise", description: "Vous devez être connecté pour participer.", variant: "destructive" });
+      toast({ title: "Connexion requise", description: "Veuillez vous connecter pour participer.", variant: "destructive" });
       return;
     }
-    if (!text?.trim() && !mediaFile) return;
+    if (!params.text?.trim() && !params.mediaFile && !params.alertType) return;
 
     setIsUploading(true);
     
     try {
       let mediaUrl = "";
-      if (mediaFile) {
+      if (params.mediaFile) {
         const storage = getStorage(firebaseApp);
-        
-        // Nom de fichier normalisé
-        const extension = mediaFile.name.split('.').pop() || 'file';
-        const fileName = `${Date.now()}_upload.${extension}`;
-        const path = `chat/${user.uid}/${fileName}`;
-        
-        console.log(`[Chat] Tentative d'envoi vers: ${path}`);
-        
-        const fileRef = storageRef(storage, path);
-        
-        try {
-          const snapshot = await uploadBytes(fileRef, mediaFile);
-          mediaUrl = await getDownloadURL(snapshot.ref);
-          console.log(`[Chat] Transfert réussi.`);
-        } catch (storageError: any) {
-          console.error("[Chat] Échec critique Firebase Storage:", storageError.code, storageError.message);
-          setIsUploading(false);
-          
-          let errorMsg = "Une erreur est survenue lors de l'envoi du fichier.";
-          if (storageError.code === 'storage/unauthorized') {
-            errorMsg = "Autorisation refusée par le serveur de stockage. Vérifiez votre profil.";
-          }
-
-          toast({ 
-            title: "Erreur de permission", 
-            description: errorMsg, 
-            variant: "destructive" 
-          });
-          return;
-        }
+        const fileName = `${Date.now()}_upload.${params.mediaFile.name.split('.').pop() || 'file'}`;
+        const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
+        const snapshot = await uploadBytes(fileRef, params.mediaFile);
+        mediaUrl = await getDownloadURL(snapshot.ref);
       }
+
+      const coords = await getCurrentCoords();
 
       const messageData = {
         userId: user.uid,
         userName: user.displayName || "Kinois Anonyme",
         userAvatar: user.photoURL || "",
-        text: text?.trim() || "",
+        text: params.text?.trim() || "",
         mediaUrl,
-        mediaType: mediaType || null,
+        mediaType: params.mediaType || null,
+        locationName: params.locationName || "",
+        coords: coords || null,
+        alertType: params.alertType || null,
         timestamp: serverTimestamp(),
       };
 
       await addDoc(collection(firestore, 'community_chat'), messageData);
       setInputText('');
+      setAlertLocation('');
+      setAlertDialog({ ...alertDialog, open: false });
     } catch (e: any) {
-      console.error("[Chat] Erreur Firestore:", e);
-      toast({ title: "Erreur d'envoi", description: "Impossible d'enregistrer le message dans le salon.", variant: "destructive" });
+      console.error("[Chat] Erreur envoi:", e);
+      toast({ title: "Échec de l'envoi", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }
@@ -213,22 +273,17 @@ export default function CommunityChat() {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
+      mediaRecorder.ondataavailable = (event) => audioChunksRef.current.push(event.data);
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         const audioFile = new File([audioBlob], "voice.wav", { type: 'audio/wav' });
-        handleSend(undefined, audioFile, 'audio');
+        handleSend({ mediaFile: audioFile, mediaType: 'audio' });
         stream.getTracks().forEach(track => track.stop());
       };
-
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
-      toast({ title: "Microphone inaccessible", description: "Veuillez autoriser l'accès au micro.", variant: "destructive" });
+      toast({ title: "Microphone inaccessible", variant: "destructive" });
     }
   };
 
@@ -240,103 +295,92 @@ export default function CommunityChat() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-50/50">
+    <div className="w-full h-full flex flex-col bg-[#F8FAFC]">
       
-      {/* Header Info */}
-      <div className="p-4 bg-white border-b flex items-center justify-between shadow-sm z-10">
+      {/* Header Bar */}
+      <div className="p-4 bg-white border-b flex items-center justify-between shadow-sm z-20">
         <div className="flex items-center gap-3">
-          <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
+          <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/20">
             <MessagesSquare className="text-white h-5 w-5" />
           </div>
           <div>
             <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none">Radio Trottoir Live</h2>
-            <div className="flex items-center gap-1.5 mt-1">
-              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Discussion Directe</span>
+            <div className="flex items-center gap-2 mt-1.5">
+              <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span className="text-[9px] font-black uppercase text-emerald-700 tracking-widest flex items-center gap-1">
+                   <Users className="h-2.5 w-2.5" /> {onlineCount} en ligne
+                </span>
+              </div>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-amber-200 text-amber-600 bg-amber-50 font-black text-[9px] uppercase">Alerte Travaux</Badge>
-            <Badge variant="outline" className="border-red-200 text-red-600 bg-red-50 font-black text-[9px] uppercase">Police</Badge>
+            <Button 
+              onClick={() => setAlertDialog({ open: true, type: 'travaux' })}
+              variant="outline" 
+              className="h-9 px-3 rounded-xl border-amber-200 text-amber-600 bg-amber-50 font-black text-[9px] uppercase gap-1.5 hover:bg-amber-100"
+            >
+              <Construction className="h-3 w-3" /> Travaux
+            </Button>
+            <Button 
+              onClick={() => setAlertDialog({ open: true, type: 'police' })}
+              variant="outline" 
+              className="h-9 px-3 rounded-xl border-red-200 text-red-600 bg-red-50 font-black text-[9px] uppercase gap-1.5 hover:bg-red-100"
+            >
+              <Siren className="h-3 w-3" /> Police
+            </Button>
         </div>
       </div>
 
-      {/* Chat Area */}
+      {/* Chat Messages */}
       <ScrollArea className="flex-1 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-blue-50/50 p-6 rounded-[2rem] border border-blue-100 flex items-center gap-4 mb-10">
-            <div className="bg-primary p-3 rounded-2xl text-white shrink-0">
-              <AlertTriangle className="h-6 w-6" />
-            </div>
-            <p className="text-xs font-bold text-slate-600 leading-relaxed italic">
-              "Partagez l'état des routes avec les autres conducteurs. Les photos et vocaux aident la communauté à mieux circuler."
-            </p>
-          </div>
-
-          <div className="flex flex-col">
-            <AnimatePresence>
-              {[...(messages || [])].reverse().map((msg) => (
-                <MessageBubble key={msg.id} message={msg} isOwn={msg.userId === user?.uid} />
-              ))}
-            </AnimatePresence>
-            <div ref={scrollRef} />
-          </div>
-
+        <div className="max-w-4xl mx-auto flex flex-col">
+          <AnimatePresence>
+            {[...(messages || [])].reverse().map((msg) => (
+              <MessageBubble key={msg.id} message={msg} isOwn={msg.userId === user?.uid} />
+            ))}
+          </AnimatePresence>
+          <div ref={scrollRef} className="h-4" />
+          
           {isLoading && (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-40">
               <Loader2 className="h-8 w-8 text-primary animate-spin" />
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Chargement...</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">Initialisation du flux...</p>
             </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Input Bar */}
+      {/* Input Section */}
       <div className="p-4 md:p-6 bg-white border-t">
         <div className="max-w-4xl mx-auto flex items-center gap-2 md:gap-4">
-          <div className="flex items-center gap-1 md:gap-2">
-            <input 
-              type="file" 
-              id="chat-image" 
-              className="hidden" 
-              accept="image/*" 
-              disabled={isUploading}
-              onChange={e => e.target.files?.[0] && handleSend(undefined, e.target.files[0], 'image')} 
-            />
-            <Button asChild variant="ghost" size="icon" className="rounded-full h-12 w-12 text-slate-400 hover:text-primary hover:bg-primary/5">
-              <label htmlFor="chat-image" className={cn("cursor-pointer", isUploading && "opacity-50 pointer-events-none")}><ImageIcon className="h-5 w-5" /></label>
+          <div className="flex items-center gap-1 md:gap-1.5">
+            <input type="file" id="chat-img" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && handleSend({ mediaFile: e.target.files[0], mediaType: 'image' })} />
+            <Button asChild variant="ghost" size="icon" className="rounded-full h-11 w-11 text-slate-400 hover:text-primary hover:bg-primary/5">
+              <label htmlFor="chat-img" className="cursor-pointer"><ImageIcon className="h-5 w-5" /></label>
             </Button>
 
-            <input 
-              type="file" 
-              id="chat-video" 
-              className="hidden" 
-              accept="video/*" 
-              disabled={isUploading}
-              onChange={e => e.target.files?.[0] && handleSend(undefined, e.target.files[0], 'video')} 
-            />
-            <Button asChild variant="ghost" size="icon" className="rounded-full h-12 w-12 text-slate-400 hover:text-primary hover:bg-primary/5">
-              <label htmlFor="chat-video" className={cn("cursor-pointer", isUploading && "opacity-50 pointer-events-none")}><Video className="h-5 w-5" /></label>
+            <input type="file" id="chat-vid" className="hidden" accept="video/*" onChange={e => e.target.files?.[0] && handleSend({ mediaFile: e.target.files[0], mediaType: 'video' })} />
+            <Button asChild variant="ghost" size="icon" className="rounded-full h-11 w-11 text-slate-400 hover:text-primary hover:bg-primary/5">
+              <label htmlFor="chat-vid" className="cursor-pointer"><Video className="h-5 w-5" /></label>
             </Button>
           </div>
 
-          <div className="flex-1 relative">
+          <div className="flex-1 relative group">
             <Input 
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !isUploading && handleSend(inputText)}
-              placeholder="Écrivez un signalement..."
+              onKeyDown={e => e.key === 'Enter' && !isUploading && handleSend({ text: inputText })}
+              placeholder="Décrivez l'état de la route..."
               disabled={isUploading}
-              className="h-14 rounded-2xl border-2 border-slate-100 bg-slate-50 focus-visible:ring-primary font-bold pl-6 pr-12"
+              className="h-14 rounded-2xl border-2 border-slate-100 bg-slate-50 focus-visible:ring-primary font-bold pl-6 pr-12 group-hover:border-slate-200 transition-all"
             />
             {isUploading ? (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <Loader2 className="h-5 w-5 text-primary animate-spin" />
-              </div>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="h-5 w-5 text-primary animate-spin" /></div>
             ) : (
               <Button 
-                onClick={() => handleSend(inputText)}
+                onClick={() => handleSend({ text: inputText })}
                 disabled={!inputText.trim()}
                 variant="ghost" 
                 size="icon" 
@@ -350,13 +394,11 @@ export default function CommunityChat() {
           <div className="flex items-center">
             {isRecording ? (
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 px-3 py-2 bg-red-50 rounded-full border border-red-100 animate-pulse">
+                <div className="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-full border border-red-100 animate-pulse">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                   <span className="text-[10px] font-black text-red-600 uppercase">Enregistre</span>
                 </div>
-                <Button onClick={stopRecording} className="h-12 w-12 rounded-full bg-red-500 hover:bg-red-600 shadow-lg shadow-red-200">
-                  <MicOff className="h-5 w-5 text-white" />
-                </Button>
+                <Button onClick={stopRecording} className="h-12 w-12 rounded-full bg-red-500 hover:bg-red-600 shadow-lg shadow-red-200"><MicOff className="h-5 w-5 text-white" /></Button>
               </div>
             ) : (
               <Button onClick={startRecording} variant="outline" size="icon" disabled={isUploading} className="h-12 w-12 rounded-full border-2 border-slate-100 text-slate-400 hover:border-primary hover:text-primary transition-all">
@@ -366,6 +408,52 @@ export default function CommunityChat() {
           </div>
         </div>
       </div>
+
+      {/* Alert Dialog */}
+      <Dialog open={alertDialog.open} onOpenChange={(o) => !isUploading && setAlertDialog({ ...alertDialog, open: o })}>
+        <DialogContent className="sm:max-w-md rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
+          <div className={cn(
+            "p-10 text-white relative",
+            alertDialog.type === 'travaux' ? "bg-amber-500" : "bg-red-600"
+          )}>
+            <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+            <DialogHeader className="relative z-10">
+              <div className="bg-white/20 p-3 rounded-2xl w-fit mb-4">
+                {alertDialog.type === 'travaux' ? <Construction className="h-8 w-8" /> : <Siren className="h-8 w-8" />}
+              </div>
+              <DialogTitle className="text-3xl font-black tracking-tight leading-none uppercase">Signalement {alertDialog.type}</DialogTitle>
+              <DialogDescription className="text-white/80 font-medium pt-2">
+                Le GPS capturera votre position exacte. Veuillez nommer l'endroit pour la communauté.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="p-10 space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-1">Nom du lieu / Intersection</label>
+              <Input 
+                value={alertLocation} 
+                onChange={e => setAlertLocation(e.target.value)}
+                placeholder="Ex: Rond-point Mandela..." 
+                className="h-14 rounded-2xl border-2 border-slate-100 font-black text-lg focus-visible:ring-primary"
+              />
+            </div>
+            <DialogFooter>
+              <Button 
+                onClick={() => handleSend({ 
+                  alertType: alertDialog.type, 
+                  locationName: alertLocation,
+                  text: `⚠️ Alerte ${alertDialog.type.toUpperCase()} signalée à ${alertLocation}`
+                })}
+                disabled={!alertLocation.trim() || isUploading}
+                className="w-full h-16 rounded-2xl text-lg font-black uppercase tracking-widest shadow-xl transition-all active:scale-95"
+              >
+                {isUploading ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2 h-5 w-5" />}
+                Diffuser l'alerte
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

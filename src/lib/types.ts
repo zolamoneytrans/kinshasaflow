@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 
 /**
@@ -70,6 +71,12 @@ export interface CommunityMessage {
   text?: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video' | 'audio';
+  locationName?: string;
+  coords?: {
+    lat: number;
+    lng: number;
+  };
+  alertType?: 'travaux' | 'police';
   timestamp: any;
 }
 

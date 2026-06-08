@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -96,12 +97,22 @@
       "type": "object",
       "description": "A message shared in the community chat salon.",
       "properties": {
+        "id": { "type": "string" },
         "userId": { "type": "string" },
         "userName": { "type": "string" },
         "userAvatar": { "type": "string" },
         "text": { "type": "string" },
         "mediaUrl": { "type": "string" },
         "mediaType": { "type": "string", "enum": ["image", "video", "audio"] },
+        "locationName": { "type": "string" },
+        "coords": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "alertType": { "type": "string", "enum": ["travaux", "police"] },
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "userName", "timestamp"]
@@ -151,6 +162,19 @@
             "$ref": "#/backend/entities/CommunityMessage"
           },
           "description": "Real-time messages from the community chat salon."
+        }
+      },
+      {
+        "path": "/presence/{userId}",
+        "definition": {
+          "entityName": "Presence",
+          "description": "Tracks online users heartbeats.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "lastSeen": { "type": "string", "format": "date-time" }
+            }
+          }
         }
       }
     ]

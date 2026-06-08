@@ -93,6 +93,12 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
     }
 
+    /** Presence Tracking */
+    match /presence/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+
     /** Business Services */
     match /logements/{id} { allow read: if true; allow write: if isAdmin(); }
     match /logement_applications/{id} { allow read: if isAdmin(); allow create: if isSignedIn(); }

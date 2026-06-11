@@ -1,4 +1,3 @@
-
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -7,6 +6,7 @@ import { generateSpeech } from "@/ai/flows/tts-flow";
 import { getStrategicInsights } from "@/ai/flows/strategic-insights-flow";
 import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsInput, StrategicInsightsOutput } from "@/lib/types";
 import * as webpush from 'web-push';
+import * as nodemailer from 'nodemailer';
 
 export async function getTrafficTipsAction(input: TrafficTipsInput) {
     try {
@@ -78,6 +78,69 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
     if (error.statusCode === 410) {
       return { success: false, error: 'Subscription expired.' };
     }
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Envoie une notification d'alerte par email via SMTP Gmail.
+ */
+export async function sendAlertEmailAction(params: { type: string, location: string, userName: string }) {
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (!smtpUser || !smtpPass) {
+    console.error("SMTP credentials missing in .env");
+    return { success: false, error: "Configuration SMTP manquante." };
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  });
+
+  const mailOptions = {
+    from: `"Kinshasa Flow Alerts" <${smtpUser}>`,
+    to: 'drnduwa@gmail.com',
+    subject: `🚨 ALERTE K-FLOW : ${params.type.toUpperCase()} à ${params.location}`,
+    html: `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
+          <div style="background-color: #248eeb; padding: 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.025em;">Kinshasa Flow</h1>
+            <p style="color: #e2e8f0; margin-top: 5px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em;">Rapport de Trafic Communautaire</p>
+          </div>
+          <div style="padding: 40px;">
+            <div style="background-color: #f1f5f9; padding: 20px; border-radius: 16px; border-left: 6px solid #248eeb; margin-bottom: 30px;">
+              <h2 style="margin: 0 0 10px 0; color: #0f172a; font-size: 18px;">Signalement de l'incident</h2>
+              <p style="margin: 5px 0;"><strong>Type d'alerte :</strong> <span style="text-transform: capitalize; color: #248eeb;">${params.type}</span></p>
+              <p style="margin: 5px 0;"><strong>Lieu :</strong> ${params.location}</p>
+              <p style="margin: 5px 0;"><strong>Signé par :</strong> ${params.userName}</p>
+              <p style="margin: 5px 0;"><strong>Heure :</strong> ${new Date().toLocaleTimeString('fr-FR')}</p>
+            </div>
+            <p style="color: #64748b; font-size: 14px; line-height: 1.6;">
+              Un membre de la communauté vient de signaler un événement perturbant la circulation. Ouvrez l'application pour voir les détails sur la carte et trouver un itinéraire de contournement.
+            </p>
+            <div style="text-align: center; margin-top: 40px;">
+              <a href="https://kinshasaflow.online/community-chat" style="background-color: #248eeb; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 16px; display: inline-block;">VOIR SUR LA CARTE</a>
+            </div>
+          </div>
+          <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 10px; margin: 0;">© ${new Date().getFullYear()} Kinshasa Flow • Swazi Appli Lab sarl</p>
+          </div>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error: any) {
+    console.error('SMTP Error:', error);
     return { success: false, error: error.message };
   }
 }

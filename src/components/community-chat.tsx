@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -45,6 +44,7 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
+import { sendAlertEmailAction } from '@/app/actions';
 
 const MessageBubble = ({ message, isOwn }: { message: WithId<CommunityMessage>, isOwn: boolean }) => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -227,7 +227,7 @@ export default function CommunityChat() {
   };
 
   /**
-   * Envoi d'une alerte email via la collection mail (Firebase Extension)
+   * Envoi d'une alerte email via SMTP Gmail configuré.
    */
   const triggerEmailNotification = async (params: { 
     type: string, 
@@ -235,31 +235,24 @@ export default function CommunityChat() {
     userName: string 
   }) => {
     try {
+      // On déclenche l'envoi SMTP via l'action serveur
+      const result = await sendAlertEmailAction(params);
+      
+      // On garde aussi l'écriture en base pour l'extension (facultatif si SMTP direct marche)
       const mailRef = collection(firestore, 'mail');
       await addDoc(mailRef, {
-        to: ['drnduwa@gmail.com'], // Pour le prototype, on envoie à l'admin
+        to: ['drnduwa@gmail.com'],
         message: {
           subject: `🚨 ALERTE K-FLOW : ${params.type.toUpperCase()} à ${params.location}`,
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; color: #333;">
-              <h1 style="color: #248eeb;">Signalement Communautaire</h1>
-              <p>Un membre de la communauté a signalé un incident :</p>
-              <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid #248eeb;">
-                <p><strong>Type :</strong> ${params.type}</p>
-                <p><strong>Lieu :</strong> ${params.location}</p>
-                <p><strong>Signalé par :</strong> ${params.userName}</p>
-                <p><strong>Heure :</strong> ${new Date().toLocaleTimeString()}</p>
-              </div>
-              <p style="margin-top: 20px;">
-                <a href="https://kinshasaflow.online/community-chat" style="background: #248eeb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Voir sur la carte</a>
-              </p>
-            </div>
-          `,
           text: `Alerte K-Flow : ${params.type} signalé à ${params.location} par ${params.userName}.`
         }
       });
+
+      if (!result.success) {
+        console.warn("[Email] Échec de l'envoi direct SMTP:", result.error);
+      }
     } catch (e) {
-      console.warn("[Email] Échec de la mise en file d'attente:", e);
+      console.warn("[Email] Échec de la notification:", e);
     }
   };
 
@@ -284,8 +277,12 @@ export default function CommunityChat() {
         const storage = getStorage(firebaseApp);
         const fileName = `${Date.now()}_upload.${params.mediaFile.name.split('.').pop() || 'file'}`;
         const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
+        
+        console.log(`[Chat] Début du transfert vers: ${fileRef.fullPath}`);
+        
         const snapshot = await uploadBytes(fileRef, params.mediaFile);
         mediaUrl = await getDownloadURL(snapshot.ref);
+        console.log(`[Chat] Transfert réussi: ${mediaUrl}`);
       }
 
       const coords = await getCurrentCoords();
@@ -318,8 +315,8 @@ export default function CommunityChat() {
       setAlertLocation('');
       setAlertDialog({ ...alertDialog, open: false });
     } catch (e: any) {
-      console.error("[Chat] Erreur envoi:", e);
-      toast({ title: "Échec de l'envoi", variant: "destructive" });
+      console.error("[Chat] Erreur envoi critique:", e);
+      toast({ title: "Échec de l'envoi", description: "Vérifiez vos permissions et votre connexion.", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }

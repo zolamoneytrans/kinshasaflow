@@ -40,6 +40,7 @@ const FEATURE_LABELS: Record<NavFeature, string> = {
   kFlowNav: "K-Flow Navigation GPS",
   fluxInfrastructure: "Flux & Infrastructure",
   insights: "K-Flow Insights (IA)",
+  communityChat: "Radio Trottoir (Chat)",
 };
 
 export default function AdminNavigationPage() {

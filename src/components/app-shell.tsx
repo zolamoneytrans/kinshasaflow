@@ -240,6 +240,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SidebarHeader>
             <SidebarMenu className="p-3 gap-1">
               
+              {/* Priorité au Chat Direct comme landing feature */}
+              {isEnabled('communityChat') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/community-chat'} className={cn(pathname === '/community-chat' && "bg-white/10")}>
+                    <Link href="/community-chat" className="font-bold flex items-center gap-3 h-11 px-4 rounded-xl">
+                      <MessagesSquare className={cn("h-5 w-5", pathname === '/community-chat' ? "text-accent" : "text-primary")} />
+                      <span>Chat Direct</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
               {isEnabled('reports') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === '/reports'} className={cn(pathname === '/reports' && "bg-white/10")}>
@@ -249,17 +261,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <span>Rapports</span>
                       </div>
                       {unreadReports > 0 && <Badge variant="destructive" className="h-5 px-1.5 min-w-[20px] justify-center text-[10px] rounded-full font-black">{unreadReports}</Badge>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
-              {isEnabled('communityChat') && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/community-chat'} className={cn(pathname === '/community-chat' && "bg-white/10")}>
-                    <Link href="/community-chat" className="font-bold flex items-center gap-3 h-11 px-4 rounded-xl">
-                      <MessagesSquare className={cn("h-5 w-5", pathname === '/community-chat' ? "text-accent" : "text-primary")} />
-                      <span>Chat Direct</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

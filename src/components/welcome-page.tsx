@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Bot, Megaphone, ArrowRight, ShieldCheck, Zap, Monitor, X, Smartphone as PhoneIcon } from 'lucide-react';
+import { Activity, Bot, Megaphone, ArrowRight, ShieldCheck, Zap, Monitor, X, Smartphone as PhoneIcon, MessagesSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
@@ -189,15 +189,16 @@ export default function WelcomePage() {
                     </motion.h1>
 
                     <motion.p variants={itemVariants} className="max-w-2xl mx-auto text-xl md:text-2xl text-muted-foreground mb-12 font-medium leading-relaxed">
-                        Évitez les bouchons et trouvez vos meilleurs itinéraires avec notre assistant IA. Le futur de la mobilité urbaine est ici.
+                        Évitez les bouchons et échangez en direct avec la communauté. Le futur de la mobilité urbaine est ici.
                     </motion.p>
 
                     <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-center gap-6">
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                            <Link href="/reports">
-                                <Button size="lg" className="text-xl py-8 px-10 rounded-2xl shadow-2xl shadow-primary/30 group font-black">
-                                    Accéder au Direct
-                                    <ArrowRight className="ml-2 w-6 h-6 transition-transform group-hover:translate-x-1" />
+                            <Link href="/community-chat">
+                                <Button size="lg" className="text-xl py-8 px-10 rounded-2xl shadow-2xl shadow-primary/30 group font-black gap-3">
+                                    <MessagesSquare className="w-6 h-6" />
+                                    Entrer dans le Chat
+                                    <ArrowRight className="ml-1 w-5 h-5 transition-transform group-hover:translate-x-1" />
                                 </Button>
                             </Link>
                         </motion.div>

@@ -100,6 +100,12 @@ service cloud.firestore {
       allow write: if isOwner(userId);
     }
 
+    /** Email Trigger Collection */
+    match /mail/{mailId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
     /** Business Services */
     match /logements/{id} { allow read: if true; allow write: if isAdmin(); }
     match /logement_applications/{id} { allow read: if isAdmin(); allow create: if isSignedIn(); }

@@ -125,6 +125,22 @@
         "lastSeen": { "type": "string", "format": "date-time" }
       },
       "required": ["lastSeen"]
+    },
+    "Mail": {
+      "title": "Mail",
+      "type": "object",
+      "description": "A document to trigger the Firebase Trigger Email extension.",
+      "properties": {
+        "to": { "type": "array", "items": { "type": "string" } },
+        "message": {
+          "type": "object",
+          "properties": {
+            "subject": { "type": "string" },
+            "html": { "type": "string" },
+            "text": { "type": "string" }
+          }
+        }
+      }
     }
   },
   "auth": {
@@ -175,6 +191,16 @@
             "$ref": "#/backend/entities/Presence"
           },
           "description": "Tracks online users heartbeats."
+        }
+      },
+      {
+        "path": "/mail/{mailId}",
+        "definition": {
+          "entityName": "Mail",
+          "schema": {
+            "$ref": "#/backend/entities/Mail"
+          },
+          "description": "Queue for outgoing email notifications."
         }
       }
     ]

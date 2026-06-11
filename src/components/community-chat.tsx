@@ -31,7 +31,7 @@ import {
   Users,
   Car
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -226,6 +226,43 @@ export default function CommunityChat() {
     });
   };
 
+  /**
+   * Envoi d'une alerte email via la collection mail (Firebase Extension)
+   */
+  const triggerEmailNotification = async (params: { 
+    type: string, 
+    location: string, 
+    userName: string 
+  }) => {
+    try {
+      const mailRef = collection(firestore, 'mail');
+      await addDoc(mailRef, {
+        to: ['drnduwa@gmail.com'], // Pour le prototype, on envoie à l'admin
+        message: {
+          subject: `🚨 ALERTE K-FLOW : ${params.type.toUpperCase()} à ${params.location}`,
+          html: `
+            <div style="font-family: sans-serif; padding: 20px; color: #333;">
+              <h1 style="color: #248eeb;">Signalement Communautaire</h1>
+              <p>Un membre de la communauté a signalé un incident :</p>
+              <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid #248eeb;">
+                <p><strong>Type :</strong> ${params.type}</p>
+                <p><strong>Lieu :</strong> ${params.location}</p>
+                <p><strong>Signalé par :</strong> ${params.userName}</p>
+                <p><strong>Heure :</strong> ${new Date().toLocaleTimeString()}</p>
+              </div>
+              <p style="margin-top: 20px;">
+                <a href="https://kinshasaflow.online/community-chat" style="background: #248eeb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Voir sur la carte</a>
+              </p>
+            </div>
+          `,
+          text: `Alerte K-Flow : ${params.type} signalé à ${params.location} par ${params.userName}.`
+        }
+      });
+    } catch (e) {
+      console.warn("[Email] Échec de la mise en file d'attente:", e);
+    }
+  };
+
   const handleSend = async (params: { 
     text?: string, 
     mediaFile?: File, 
@@ -267,6 +304,16 @@ export default function CommunityChat() {
       };
 
       await addDoc(collection(firestore, 'community_chat'), messageData);
+
+      // Si c'est une alerte, on déclenche l'email
+      if (params.alertType && params.locationName) {
+        triggerEmailNotification({
+          type: params.alertType,
+          location: params.locationName,
+          userName: messageData.userName
+        });
+      }
+
       setInputText('');
       setAlertLocation('');
       setAlertDialog({ ...alertDialog, open: false });

@@ -116,6 +116,15 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "userName", "timestamp"]
+    },
+    "Presence": {
+      "title": "Presence",
+      "type": "object",
+      "description": "Tracks online users heartbeats.",
+      "properties": {
+        "lastSeen": { "type": "string", "format": "date-time" }
+      },
+      "required": ["lastSeen"]
     }
   },
   "auth": {
@@ -135,13 +144,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles and their cumulative star statistics.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
+          "description": "Stores user profiles and their cumulative star statistics."
         }
       },
       {
@@ -168,13 +171,10 @@
         "path": "/presence/{userId}",
         "definition": {
           "entityName": "Presence",
-          "description": "Tracks online users heartbeats.",
           "schema": {
-            "type": "object",
-            "properties": {
-              "lastSeen": { "type": "string", "format": "date-time" }
-            }
-          }
+            "$ref": "#/backend/entities/Presence"
+          },
+          "description": "Tracks online users heartbeats."
         }
       }
     ]

@@ -173,7 +173,11 @@ export default function CommunityChat() {
   useEffect(() => {
     if (!user) return;
     const updatePresence = async () => {
-      await setDoc(doc(firestore, 'presence', user.uid), { lastSeen: serverTimestamp() });
+      try {
+        await setDoc(doc(firestore, 'presence', user.uid), { lastSeen: serverTimestamp() });
+      } catch (e) {
+        console.error("Presence update failed", e);
+      }
     };
     updatePresence();
     const interval = setInterval(updatePresence, 60000); // Every minute
@@ -182,6 +186,7 @@ export default function CommunityChat() {
 
   // Online count calculation (active in last 5 mins)
   const presenceQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
     const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
     return query(collection(firestore, 'presence'), where('lastSeen', '>=', Timestamp.fromDate(fiveMinsAgo)));
   }, [firestore]);
@@ -192,6 +197,7 @@ export default function CommunityChat() {
   }, [onlineUsers]);
 
   const messagesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
     return query(collection(firestore, 'community_chat'), orderBy('timestamp', 'desc'), limit(50));
   }, [firestore]);
 
@@ -337,7 +343,7 @@ export default function CommunityChat() {
       <ScrollArea className="flex-1 p-4 md:p-8">
         <div className="max-w-4xl mx-auto flex flex-col">
           <AnimatePresence>
-            {[...(messages || [])].reverse().map((msg) => (
+            {messages && [...messages].reverse().map((msg) => (
               <MessageBubble key={msg.id} message={msg} isOwn={msg.userId === user?.uid} />
             ))}
           </AnimatePresence>

@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -95,7 +96,7 @@ service cloud.firestore {
 
     /** Presence Tracking */
     match /presence/{userId} {
-      allow read: if isSignedIn();
+      allow get, list: if isSignedIn();
       allow write: if isOwner(userId);
     }
 

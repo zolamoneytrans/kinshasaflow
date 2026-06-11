@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Send, 
   ImageIcon, 
-  Video, 
+  Video as VideoIcon, 
   Mic, 
   MicOff, 
   Loader2, 
@@ -28,7 +28,8 @@ import {
   MapPin,
   Siren,
   Construction,
-  Users
+  Users,
+  Car
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -97,9 +98,13 @@ const MessageBubble = ({ message, isOwn }: { message: WithId<CommunityMessage>, 
           {message.alertType && (
             <Badge className={cn(
               "mb-3 flex items-center gap-1.5 font-black text-[9px] uppercase py-1",
-              message.alertType === 'travaux' ? "bg-amber-500 text-white" : "bg-red-600 text-white"
+              message.alertType === 'travaux' ? "bg-amber-500 text-white" : 
+              message.alertType === 'police' ? "bg-red-600 text-white" :
+              "bg-orange-600 text-white"
             )}>
-              {message.alertType === 'travaux' ? <Construction className="h-3 w-3" /> : <Siren className="h-3 w-3" />}
+              {message.alertType === 'travaux' ? <Construction className="h-3 w-3" /> : 
+               message.alertType === 'police' ? <Siren className="h-3 w-3" /> :
+               <Car className="h-3 w-3" />}
               Alerte {message.alertType}
             </Badge>
           )}
@@ -158,7 +163,7 @@ export default function CommunityChat() {
   const [inputText, setInputText] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [alertDialog, setAlertDialog] = useState<{ open: boolean, type: 'travaux' | 'police' }>({ open: false, type: 'travaux' });
+  const [alertDialog, setAlertDialog] = useState<{ open: boolean, type: 'travaux' | 'police' | 'embouteillage' }>({ open: false, type: 'travaux' });
   const [alertLocation, setAlertLocation] = useState('');
   const [onlineCount, setOnlineCount] = useState(0);
   
@@ -225,7 +230,7 @@ export default function CommunityChat() {
     text?: string, 
     mediaFile?: File, 
     mediaType?: 'image' | 'video' | 'audio',
-    alertType?: 'travaux' | 'police',
+    alertType?: 'travaux' | 'police' | 'embouteillage',
     locationName?: string
   }) => {
     if (!user) {
@@ -321,18 +326,25 @@ export default function CommunityChat() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none max-w-[200px] md:max-w-none">
+            <Button 
+              onClick={() => setAlertDialog({ open: true, type: 'embouteillage' })}
+              variant="outline" 
+              className="h-9 px-3 rounded-xl border-orange-200 text-orange-600 bg-orange-50 font-black text-[9px] uppercase gap-1.5 hover:bg-orange-100 shrink-0"
+            >
+              <Car className="h-3 w-3" /> Embouteillage
+            </Button>
             <Button 
               onClick={() => setAlertDialog({ open: true, type: 'travaux' })}
               variant="outline" 
-              className="h-9 px-3 rounded-xl border-amber-200 text-amber-600 bg-amber-50 font-black text-[9px] uppercase gap-1.5 hover:bg-amber-100"
+              className="h-9 px-3 rounded-xl border-amber-200 text-amber-600 bg-amber-50 font-black text-[9px] uppercase gap-1.5 hover:bg-amber-100 shrink-0"
             >
               <Construction className="h-3 w-3" /> Travaux
             </Button>
             <Button 
               onClick={() => setAlertDialog({ open: true, type: 'police' })}
               variant="outline" 
-              className="h-9 px-3 rounded-xl border-red-200 text-red-600 bg-red-50 font-black text-[9px] uppercase gap-1.5 hover:bg-red-100"
+              className="h-9 px-3 rounded-xl border-red-200 text-red-600 bg-red-50 font-black text-[9px] uppercase gap-1.5 hover:bg-red-100 shrink-0"
             >
               <Siren className="h-3 w-3" /> Police
             </Button>
@@ -369,7 +381,7 @@ export default function CommunityChat() {
 
             <input type="file" id="chat-vid" className="hidden" accept="video/*" onChange={e => e.target.files?.[0] && handleSend({ mediaFile: e.target.files[0], mediaType: 'video' })} />
             <Button asChild variant="ghost" size="icon" className="rounded-full h-11 w-11 text-slate-400 hover:text-primary hover:bg-primary/5">
-              <label htmlFor="chat-vid" className="cursor-pointer"><Video className="h-5 w-5" /></label>
+              <label htmlFor="chat-vid" className="cursor-pointer"><VideoIcon className="h-5 w-5" /></label>
             </Button>
           </div>
 
@@ -420,12 +432,16 @@ export default function CommunityChat() {
         <DialogContent className="sm:max-w-md rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
           <div className={cn(
             "p-10 text-white relative",
-            alertDialog.type === 'travaux' ? "bg-amber-500" : "bg-red-600"
+            alertDialog.type === 'travaux' ? "bg-amber-500" : 
+            alertDialog.type === 'police' ? "bg-red-600" :
+            "bg-orange-600"
           )}>
             <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
             <DialogHeader className="relative z-10">
               <div className="bg-white/20 p-3 rounded-2xl w-fit mb-4">
-                {alertDialog.type === 'travaux' ? <Construction className="h-8 w-8" /> : <Siren className="h-8 w-8" />}
+                {alertDialog.type === 'travaux' ? <Construction className="h-8 w-8" /> : 
+                 alertDialog.type === 'police' ? <Siren className="h-8 w-8" /> :
+                 <Car className="h-8 w-8" />}
               </div>
               <DialogTitle className="text-3xl font-black tracking-tight leading-none uppercase">Signalement {alertDialog.type}</DialogTitle>
               <DialogDescription className="text-white/80 font-medium pt-2">

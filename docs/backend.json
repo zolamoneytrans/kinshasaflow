@@ -112,7 +112,7 @@
             "lng": { "type": "number" }
           }
         },
-        "alertType": { "type": "string", "enum": ["travaux", "police"] },
+        "alertType": { "type": "string", "enum": ["travaux", "police", "embouteillage"] },
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "userName", "timestamp"]

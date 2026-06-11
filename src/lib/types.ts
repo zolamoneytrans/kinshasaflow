@@ -76,7 +76,7 @@ export interface CommunityMessage {
     lat: number;
     lng: number;
   };
-  alertType?: 'travaux' | 'police';
+  alertType?: 'travaux' | 'police' | 'embouteillage';
   timestamp: any;
 }
 

@@ -48,7 +48,9 @@ service cloud.firestore {
     /** Rules for user profiles and balances */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
+      // Allow list for the broadcast action (which is technically unauthenticated on server side)
+      // or for admin management.
+      allow list: if isSignedIn(); 
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();

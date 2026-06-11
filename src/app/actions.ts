@@ -1,3 +1,4 @@
+
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -7,6 +8,8 @@ import { getStrategicInsights } from "@/ai/flows/strategic-insights-flow";
 import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsInput, StrategicInsightsOutput } from "@/lib/types";
 import * as webpush from 'web-push';
 import * as nodemailer from 'nodemailer';
+import { initializeFirebase } from "@/firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 export async function getTrafficTipsAction(input: TrafficTipsInput) {
     try {
@@ -48,7 +51,7 @@ export async function getStrategicInsightsAction(input: StrategicInsightsInput):
     return {
       globalAdvice: "Analyse momentanément indisponible. Restez prudents sur les routes.",
       tips: ["Vérifiez vos rétroviseurs", "Gardez vos distances de sécurité", "Évitez les axes saturés"],
-      trend: "stable"
+      trend: "stable" as const
     };
   }
 }
@@ -83,7 +86,7 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
 }
 
 /**
- * Envoie une notification d'alerte par email via SMTP Gmail.
+ * Envoie une notification d'alerte par email à TOUS les utilisateurs via SMTP Gmail.
  */
 export async function sendAlertEmailAction(params: { type: string, location: string, userName: string }) {
   const smtpUser = process.env.SMTP_USER;
@@ -92,6 +95,21 @@ export async function sendAlertEmailAction(params: { type: string, location: str
   if (!smtpUser || !smtpPass) {
     console.error("SMTP credentials missing in .env");
     return { success: false, error: "Configuration SMTP manquante." };
+  }
+
+  // 1. Récupérer tous les emails des utilisateurs de l'application
+  let recipientList: string[] = ['drnduwa@gmail.com']; // Admin toujours inclus
+  
+  try {
+    const { firestore } = initializeFirebase();
+    const usersSnap = await getDocs(collection(firestore, 'users'));
+    const userEmails = usersSnap.docs
+      .map(doc => doc.data().email)
+      .filter(email => email && email.includes('@') && email !== 'drnduwa@gmail.com');
+    
+    recipientList = [...recipientList, ...userEmails];
+  } catch (e) {
+    console.warn("[Email Broadcast] Impossible de récupérer la liste des utilisateurs, envoi à l'admin uniquement.");
   }
 
   const transporter = nodemailer.createTransport({
@@ -104,7 +122,8 @@ export async function sendAlertEmailAction(params: { type: string, location: str
 
   const mailOptions = {
     from: `"Kinshasa Flow Alerts" <${smtpUser}>`,
-    to: 'drnduwa@gmail.com',
+    to: 'drnduwa@gmail.com', // Destinataire principal (admin)
+    bcc: recipientList, // Tous les autres en copie cachée pour la confidentialité
     subject: `🚨 ALERTE K-FLOW : ${params.type.toUpperCase()} à ${params.location}`,
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc;">
@@ -115,21 +134,22 @@ export async function sendAlertEmailAction(params: { type: string, location: str
           </div>
           <div style="padding: 40px;">
             <div style="background-color: #f1f5f9; padding: 20px; border-radius: 16px; border-left: 6px solid #248eeb; margin-bottom: 30px;">
-              <h2 style="margin: 0 0 10px 0; color: #0f172a; font-size: 18px;">Signalement de l'incident</h2>
+              <h2 style="margin: 0 0 10px 0; color: #0f172a; font-size: 18px;">Signalement en direct</h2>
               <p style="margin: 5px 0;"><strong>Type d'alerte :</strong> <span style="text-transform: capitalize; color: #248eeb;">${params.type}</span></p>
               <p style="margin: 5px 0;"><strong>Lieu :</strong> ${params.location}</p>
-              <p style="margin: 5px 0;"><strong>Signé par :</strong> ${params.userName}</p>
+              <p style="margin: 5px 0;"><strong>Signalé par :</strong> ${params.userName}</p>
               <p style="margin: 5px 0;"><strong>Heure :</strong> ${new Date().toLocaleTimeString('fr-FR')}</p>
             </div>
             <p style="color: #64748b; font-size: 14px; line-height: 1.6;">
-              Un membre de la communauté vient de signaler un événement perturbant la circulation. Ouvrez l'application pour voir les détails sur la carte et trouver un itinéraire de contournement.
+              Un membre de la communauté vient de signaler cet incident sur Radio Trottoir. Ouvrez l'application pour localiser l'événement sur la carte et adapter votre itinéraire.
             </p>
             <div style="text-align: center; margin-top: 40px;">
-              <a href="https://kinshasaflow.online/community-chat" style="background-color: #248eeb; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 16px; display: inline-block;">VOIR SUR LA CARTE</a>
+              <a href="https://kinshasaflow.online/community-chat" style="background-color: #248eeb; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 16px; display: inline-block;">VOIR DANS LE CHAT</a>
             </div>
           </div>
           <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
             <p style="color: #94a3b8; font-size: 10px; margin: 0;">© ${new Date().getFullYear()} Kinshasa Flow • Swazi Appli Lab sarl</p>
+            <p style="color: #cbd5e1; font-size: 8px; margin-top: 5px;">Vous recevez cet email car vous êtes inscrit sur Kinshasa Flow.</p>
           </div>
         </div>
       </div>
@@ -138,7 +158,7 @@ export async function sendAlertEmailAction(params: { type: string, location: str
 
   try {
     await transporter.sendMail(mailOptions);
-    return { success: true };
+    return { success: true, count: recipientList.length };
   } catch (error: any) {
     console.error('SMTP Error:', error);
     return { success: false, error: error.message };

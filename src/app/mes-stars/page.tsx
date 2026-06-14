@@ -178,7 +178,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
   };
 
   const checkStatus = useCallback(async (isManual = false) => {
-    if (!pendingTransactionId || !user || !selectedPack || (isChecking && !isManual)) return;
+    if (!pendingTransactionId || !user || (isChecking && !isManual)) return;
     
     setIsChecking(true);
     try {
@@ -186,7 +186,15 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
         if (result.success && result.data) {
             const status = String(result.data.status).toLowerCase(); 
             
-            if (status === 'successful') {
+            if (status === 'successful' || status === 'success' || status === 'completed') {
+                const activePack = selectedPack || JSON.parse(localStorage.getItem('pending_pack') || 'null');
+                
+                if (!activePack) {
+                    toast({ title: "Erreur de données", description: "Impossible de retrouver les détails du pack.", variant: "destructive" });
+                    cancelPending();
+                    return;
+                }
+
                 const userRef = doc(firestore, 'users', user.uid);
                 const transRef = doc(firestore, 'users', user.uid, 'star_transactions', pendingTransactionId);
 
@@ -195,6 +203,7 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                     localStorage.removeItem('pending_tx_id');
                     localStorage.removeItem('pending_pack');
                     setStep(1);
+                    window.location.reload();
                     return;
                 }
 
@@ -203,8 +212,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                     if (!userDoc.exists()) return;
                     
                     const currentData = userDoc.data() as UserProfile;
-                    const newBalance = (currentData.currentStarsBalance || 0) + selectedPack.stars;
-                    const newTotalPurchased = (currentData.totalStarsPurchased || 0) + selectedPack.stars;
+                    const newBalance = (currentData.currentStarsBalance || 0) + activePack.stars;
+                    const newTotalPurchased = (currentData.totalStarsPurchased || 0) + activePack.stars;
 
                     transaction.update(userRef, {
                         currentStarsBalance: newBalance,
@@ -214,9 +223,9 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                     transaction.set(transRef, {
                         userId: user.uid,
                         type: 'purchase',
-                        starsChange: selectedPack.stars,
+                        starsChange: activePack.stars,
                         balanceAfterTransaction: newBalance,
-                        description: `Pack ${selectedPack.label} (${(localStorage.getItem('pending_operator') || 'Mobile Money').toUpperCase()})`,
+                        description: `Pack ${activePack.label} (${(localStorage.getItem('pending_operator') || 'Mobile Money').toUpperCase()})`,
                         timestamp: serverTimestamp(),
                         relatedObjectId: pendingTransactionId,
                         relatedObjectType: 'MbiyoPayTransaction'
@@ -227,14 +236,11 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 localStorage.removeItem('pending_pack');
                 localStorage.removeItem('pending_operator');
 
-                toast({ title: "Paiement confirmé !", description: `+${selectedPack.stars} Stars ajoutées.` });
+                toast({ title: "Paiement confirmé !", description: `+${activePack.stars} Stars ajoutées.` });
                 setTimeout(() => window.location.reload(), 1500);
-            } else if (status === 'failed' || status === 'canceled') {
+            } else if (status === 'failed' || status === 'canceled' || status === 'rejected') {
                 toast({ title: "Paiement annulé", description: "La transaction a échoué ou a été annulée.", variant: "destructive" });
-                localStorage.removeItem('pending_tx_id');
-                localStorage.removeItem('pending_pack');
-                setPendingTransactionId(null);
-                setStep(1);
+                cancelPending();
             } else if (isManual) {
                 toast({ title: "En attente", description: "Le paiement n'a pas encore été validé par l'opérateur." });
             }
@@ -495,32 +501,37 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
       if (result.success && result.data) {
         const status = String(result.data.status).toLowerCase();
         
-        if (status === 'successful') {
-          // Si on est dans ce step, selectedPlan devrait être là, sinon on essaie de le récupérer du storage
+        if (status === 'successful' || status === 'success' || status === 'completed') {
+          // Restore plan details from storage if missing in state
           const activePlan = selectedPlan || JSON.parse(localStorage.getItem('pending_sub_plan') || 'null');
           
           if (!activePlan) {
-              console.error("No plan selected/found for verification");
-              toast({ title: "Erreur interne", description: "Impossible de retrouver les détails du forfait.", variant: "destructive" });
+              console.error("Critical: Plan details lost during verification");
+              toast({ title: "Erreur de données", description: "Impossible de valider votre forfait. Contactez le support.", variant: "destructive" });
               cancelPending();
               return;
           }
 
           const userRef = doc(firestore, 'users', user.uid);
+          // Use the transaction ID as document ID to prevent duplicate processing
           const transRef = doc(firestore, 'users', user.uid, 'star_transactions', pendingTxId);
 
-          const transSnap = await getDoc(transRef);
-          if (transSnap.exists()) {
+          // Try to read first to see if already processed
+          const existing = await getDoc(transRef);
+          if (existing.exists()) {
               localStorage.removeItem('pending_sub_tx_id');
               localStorage.removeItem('pending_sub_plan');
               setStep(1);
+              window.location.reload();
               return;
           }
 
           await runTransaction(firestore, async (transaction) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists()) return;
-            const currentExpiry = (userDoc.data() as UserProfile).cashSubscriptionExpiry?.toDate() || new Date();
+            
+            const userData = userDoc.data() as UserProfile;
+            const currentExpiry = userData.cashSubscriptionExpiry?.toDate() || new Date();
             const baseDate = currentExpiry > new Date() ? currentExpiry : new Date();
             const newExpiry = activePlan.id === 'monthly' ? addMonths(baseDate, 1) : addYears(baseDate, 1);
             
@@ -533,7 +544,7 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
               userId: user.uid,
               type: 'purchase',
               starsChange: 0,
-              balanceAfterTransaction: (userDoc.data() as UserProfile).currentStarsBalance || 0,
+              balanceAfterTransaction: userData.currentStarsBalance || 0,
               description: `Abonnement Cash ${activePlan.label}`,
               timestamp: serverTimestamp(),
               relatedObjectId: pendingTxId,
@@ -543,17 +554,18 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
 
           localStorage.removeItem('pending_sub_tx_id');
           localStorage.removeItem('pending_sub_plan');
-          toast({ title: "Abonnement confirmé !", description: "Votre accès est maintenant actif." });
+          toast({ title: "Abonnement Actif !", description: "Merci pour votre confiance." });
           setTimeout(() => window.location.reload(), 1500);
-        } else if (status === 'failed' || status === 'canceled') {
-          toast({ title: "Paiement échoué", description: "La transaction n'a pas pu être complétée ou a été annulée.", variant: "destructive" });
+        } else if (status === 'failed' || status === 'canceled' || status === 'rejected') {
+          toast({ title: "Paiement refusé", description: "La transaction n'a pas pu être complétée ou a été annulée.", variant: "destructive" });
           cancelPending();
         } else if (isManual) {
-          toast({ title: "En attente", description: "Votre transaction est toujours en cours de traitement." });
+          toast({ title: "En attente", description: "Votre transaction est toujours en cours de traitement chez l'opérateur." });
         }
       }
     } catch (e) {
       console.error("Subscription check error:", e);
+      if (isManual) toast({ title: "Erreur réseau", description: "Impossible de joindre le serveur de vérification.", variant: "destructive" });
     } finally {
       setIsChecking(false);
     }
@@ -670,7 +682,7 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
                 <div className="space-y-2">
                     <Button onClick={() => checkStatus(true)} disabled={isChecking} className="w-full h-12 rounded-xl font-bold shadow-lg">
                         {isChecking ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                        Vérifier
+                        Vérifier manuellement
                     </Button>
                     <Button variant="ghost" onClick={cancelPending} className="w-full text-slate-400 text-xs font-bold">
                         Annuler et retourner

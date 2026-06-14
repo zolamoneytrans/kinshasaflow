@@ -177,14 +177,14 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     }
   };
 
-  const checkStatus = useCallback(async () => {
-    if (!pendingTransactionId || !user || !selectedPack || isChecking) return;
+  const checkStatus = useCallback(async (isManual = false) => {
+    if (!pendingTransactionId || !user || !selectedPack || (isChecking && !isManual)) return;
     
     setIsChecking(true);
     try {
         const result = await checkMbiyoTransactionStatusAction(pendingTransactionId);
         if (result.success && result.data) {
-            const status = result.data.status; 
+            const status = String(result.data.status).toLowerCase(); 
             
             if (status === 'successful') {
                 const userRef = doc(firestore, 'users', user.uid);
@@ -235,6 +235,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                 localStorage.removeItem('pending_pack');
                 setPendingTransactionId(null);
                 setStep(1);
+            } else if (isManual) {
+                toast({ title: "En attente", description: "Le paiement n'a pas encore été validé par l'opérateur." });
             }
         }
     } catch (e) {
@@ -384,8 +386,8 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
                   <p className="text-3xl font-black text-amber-500">{selectedPack?.stars} ⭐</p>
                 </div>
                 <div className="space-y-2">
-                    <Button onClick={checkStatus} disabled={isChecking} className="w-full h-12 rounded-xl font-bold bg-amber-500 hover:bg-amber-600">
-                        {isChecking ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                    <Button onClick={() => checkStatus(true)} disabled={isChecking} className="w-full h-12 rounded-xl font-bold bg-amber-500 hover:bg-amber-600">
+                        {isChecking ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Vérifier manuellement
                     </Button>
                     <Button variant="ghost" onClick={cancelPending} className="w-full text-slate-400 text-xs font-bold">
@@ -484,59 +486,74 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
     }
   };
 
-  const checkStatus = useCallback(async () => {
-    if (!pendingTxId || !user || !selectedPlan || isChecking) return;
+  const checkStatus = useCallback(async (isManual = false) => {
+    if (!pendingTxId || !user || (isChecking && !isManual)) return;
+    
     setIsChecking(true);
     try {
       const result = await checkMbiyoTransactionStatusAction(pendingTxId);
-      if (result.success && result.data?.status === 'successful') {
-        const userRef = doc(firestore, 'users', user.uid);
-        const transRef = doc(firestore, 'users', user.uid, 'star_transactions', pendingTxId);
-
-        const transSnap = await getDoc(transRef);
-        if (transSnap.exists()) {
-            localStorage.removeItem('pending_sub_tx_id');
-            localStorage.removeItem('pending_sub_plan');
-            setStep(1);
-            return;
-        }
-
-        await runTransaction(firestore, async (transaction) => {
-          const userDoc = await transaction.get(userRef);
-          if (!userDoc.exists()) return;
-          const currentExpiry = (userDoc.data() as UserProfile).cashSubscriptionExpiry?.toDate() || new Date();
-          const newExpiry = selectedPlan.id === 'monthly' ? addMonths(currentExpiry, 1) : addYears(currentExpiry, 1);
+      if (result.success && result.data) {
+        const status = String(result.data.status).toLowerCase();
+        
+        if (status === 'successful') {
+          // Si on est dans ce step, selectedPlan devrait être là, sinon on essaie de le récupérer du storage
+          const activePlan = selectedPlan || JSON.parse(localStorage.getItem('pending_sub_plan') || 'null');
           
-          transaction.update(userRef, {
-            isCashSubscribed: true,
-            cashSubscriptionExpiry: Timestamp.fromDate(newExpiry)
+          if (!activePlan) {
+              console.error("No plan selected/found for verification");
+              toast({ title: "Erreur interne", description: "Impossible de retrouver les détails du forfait.", variant: "destructive" });
+              cancelPending();
+              return;
+          }
+
+          const userRef = doc(firestore, 'users', user.uid);
+          const transRef = doc(firestore, 'users', user.uid, 'star_transactions', pendingTxId);
+
+          const transSnap = await getDoc(transRef);
+          if (transSnap.exists()) {
+              localStorage.removeItem('pending_sub_tx_id');
+              localStorage.removeItem('pending_sub_plan');
+              setStep(1);
+              return;
+          }
+
+          await runTransaction(firestore, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) return;
+            const currentExpiry = (userDoc.data() as UserProfile).cashSubscriptionExpiry?.toDate() || new Date();
+            const baseDate = currentExpiry > new Date() ? currentExpiry : new Date();
+            const newExpiry = activePlan.id === 'monthly' ? addMonths(baseDate, 1) : addYears(baseDate, 1);
+            
+            transaction.update(userRef, {
+              isCashSubscribed: true,
+              cashSubscriptionExpiry: Timestamp.fromDate(newExpiry)
+            });
+
+            transaction.set(transRef, {
+              userId: user.uid,
+              type: 'purchase',
+              starsChange: 0,
+              balanceAfterTransaction: (userDoc.data() as UserProfile).currentStarsBalance || 0,
+              description: `Abonnement Cash ${activePlan.label}`,
+              timestamp: serverTimestamp(),
+              relatedObjectId: pendingTxId,
+              relatedObjectType: 'MbiyoPaySubscription'
+            });
           });
 
-          transaction.set(transRef, {
-            userId: user.uid,
-            type: 'purchase',
-            starsChange: 0,
-            balanceAfterTransaction: (userDoc.data() as UserProfile).currentStarsBalance || 0,
-            description: `Abonnement Cash ${selectedPlan.label}`,
-            timestamp: serverTimestamp(),
-            relatedObjectId: pendingTxId,
-            relatedObjectType: 'MbiyoPaySubscription'
-          });
-        });
-
-        localStorage.removeItem('pending_sub_tx_id');
-        localStorage.removeItem('pending_sub_plan');
-        toast({ title: "Abonnement confirmé !", description: "Votre accès est maintenant actif." });
-        setTimeout(() => window.location.reload(), 1500);
-      } else if (result.success && (result.data?.status === 'failed' || result.data?.status === 'canceled')) {
-        toast({ title: "Paiement échoué", description: "La transaction n'a pas pu être complétée.", variant: "destructive" });
-        localStorage.removeItem('pending_sub_tx_id');
-        localStorage.removeItem('pending_sub_plan');
-        setPendingTxId(null);
-        setStep(1);
+          localStorage.removeItem('pending_sub_tx_id');
+          localStorage.removeItem('pending_sub_plan');
+          toast({ title: "Abonnement confirmé !", description: "Votre accès est maintenant actif." });
+          setTimeout(() => window.location.reload(), 1500);
+        } else if (status === 'failed' || status === 'canceled') {
+          toast({ title: "Paiement échoué", description: "La transaction n'a pas pu être complétée ou a été annulée.", variant: "destructive" });
+          cancelPending();
+        } else if (isManual) {
+          toast({ title: "En attente", description: "Votre transaction est toujours en cours de traitement." });
+        }
       }
     } catch (e) {
-      console.error(e);
+      console.error("Subscription check error:", e);
     } finally {
       setIsChecking(false);
     }
@@ -631,14 +648,14 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
                 <div className="flex gap-2">
                   <Button variant="ghost" onClick={() => setStep(1)} className="flex-1 font-bold">Retour</Button>
                   <Button disabled={!operator || phone.length < 9 || isLoading} onClick={handleSubscribe} className="flex-[2] h-12 rounded-xl font-bold">
-                    {isLoading ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2" />}
+                    {isLoading ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2 h-5 w-5" />}
                     Payer {selectedPlan?.labelPrice}
                   </Button>
                 </div>
               </motion.div>
             )}
             {step === 3 && (
-              <motion.div key="s3" className="py-10 text-center space-y-6">
+              <motion.div key="s3" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="py-10 text-center space-y-6">
                 <div className="w-24 h-24 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto">
                   {isChecking ? <Loader2 className="h-12 w-12 animate-spin" /> : <CheckCircle2 className="h-12 w-12" />}
                 </div>
@@ -651,8 +668,8 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
                   </p>
                 </div>
                 <div className="space-y-2">
-                    <Button onClick={checkStatus} disabled={isChecking} className="w-full h-12 rounded-xl font-bold">
-                        {isChecking ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
+                    <Button onClick={() => checkStatus(true)} disabled={isChecking} className="w-full h-12 rounded-xl font-bold shadow-lg">
+                        {isChecking ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Vérifier
                     </Button>
                     <Button variant="ghost" onClick={cancelPending} className="w-full text-slate-400 text-xs font-bold">

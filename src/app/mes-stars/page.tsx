@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
@@ -113,7 +114,6 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     { id: 'business', stars: 1200, prices: { CDF: 60000, USD: 25 }, labels: { CDF: '60 000 CDF', USD: '25 USD' }, label: 'Business' },
   ];
 
-  // Récupérer une transaction en attente au chargement
   useEffect(() => {
     const savedId = localStorage.getItem('pending_tx_id');
     const savedPack = localStorage.getItem('pending_pack');
@@ -244,13 +244,12 @@ const BuyStarsDialog = ({ currentBalance }: { currentBalance: number }) => {
     }
   }, [pendingTransactionId, user, selectedPack, firestore, toast, isChecking]);
 
-  // Auto-polling when in step 3
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (step === 3 && pendingTransactionId) {
         interval = setInterval(() => {
             checkStatus();
-        }, 5000); // Check every 5 seconds
+        }, 5000);
     }
     return () => {
         if (interval) clearInterval(interval);
@@ -419,6 +418,16 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
     { id: 'yearly', label: 'Annuel', price: 5, stars: 0, duration: 12, labelPrice: '5 USD', popular: true },
   ];
 
+  useEffect(() => {
+    const savedId = localStorage.getItem('pending_sub_tx_id');
+    const savedPlan = localStorage.getItem('pending_sub_plan');
+    if (savedId && savedPlan) {
+      setPendingTxId(savedId);
+      setSelectedPlan(JSON.parse(savedPlan));
+      setStep(3);
+    }
+  }, []);
+
   const handleFreeTrial = async () => {
     if (!user || userProfile.hasUsedFreeTrial) return;
     setIsLoading(true);
@@ -461,6 +470,8 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
 
       if (result.success && result.data) {
         setPendingTxId(result.data.id);
+        localStorage.setItem('pending_sub_tx_id', result.data.id);
+        localStorage.setItem('pending_sub_plan', JSON.stringify(selectedPlan));
         setStep(3);
         toast({ title: "Demande USSD envoyée", description: "Vérifiez votre téléphone." });
       } else {
@@ -473,15 +484,26 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
     }
   };
 
-  const checkStatus = async () => {
-    if (!pendingTxId || !user || !selectedPlan) return;
+  const checkStatus = useCallback(async () => {
+    if (!pendingTxId || !user || !selectedPlan || isChecking) return;
     setIsChecking(true);
     try {
       const result = await checkMbiyoTransactionStatusAction(pendingTxId);
       if (result.success && result.data?.status === 'successful') {
         const userRef = doc(firestore, 'users', user.uid);
+        const transRef = doc(firestore, 'users', user.uid, 'star_transactions', pendingTxId);
+
+        const transSnap = await getDoc(transRef);
+        if (transSnap.exists()) {
+            localStorage.removeItem('pending_sub_tx_id');
+            localStorage.removeItem('pending_sub_plan');
+            setStep(1);
+            return;
+        }
+
         await runTransaction(firestore, async (transaction) => {
           const userDoc = await transaction.get(userRef);
+          if (!userDoc.exists()) return;
           const currentExpiry = (userDoc.data() as UserProfile).cashSubscriptionExpiry?.toDate() || new Date();
           const newExpiry = selectedPlan.id === 'monthly' ? addMonths(currentExpiry, 1) : addYears(currentExpiry, 1);
           
@@ -489,19 +511,58 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
             isCashSubscribed: true,
             cashSubscriptionExpiry: Timestamp.fromDate(newExpiry)
           });
+
+          transaction.set(transRef, {
+            userId: user.uid,
+            type: 'purchase',
+            starsChange: 0,
+            balanceAfterTransaction: (userDoc.data() as UserProfile).currentStarsBalance || 0,
+            description: `Abonnement Cash ${selectedPlan.label}`,
+            timestamp: serverTimestamp(),
+            relatedObjectId: pendingTxId,
+            relatedObjectType: 'MbiyoPaySubscription'
+          });
         });
+
+        localStorage.removeItem('pending_sub_tx_id');
+        localStorage.removeItem('pending_sub_plan');
         toast({ title: "Abonnement confirmé !", description: "Votre accès est maintenant actif." });
         setTimeout(() => window.location.reload(), 1500);
+      } else if (result.success && (result.data?.status === 'failed' || result.data?.status === 'canceled')) {
+        toast({ title: "Paiement échoué", description: "La transaction n'a pas pu être complétée.", variant: "destructive" });
+        localStorage.removeItem('pending_sub_tx_id');
+        localStorage.removeItem('pending_sub_plan');
+        setPendingTxId(null);
+        setStep(1);
       }
     } catch (e) {
       console.error(e);
     } finally {
       setIsChecking(false);
     }
+  }, [pendingTxId, user, selectedPlan, firestore, toast, isChecking]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (step === 3 && pendingTxId) {
+        interval = setInterval(() => {
+            checkStatus();
+        }, 5000);
+    }
+    return () => {
+        if (interval) clearInterval(interval);
+    }
+  }, [step, pendingTxId, checkStatus]);
+
+  const cancelPending = () => {
+    localStorage.removeItem('pending_sub_tx_id');
+    localStorage.removeItem('pending_sub_plan');
+    setPendingTxId(null);
+    setStep(1);
   };
 
   return (
-    <Dialog>
+    <Dialog onOpenChange={(open) => !open && !pendingTxId && setStep(1)}>
       <DialogTrigger asChild>
         <Button className="bg-primary hover:bg-primary/90 text-white font-bold h-12 px-8 rounded-xl shadow-lg">
           <CreditCard className="mr-2 h-5 w-5" />
@@ -582,13 +643,22 @@ const CashSubscriptionDialog = ({ userProfile }: { userProfile: UserProfile }) =
                   {isChecking ? <Loader2 className="h-12 w-12 animate-spin" /> : <CheckCircle2 className="h-12 w-12" />}
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900">Vérification...</h3>
-                  <p className="text-slate-500 font-medium text-sm">Veuillez valider le message USSD.</p>
+                  <h3 className="text-2xl font-black text-slate-900">
+                    {isChecking ? "Vérification..." : "Validation en attente"}
+                  </h3>
+                  <p className="text-slate-500 font-medium text-sm">
+                    {isChecking ? "Confirmation en cours auprès de MbiyoPay..." : "Veuillez valider le message USSD sur votre téléphone."}
+                  </p>
                 </div>
-                <Button onClick={checkStatus} disabled={isChecking} className="w-full h-12 rounded-xl font-bold">
-                  {isChecking ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-                  Vérifier
-                </Button>
+                <div className="space-y-2">
+                    <Button onClick={checkStatus} disabled={isChecking} className="w-full h-12 rounded-xl font-bold">
+                        {isChecking ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
+                        Vérifier
+                    </Button>
+                    <Button variant="ghost" onClick={cancelPending} className="w-full text-slate-400 text-xs font-bold">
+                        Annuler et retourner
+                    </Button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

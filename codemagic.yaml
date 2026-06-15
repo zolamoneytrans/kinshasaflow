@@ -12,6 +12,8 @@ workflows:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "online.kinshasaflow.app"
+    integrations:
+      app_store_connect: "App Store Connect" # Doit correspondre au nom dans l'UI Codemagic
     triggering:
       events:
         - push

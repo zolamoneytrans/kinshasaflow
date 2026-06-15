@@ -1,0 +1,51 @@
+workflows:
+  ios-workflow:
+    name: Kinshasa Flow iOS Build & Publish
+    max_build_duration: 120
+    instance_type: mac_mini_m1
+    environment:
+      node: 20
+      xcode: latest
+      groups:
+        - app_store_credentials # Groupe à créer dans l'UI Codemagic
+      vars:
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "online.kinshasaflow.app"
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Install Node dependencies
+        script: npm install
+      - name: Next.js Build (Web Assets)
+        script: |
+          # On génère les fichiers statiques pour Capacitor
+          npm run build
+      - name: Capacitor Sync
+        script: |
+          # Ajout et synchronisation de la plateforme iOS
+          npx cap add ios || true
+          npx cap sync ios
+      - name: Install CocoaPods
+        script: |
+          cd ios/App && pod install
+      - name: Build and Sign IPA
+        script: |
+          # Récupération automatique des certificats et profils de provisionnement
+          # Nécessite APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_PRIVATE_KEY
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --project-type ios_app --auth
+          xcode-project use-profiles
+          xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_testers_grps:
+          - Internal Testers

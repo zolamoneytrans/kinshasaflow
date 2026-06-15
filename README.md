@@ -2,9 +2,9 @@
 
 Cette application est configurée pour être déployée sur l'App Store via **Codemagic** et synchronisée sur **GitHub**.
 
-## 🚀 Synchronisation GitHub
+## 🚀 Synchronisation GitHub (Ligne de commande)
 
-Pour envoyer votre code sur votre dépôt `zolamoneytrans/kinshasaflow`, ouvrez votre terminal et exécutez ces commandes :
+Pour envoyer votre code sur votre dépôt `zolamoneytrans/kinshasaflow`, ouvrez votre terminal dans le dossier du projet et exécutez ces commandes :
 
 1. **Initialiser Git** (si ce n'est pas fait) :
    ```bash
@@ -16,33 +16,28 @@ Pour envoyer votre code sur votre dépôt `zolamoneytrans/kinshasaflow`, ouvrez 
    git remote add origin https://github.com/zolamoneytrans/kinshasaflow.git
    ```
 
-3. **Envoyer le code** :
+3. **Ajouter les fichiers et créer le premier commit** :
    ```bash
    git add .
-   git commit -m "Initial commit - Kinshasa Flow"
+   git commit -m "Initial commit - Kinshasa Flow avec correctifs Codemagic et SMTP"
+   ```
+
+4. **Pousser les mises à jour** :
+   ```bash
    git branch -M main
    git push -u origin main
    ```
 
-*Note : Le fichier `.env` est automatiquement ignoré pour protéger vos mots de passe SMTP.*
+**Note de sécurité :** Le fichier `.env` est automatiquement ignoré par Git grâce au fichier `.gitignore`. Vos mots de passe SMTP ne seront jamais visibles publiquement.
 
-## 📱 Déploiement iOS via Codemagic (Recommandé)
+## 📱 Déploiement iOS via Codemagic
 
-Le fichier `codemagic.yaml` est présent à la racine. Pour l'activer :
+Le fichier `codemagic.yaml` à la racine est configuré pour construire l'IPA et l'envoyer sur **TestFlight**.
 
 1. Connectez-vous sur [Codemagic.io](https://codemagic.io).
-2. Ajoutez votre dépôt GitHub `kinshasaflow`.
-3. Dans les **Settings** de l'application sur Codemagic :
-    * Allez dans **Environment variables**.
-    * Créez un groupe nommé `app_store_credentials`.
-    * Ajoutez les variables Apple (Issuer ID, Key ID, Private Key).
-4. Lancez un build manuellement.
+2. Liez votre dépôt GitHub `kinshasaflow`.
+3. Dans les **Environment variables**, créez un groupe nommé `app_store_credentials` et ajoutez vos clés Apple (Issuer ID, Key ID, Private Key).
+4. Lancez le build.
 
 ---
-### Structure Native (Capacitor)
-
-L'application iOS fonctionne comme un "Live Wrapper" pointant vers `https://kinshasaflow.online`. 
-
 Développé par Swazi Appli Lab sarl.
-# kinshasaflow
-# kinshasaflow

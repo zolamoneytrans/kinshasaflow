@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, MessageCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { inquiryFormSchema, InquiryFormValues } from '@/lib/types';
@@ -37,6 +37,7 @@ export function ContactForm() {
     
     const { firestore } = useFirebase();
     const { user, isUserLoading } = useUser();
+    const whatsappBusinessUrl = "https://wa.me/243892293178";
 
     const form = useForm<InquiryFormValues>({
         resolver: zodResolver(inquiryFormSchema),
@@ -106,56 +107,84 @@ export function ContactForm() {
     }
 
     return (
-        <Card className="w-full">
-            <CardHeader>
-                <CardTitle>Contactez-nous</CardTitle>
-                <CardDescription>Envoyez-nous vos questions, suggestions ou plaintes.</CardDescription>
+        <Card className="w-full border-none shadow-xl rounded-[2rem] overflow-hidden">
+            <CardHeader className="bg-primary p-8 text-white">
+                <CardTitle className="text-2xl font-black">Contactez-nous</CardTitle>
+                <CardDescription className="text-primary-foreground/80">Posez vos questions ou envoyez-nous vos suggestions.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8 space-y-8">
+                
+                <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-emerald-500 p-2 rounded-xl">
+                            <MessageCircle className="text-white h-5 w-5" />
+                        </div>
+                        <p className="font-black text-emerald-900 uppercase text-xs tracking-widest">Support Rapide</p>
+                    </div>
+                    <p className="text-sm text-emerald-800 font-medium">
+                        Pour une réponse immédiate, contactez notre équipe directement sur WhatsApp.
+                    </p>
+                    <Button asChild className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-200">
+                        <a href={whatsappBusinessUrl} target="_blank" rel="noopener noreferrer">
+                            DISCUTER SUR WHATSAPP
+                        </a>
+                    </Button>
+                </div>
+
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                    <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest text-slate-400">
+                        <span className="bg-white px-4">Ou par formulaire</span>
+                    </div>
+                </div>
+
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                         <FormField
-                            control={form.control}
-                            name="fullName"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nom complet</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Votre nom complet" {...field} disabled={isSubmitting || isUserLoading} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Numéro de téléphone</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Votre numéro de téléphone" {...field} disabled={isSubmitting || isUserLoading} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                         <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="fullName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-[10px] font-black uppercase text-slate-400">Nom complet</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Votre nom" className="h-12 rounded-xl border-2" {...field} disabled={isSubmitting || isUserLoading} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="phone"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-[10px] font-black uppercase text-slate-400">Téléphone</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="08..." className="h-12 rounded-xl border-2" {...field} disabled={isSubmitting || isUserLoading} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
                          <FormField
                             control={form.control}
                             name="type"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Type de message</FormLabel>
+                                <FormLabel className="text-[10px] font-black uppercase text-slate-400">Objet de la demande</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isUserLoading}>
                                     <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Sélectionnez le type de message" />
+                                    <SelectTrigger className="h-12 rounded-xl border-2">
+                                        <SelectValue placeholder="Sélectionnez le type" />
                                     </SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="inquiry">Demande d'information</SelectItem>
-                                    <SelectItem value="suggestion">Suggestion</SelectItem>
-                                    <SelectItem value="complaint">Plainte</SelectItem>
+                                    <SelectContent className="rounded-xl">
+                                    <SelectItem value="inquiry" className="font-bold">Demande d'information</SelectItem>
+                                    <SelectItem value="suggestion" className="font-bold">Suggestion</SelectItem>
+                                    <SelectItem value="complaint" className="font-bold">Plainte</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -167,9 +196,9 @@ export function ContactForm() {
                             name="subject"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Sujet</FormLabel>
+                                    <FormLabel className="text-[10px] font-black uppercase text-slate-400">Sujet</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Sujet de votre message" {...field} disabled={isSubmitting || isUserLoading} />
+                                        <Input placeholder="Bref résumé" className="h-12 rounded-xl border-2" {...field} disabled={isSubmitting || isUserLoading} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -180,11 +209,11 @@ export function ContactForm() {
                             name="message"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Message</FormLabel>
+                                    <FormLabel className="text-[10px] font-black uppercase text-slate-400">Message détaillé</FormLabel>
                                     <FormControl>
                                         <Textarea
                                         placeholder="Écrivez votre message ici..."
-                                        className="resize-y min-h-[150px]"
+                                        className="resize-y min-h-[150px] rounded-xl border-2"
                                         {...field}
                                         disabled={isSubmitting || isUserLoading}
                                         />
@@ -194,15 +223,15 @@ export function ContactForm() {
                             )}
                         />
                         
-                        <Button type="submit" className="w-full" disabled={isSubmitting || isUserLoading}>
+                        <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-black shadow-lg shadow-primary/20 transition-all active:scale-95" disabled={isSubmitting || isUserLoading}>
                             {isSubmitting ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                                     Envoi en cours...
                                 </>
                             ) : (
                                 <>
-                                    <Send className="mr-2 h-4 w-4" />
+                                    <Send className="mr-2 h-5 w-5" />
                                     Envoyer le message
                                 </>
                             )}

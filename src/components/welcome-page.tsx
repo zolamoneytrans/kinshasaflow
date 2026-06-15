@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Bot, Megaphone, ArrowRight, ShieldCheck, Zap, Monitor, X, Smartphone as PhoneIcon, MessagesSquare } from 'lucide-react';
+import { Activity, Bot, Megaphone, ArrowRight, ShieldCheck, Zap, Monitor, X, Smartphone as PhoneIcon, MessagesSquare, MessageCircle, Share2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Logo } from './logo';
 import React, { useState, useEffect } from 'react';
@@ -59,6 +59,8 @@ export default function WelcomePage() {
     
     const echangeurBgUrl = "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1200";
     const heroImageUrl = "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&q=80&w=1600";
+    const whatsappChannelUrl = "https://whatsapp.com/channel/0029Vb7S97n7oQhlHe5k1k1f";
+    const whatsappBusinessUrl = "https://wa.me/243892293178";
 
     useEffect(() => {
         const handleBeforeInstallPrompt = (e: Event) => {
@@ -205,9 +207,11 @@ export default function WelcomePage() {
                         
                         <div className="flex flex-col gap-3">
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button onClick={() => handleInstallClick('desktop')} size="lg" variant="outline" className="w-full text-base py-6 px-10 rounded-2xl border-2 border-primary/20 bg-card/50 backdrop-blur-sm shadow-sm hover:bg-primary/5 group font-bold">
-                                    <AppIconSmall className="mr-3 w-8 h-8 group-hover:animate-pulse" />
-                                    Télécharger Logiciel (Win/Mac)
+                                <Button asChild size="lg" className="w-full text-base py-6 px-10 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-xl font-black gap-3 text-white">
+                                    <a href={whatsappChannelUrl} target="_blank" rel="noopener noreferrer">
+                                        <Share2 className="w-5 h-5" />
+                                        Rejoindre le Canal
+                                    </a>
                                 </Button>
                             </motion.div>
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -316,6 +320,10 @@ export default function WelcomePage() {
                             <ShieldCheck className="h-4 w-4" />
                             Confidentialité & CGU
                         </Link>
+                        <a href={whatsappBusinessUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors flex items-center gap-2 text-emerald-600 font-bold">
+                            <MessageCircle className="h-4 w-4" />
+                            Support WhatsApp
+                        </a>
                         <Link href="/contact" className="hover:text-primary transition-colors">Contact</Link>
                     </div>
                     <p className="text-xs text-muted-foreground max-w-sm font-medium">

@@ -8,7 +8,8 @@ import {
   Mail, Car, Star, Share2, Users, ShieldAlert, AlertCircle, 
   Palmtree, Compass, LayoutGrid, Utensils, Bell, Send, Navigation,
   BarChart3, Zap, Smartphone, Monitor, Radar, Construction, ShieldAlert as HazardIcon,
-  MessagesSquare
+  MessagesSquare,
+  MessageCircle
 } from 'lucide-react';
 import {
   Sidebar,
@@ -200,6 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isAdmin = user?.email === 'drnduwa@gmail.com';
   const isPartnerAdmin = user?.email === 'contact.congonamotema@gmail.com' || isAdmin;
+  const whatsappChannelUrl = "https://whatsapp.com/channel/0029Vb7S97n7oQhlHe5k1k1f";
   
   const getPageTitle = () => {
     const titles: Record<string, string> = {
@@ -251,6 +253,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="h-11 px-4 rounded-xl hover:bg-emerald-500/10 group">
+                  <a href={whatsappChannelUrl} target="_blank" rel="noopener noreferrer" className="font-bold flex items-center gap-3">
+                    <MessageCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-emerald-700">Canal WhatsApp</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
               {isEnabled('reports') && (
                 <SidebarMenuItem>

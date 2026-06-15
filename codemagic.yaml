@@ -7,13 +7,13 @@ workflows:
       node: 20
       xcode: latest
       groups:
-        - app_store_credentials # Groupe à créer dans l'UI Codemagic
+        - app_store_credentials # Groupe de variables à créer dans l'UI Codemagic
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "online.kinshasaflow.app"
     integrations:
-      app_store_connect: "App Store Connect" # Doit correspondre au nom dans l'UI Codemagic
+      app_store_connect: "App Store Connect" # Doit correspondre au nom de votre intégration dans Codemagic
     triggering:
       events:
         - push
@@ -25,11 +25,9 @@ workflows:
         script: npm install
       - name: Next.js Build (Web Assets)
         script: |
-          # On génère les fichiers statiques pour Capacitor
           npm run build
       - name: Capacitor Sync
         script: |
-          # Ajout et synchronisation de la plateforme iOS
           npx cap add ios || true
           npx cap sync ios
       - name: Install CocoaPods
@@ -37,15 +35,14 @@ workflows:
           cd ios/App && pod install
       - name: Build and Sign IPA
         script: |
-          # Récupération automatique des certificats et profils de provisionnement
-          # Nécessite APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_PRIVATE_KEY
+          # Récupération automatique des certificats via l'API Apple
           app-store-connect fetch-signing-files "$BUNDLE_ID" --project-type ios_app --auth
           xcode-project use-profiles
           xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
-        auth: integration
-        submit_to_testflight: true
+        auth: integration # Utilise l'intégration configurée dans l'UI Codemagic
+        submit_to_testflight: true # Envoie automatiquement le build vers TestFlight
+        expire_build_after_days: 90

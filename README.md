@@ -44,3 +44,4 @@ Le fichier `codemagic.yaml` est présent à la racine. Pour l'activer :
 L'application iOS fonctionne comme un "Live Wrapper" pointant vers `https://kinshasaflow.online`. 
 
 Développé par Swazi Appli Lab sarl.
+# kinshasaflow

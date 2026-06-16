@@ -106,28 +106,33 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
 
-        {/* Script de récupération automatique en cas d'erreur de chargement des ressources (Chunks) */}
+        {/* Script de récupération critique (Head) */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                var recoveryInProgress = false;
                 var handleError = function(e) {
-                  var error = e.error || e.reason || e;
-                  var msg = error && (error.message || error.toString()) || "";
+                  if (recoveryInProgress) return;
                   
-                  // Détection des erreurs de type ChunkLoadError ou timeout de module
+                  var error = e.error || e.reason || e;
+                  var msg = (error && (error.message || error.toString())) || "";
+                  
+                  // Détection des erreurs de modules Next.js (Chunks)
                   var isChunkError = /Loading chunk|ChunkLoadError|timeout|Unexpected token '<'/.test(msg);
                   
                   if (isChunkError) {
-                    console.warn("K-Flow: Échec de module détecté. Tentative de récupération...");
+                    recoveryInProgress = true;
+                    console.error("K-Flow: Échec critique de module détecté (" + msg + "). Récupération en cours...");
+                    
                     var lastReload = sessionStorage.getItem("kflow-recovery-ts");
                     var now = Date.now();
                     
-                    // Empêcher les boucles de rechargement infinies (max 1 fois toutes les 8s)
-                    if (!lastReload || (now - parseInt(lastReload)) > 8000) {
+                    // Empêcher les boucles de rechargement infinies
+                    if (!lastReload || (now - parseInt(lastReload)) > 10000) {
                       sessionStorage.setItem("kflow-recovery-ts", now);
                       
-                      // Purge des Service Workers qui peuvent stocker des chunks obsolètes
+                      // Purge des Service Workers et rechargement forcé
                       if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.getRegistrations().then(function(registrations) {
                           for(var i = 0; i < registrations.length; i++) {

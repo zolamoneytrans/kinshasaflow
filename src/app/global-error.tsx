@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 
 /**
- * Gestionnaire d'erreurs global pour Next.js.
- * Capture les erreurs au plus haut niveau (y compris les échecs de chargement du layout).
+ * Gestionnaire d'erreurs global robuste pour Next.js.
+ * Capable de forcer un rechargement propre en cas d'échec de chargement des ressources.
  */
 export default function GlobalError({
   error,
@@ -14,12 +14,12 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Si c'est une erreur de chargement de chunk (module JS manquant ou cache corrompu)
-    const errorMsg = error.message || "";
-    if (errorMsg.includes('Loading chunk') || errorMsg.includes('ChunkLoadError') || errorMsg.includes('timeout')) {
-      console.warn("K-Flow: Échec de chargement détecté au niveau global. Rechargement forcé...");
+    // Si c'est une erreur liée aux fichiers statiques (Chunks)
+    const msg = error.message || "";
+    if (msg.includes('Loading chunk') || msg.includes('ChunkLoadError') || msg.includes('timeout')) {
+      console.warn("K-Flow Error Boundary: Tentative de récupération automatique...");
       
-      // Nettoyage des service workers pour purger le cache corrompu
+      // Nettoyage radical du cache pour débloquer l'application
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(registrations => {
           for (const registration of registrations) {
@@ -45,35 +45,43 @@ export default function GlobalError({
           fontFamily: 'sans-serif',
           textAlign: 'center',
           padding: '20px',
-          backgroundColor: '#f8fafc'
+          backgroundColor: '#f8fafc',
+          color: '#0f172a'
         }}>
           <div style={{
             backgroundColor: '#fff',
             padding: '40px',
-            borderRadius: '24px',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-            maxWidth: '400px'
+            borderRadius: '32px',
+            boxShadow: '0 20px 50px -12px rgba(0, 0, 0, 0.1)',
+            maxWidth: '450px',
+            border: '1px solid #e2e8f0'
           }}>
-            <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginBottom: '16px' }}>Chargement interrompu</h2>
-            <p style={{ color: '#64748b', marginBottom: '24px', lineHeight: '1.6' }}>
-              Une mise à jour ou un problème de connexion nécessite de rafraîchir Kinshasa Flow.
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚡</div>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '16px', letterSpacing: '-0.025em' }}>Mise à jour requise</h2>
+            <p style={{ color: '#64748b', marginBottom: '32px', lineHeight: '1.6', fontWeight: '500' }}>
+              Une nouvelle version de Kinshasa Flow est disponible ou votre connexion a été interrompue.
             </p>
             <button
               onClick={() => window.location.reload()}
               style={{
                 width: '100%',
-                padding: '16px',
+                padding: '18px',
                 backgroundColor: '#248eeb',
                 color: 'white',
                 border: 'none',
                 borderRadius: '16px',
-                fontWeight: 'bold',
+                fontWeight: '900',
                 cursor: 'pointer',
-                fontSize: '16px'
+                fontSize: '16px',
+                boxShadow: '0 10px 15px -3px rgba(36, 142, 235, 0.3)',
+                transition: 'transform 0.2s'
               }}
             >
-              Actualiser maintenant
+              ACTUALISER L'APPLICATION
             </button>
+            <p style={{ marginTop: '20px', fontSize: '10px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>
+              Code d'erreur: {error.digest || 'CHUNK_ERR'}
+            </p>
           </div>
         </div>
       </body>

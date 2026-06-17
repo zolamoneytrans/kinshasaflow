@@ -9,7 +9,7 @@ import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsIn
 import * as webpush from 'web-push';
 import * as nodemailer from 'nodemailer';
 import { initializeFirebase } from "@/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 export async function getTrafficTipsAction(input: TrafficTipsInput) {
     try {
@@ -29,9 +29,6 @@ export async function askAssistantAction(input: AssistantInput) {
     }
 }
 
-/**
- * Action serveur pour la génération vocale de l'assistant.
- */
 export async function generateSpeechAction(text: string) {
     try {
         return await generateSpeech(text);
@@ -89,15 +86,11 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
  * Envoie une notification d'alerte par email à TOUS les utilisateurs via SMTP Gmail.
  */
 export async function sendAlertEmailAction(params: { type: string, location: string, userName: string }) {
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
+  // Identifiants fournis par l'utilisateur
+  const smtpUser = "kinshasaflow@gmail.com";
+  const smtpPass = "jrgl kgjl qlqj vmfc";
 
-  if (!smtpUser || !smtpPass) {
-    console.error("SMTP credentials missing in .env");
-    return { success: false, error: "Configuration SMTP manquante." };
-  }
-
-  // 1. Récupérer tous les emails des utilisateurs de l'application
+  // 1. Récupérer TOUS les emails des utilisateurs de l'application
   let recipientList: string[] = ['drnduwa@gmail.com']; // Admin toujours inclus
   
   try {
@@ -122,8 +115,8 @@ export async function sendAlertEmailAction(params: { type: string, location: str
 
   const mailOptions = {
     from: `"Kinshasa Flow Alerts" <${smtpUser}>`,
-    to: 'drnduwa@gmail.com', // Destinataire principal (admin)
-    bcc: recipientList, // Tous les autres en copie cachée pour la confidentialité
+    to: smtpUser, // On s'envoie l'email à soi-même comme destinataire principal
+    bcc: recipientList, // Tout le monde en copie cachée pour la confidentialité et le volume
     subject: `🚨 ALERTE K-FLOW : ${params.type.toUpperCase()} à ${params.location}`,
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc;">
@@ -141,7 +134,7 @@ export async function sendAlertEmailAction(params: { type: string, location: str
               <p style="margin: 5px 0;"><strong>Heure :</strong> ${new Date().toLocaleTimeString('fr-FR')}</p>
             </div>
             <p style="color: #64748b; font-size: 14px; line-height: 1.6;">
-              Un membre de la communauté vient de signaler cet incident sur Radio Trottoir. Ouvrez l'application pour localiser l'événement sur la carte et adapter votre itinéraire.
+              Un membre de la communauté vient de signaler cet incident sur Radio Trottoir. Ouvrez l'application dès maintenant pour localiser l'événement sur la carte et adapter votre itinéraire en temps réel.
             </p>
             <div style="text-align: center; margin-top: 40px;">
               <a href="https://kinshasaflow.online/community-chat" style="background-color: #248eeb; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 16px; display: inline-block;">VOIR DANS LE CHAT</a>
@@ -149,7 +142,7 @@ export async function sendAlertEmailAction(params: { type: string, location: str
           </div>
           <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
             <p style="color: #94a3b8; font-size: 10px; margin: 0;">© ${new Date().getFullYear()} Kinshasa Flow • Swazi Appli Lab sarl</p>
-            <p style="color: #cbd5e1; font-size: 8px; margin-top: 5px;">Vous recevez cet email car vous êtes inscrit sur Kinshasa Flow.</p>
+            <p style="color: #cbd5e1; font-size: 8px; margin-top: 5px;">Vous recevez cet email car vous êtes membre de la communauté Kinshasa Flow.</p>
           </div>
         </div>
       </div>
@@ -157,85 +150,11 @@ export async function sendAlertEmailAction(params: { type: string, location: str
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    return { success: true, count: recipientList.length };
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, count: recipientList.length, messageId: info.messageId };
   } catch (error: any) {
     console.error('SMTP Error:', error);
     return { success: false, error: error.message };
-  }
-}
-
-/**
- * Récupère le statut réel du trafic via Google Routes API v2.
- */
-export async function getGoogleTrafficStatusAction(axes: { name: string, origin: { lat: number, lng: number }, destination: { lat: number, lng: number } }[]) {
-  const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
-  
-  if (!axes?.length) return [];
-
-  const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
-  
-  const requests = axes.map(axis => {
-    const body = {
-      origin: { location: { latLng: { latitude: axis.origin.lat, longitude: axis.origin.lng } } },
-      destination: { location: { latLng: { latitude: axis.destination.lat, longitude: axis.destination.lng } } },
-      travelMode: "DRIVE",
-      routingPreference: "TRAFFIC_AWARE_OPTIMAL",
-      departureTime: new Date(Date.now() + 10000).toISOString(),
-      computeAlternativeRoutes: false,
-      languageCode: "fr-FR",
-      units: "METRIC"
-    };
-
-    return fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters'
-      },
-      body: JSON.stringify(body)
-    }).then(async res => {
-        if (!res.ok) return { error: "API Error" };
-        return res.json();
-    }).catch(err => ({ error: err.message }));
-  });
-
-  try {
-    const results = await Promise.allSettled(requests);
-    
-    return results.map((result, index) => {
-      const data = result.status === "fulfilled" ? result.value : null;
-      const route = data?.routes?.[0];
-      
-      if (route) {
-        const duration = parseInt((route.duration ?? "0s").replace('s', '')) || 1;
-        const staticDuration = parseInt((route.staticDuration ?? route.duration ?? "0s").replace('s', '')) || 1;
-        const distance = route.distanceMeters ?? 0;
-        
-        const delaySeconds = Math.max(0, duration - staticDuration);
-        const delayMinutes = Math.round(delaySeconds / 60);
-        const speedKmh = duration > 0 && distance > 0 ? Math.round((distance / 1000) / (duration / 3600)) : 0;
-
-        let status: "FLUIDE" | "MODÉRÉ" | "DENSE" | "EMBOUTEILLAGE" | "INCONNU" = "FLUIDE";
-        if (speedKmh <= 8 || delayMinutes > 10) status = "EMBOUTEILLAGE";
-        else if (speedKmh <= 20 || delayMinutes >= 5) status = "DENSE";
-        else if (speedKmh <= 35 || delayMinutes >= 2) status = "MODÉRÉ";
-
-        return {
-          road: axes[index].name,
-          duration,
-          staticDuration,
-          distance,
-          speed: speedKmh,
-          delay: delayMinutes,
-          status
-        };
-      }
-      return { road: axes[index].name, status: "INCONNU" as const, speed: 0, delay: 0 };
-    });
-  } catch (error) {
-    return axes.map(a => ({ road: a.name, status: "INCONNU" as const, speed: 0, delay: 0 }));
   }
 }
 

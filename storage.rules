@@ -2,34 +2,52 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // 1. LECTURE : Accès public pour tous les médias
+    // 1. LECTURE : Accès public pour tous les médias (Photos de profil, Chat, Dangers)
     match /{allPaths=**} {
       allow read: if true;
     }
 
-    // 2. ÉCRITURE : Règles consolidées pour éviter les conflits d'autorisation
-    match /{allPaths=**} {
-      allow write: if request.auth != null && (
-        // Accès total pour l'administrateur
+    // 2. FONCTIONS DE SÉCURITÉ
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
         request.auth.token.email == 'drnduwa@gmail.com' ||
-        request.auth.uid == 'kTFPpztAXQUgLVUAX8M4A2CwMdE3' ||
-        
-        // Accès propriétaire pour les dossiers de services (chat, avatars, hazards, videos)
-        // La structure attendue est /{service}/{userId}/...
-        (
-          (request.path[0] == 'chat' || 
-           request.path[0] == 'avatars' || 
-           request.path[0] == 'hazards' || 
-           request.path[0] == 'videos') && 
-          request.auth.uid == request.path[1]
-        ) ||
-        
-        // Accès partenaire pour le tourisme
-        (
-          request.path[0] == 'tourism' && 
-          request.auth.token.email == 'contact.congonamotema@gmail.com'
-        )
+        request.auth.uid == 'kTFPpztAXQUgLVUAX8M4A2CwMdE3'
       );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // 3. RÈGLES PAR DOSSIER
+
+    // Dossier Chat : Utilisateurs peuvent uploader dans leur propre sous-dossier
+    match /chat/{userId}/{allPaths=**} {
+      allow write: if isAdmin() || isOwner(userId);
+    }
+
+    // Dossier Avatars : Mise à jour de la photo de profil
+    match /avatars/{userId} {
+      allow write: if isAdmin() || isOwner(userId);
+    }
+
+    // Dossier Dangers (Hazard Map) : Signalements communautaires
+    match /hazards/{userId}/{allPaths=**} {
+      allow write: if isAdmin() || isOwner(userId);
+    }
+
+    // Dossier Vidéos (Feed) : Partage de vidéos par les utilisateurs
+    match /videos/{userId}/{allPaths=**} {
+      allow write: if isAdmin() || isOwner(userId);
+    }
+
+    // Dossier Tourisme : Accès pour l'admin partenaire
+    match /tourism/{allPaths=**} {
+      allow write: if isAdmin() || (isSignedIn() && request.auth.token.email == 'contact.congonamotema@gmail.com');
     }
   }
 }

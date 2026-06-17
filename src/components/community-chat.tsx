@@ -238,7 +238,7 @@ export default function CommunityChat() {
       // On déclenche l'envoi SMTP via l'action serveur
       const result = await sendAlertEmailAction(params);
       
-      // On garde aussi l'écriture en base pour l'extension (facultatif si SMTP direct marche)
+      // On garde aussi l'écriture en base pour l'extension
       const mailRef = collection(firestore, 'mail');
       await addDoc(mailRef, {
         to: ['drnduwa@gmail.com'],
@@ -275,14 +275,15 @@ export default function CommunityChat() {
       let mediaUrl = "";
       if (params.mediaFile) {
         const storage = getStorage(firebaseApp);
-        const fileName = `${Date.now()}_upload.${params.mediaFile.name.split('.').pop() || 'file'}`;
+        // On génère un nom de fichier propre avec timestamp et extension
+        const ext = params.mediaFile.name.split('.').pop() || (params.mediaType === 'audio' ? 'wav' : 'file');
+        const fileName = `${Date.now()}_upload.${ext}`;
         const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
         
         console.log(`[Chat] Début du transfert vers: ${fileRef.fullPath}`);
         
         const snapshot = await uploadBytes(fileRef, params.mediaFile);
         mediaUrl = await getDownloadURL(snapshot.ref);
-        console.log(`[Chat] Transfert réussi: ${mediaUrl}`);
       }
 
       const coords = await getCurrentCoords();
@@ -316,7 +317,13 @@ export default function CommunityChat() {
       setAlertDialog({ ...alertDialog, open: false });
     } catch (e: any) {
       console.error("[Chat] Erreur envoi critique:", e);
-      toast({ title: "Échec de l'envoi", description: "Vérifiez vos permissions et votre connexion.", variant: "destructive" });
+      toast({ 
+        title: "Échec de l'envoi", 
+        description: e.code === 'storage/unauthorized' 
+          ? "Accès refusé au stockage. Vérifiez votre profil." 
+          : "Une erreur est survenue lors de l'envoi.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsUploading(false);
     }
@@ -338,7 +345,7 @@ export default function CommunityChat() {
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
-      toast({ title: "Microphone inaccessible", variant: "destructive" });
+      toast({ title: "Microphone inaccessible", description: "Veuillez autoriser l'accès au micro.", variant: "destructive" });
     }
   };
 

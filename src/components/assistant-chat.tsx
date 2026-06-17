@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bot, Send, User, Loader2, Volume2, Star, VolumeX, Mic, MicOff } from 'lucide-react';
+import { Bot, Send, User, Loader2, Volume2, Star, VolumeX, Mic, MicOff, MessageCircle } from 'lucide-react';
 import { askAssistantAction, generateSpeechAction } from '@/app/actions';
 import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,8 @@ export default function AssistantChat() {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  const whatsappBusinessUrl = "https://wa.me/243892293178";
 
   const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc<UserProfile>(userRef);
@@ -202,6 +204,14 @@ export default function AssistantChat() {
                         <p className="text-sm text-slate-500 font-medium leading-relaxed italic">
                           Je cherche les meilleurs chemins pour vous. Activez le mode auto pour m'écouter en conduisant !
                         </p>
+                        <div className="pt-6">
+                          <Button asChild variant="outline" className="rounded-full border-emerald-200 text-emerald-600 hover:bg-emerald-50 gap-2">
+                            <a href={whatsappBusinessUrl} target="_blank" rel="noopener noreferrer">
+                              <MessageCircle className="h-4 w-4" />
+                              Parler à un humain
+                            </a>
+                          </Button>
+                        </div>
                       </div>
                   </motion.div>
               )}
@@ -223,7 +233,7 @@ export default function AssistantChat() {
                       'max-w-[85%] rounded-[1.5rem] p-5 text-sm md:text-base relative group shadow-sm transition-all',
                       message.role === 'user' 
                         ? 'bg-primary text-primary-foreground rounded-tr-none shadow-primary/20 font-medium' 
-                        : 'bg-slate-50 border border-slate-100 rounded-tl-none text-slate-700 leading-relaxed'
+                        : 'bg-slate-50 border border-slate-100 text-slate-700 leading-relaxed'
                     )}>
                       {message.content}
                       {message.role === 'assistant' && (
@@ -306,9 +316,14 @@ export default function AssistantChat() {
                   <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
                   - {STAR_COSTS.AI_MESSAGE} stars par étude
               </p>
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                  Solde: <span className="text-primary">{profile?.currentStarsBalance || 0} ⭐</span>
-              </p>
+              <div className="flex items-center gap-3">
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                      Solde: <span className="text-primary">{profile?.currentStarsBalance || 0} ⭐</span>
+                  </p>
+                  <a href={whatsappBusinessUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
+                      <MessageCircle className="h-3 w-3" /> Aide humaine
+                  </a>
+              </div>
             </div>
           </div>
         </CardContent>

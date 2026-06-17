@@ -9,7 +9,8 @@ import {
   Palmtree, Compass, LayoutGrid, Utensils, Bell, Send, Navigation,
   BarChart3, Zap, Smartphone, Monitor, Radar, Construction, ShieldAlert as HazardIcon,
   MessagesSquare,
-  MessageCircle
+  MessageCircle,
+  Headphones
 } from 'lucide-react';
 import {
   Sidebar,
@@ -36,6 +37,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { sendEmailVerification } from 'firebase/auth';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -201,7 +203,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isAdmin = user?.email === 'drnduwa@gmail.com';
   const isPartnerAdmin = user?.email === 'contact.congonamotema@gmail.com' || isAdmin;
+  
   const whatsappChannelUrl = "https://whatsapp.com/channel/0029Vb7S97n7oQhlHe5k1k1f";
+  const whatsappBusinessUrl = "https://wa.me/243892293178";
   
   const getPageTitle = () => {
     const titles: Record<string, string> = {
@@ -257,8 +261,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className="h-11 px-4 rounded-xl hover:bg-emerald-500/10 group">
                   <a href={whatsappChannelUrl} target="_blank" rel="noopener noreferrer" className="font-bold flex items-center gap-3">
-                    <MessageCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                    <Share2 className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
                     <span className="text-emerald-700">Canal WhatsApp</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="h-11 px-4 rounded-xl hover:bg-primary/10 group">
+                  <a href={whatsappBusinessUrl} target="_blank" rel="noopener noreferrer" className="font-bold flex items-center gap-3">
+                    <Headphones className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
+                    <span className="text-primary">Assistance WhatsApp</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -500,7 +513,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </SidebarContent>
         </Sidebar>
         <SidebarInset>
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full relative">
                 <header className="bg-card border-b p-4 flex items-center justify-between gap-4 shadow-sm z-20">
                     <div className="flex items-center gap-4">
                       <SidebarTrigger className="md:hidden" />
@@ -514,6 +527,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         {isProtectedPage ? <ProtectedContent>{children}</ProtectedContent> : children}
                     </div>
                 </main>
+
+                {/* --- Bouton d'assistance WhatsApp flottant --- */}
+                <motion.div 
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="fixed bottom-6 right-6 z-[100]"
+                >
+                  <Button 
+                    asChild
+                    className="h-14 w-14 rounded-full p-0 bg-emerald-500 hover:bg-emerald-600 shadow-2xl ring-4 ring-emerald-500/20 border-none"
+                    title="Assistance WhatsApp"
+                  >
+                    <a href={whatsappBusinessUrl} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="h-8 w-8 text-white" />
+                    </a>
+                  </Button>
+                </motion.div>
             </div>
         </SidebarInset>
       </SidebarProvider>

@@ -2,7 +2,7 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // 1. LECTURE : Accès public pour tous les médias (Photos de profil, Chat, Dangers)
+    // 1. LECTURE : Accès public pour tous les médias afin de permettre le partage communautaire
     match /{allPaths=**} {
       allow read: if true;
     }
@@ -14,40 +14,35 @@ service firebase.storage {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'drnduwa@gmail.com' ||
-        request.auth.uid == 'kTFPpztAXQUgLVUAX8M4A2CwMdE3'
+        request.auth.token.email == 'drnduwa@gmail.com'
       );
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
     }
 
     // 3. RÈGLES PAR DOSSIER
 
-    // Dossier Chat : Utilisateurs peuvent uploader dans leur propre sous-dossier
+    // Dossier Chat : Les utilisateurs peuvent créer, modifier ou supprimer dans leur propre dossier
     match /chat/{userId}/{allPaths=**} {
-      allow write: if isAdmin() || isOwner(userId);
+      allow create, update, delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
     // Dossier Avatars : Mise à jour de la photo de profil
     match /avatars/{userId} {
-      allow write: if isAdmin() || isOwner(userId);
+      allow create, update, delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
-    // Dossier Dangers (Hazard Map) : Signalements communautaires
+    // Dossier Dangers (Hazard Map) : Signalements communautaires avec photos
     match /hazards/{userId}/{allPaths=**} {
-      allow write: if isAdmin() || isOwner(userId);
+      allow create, update, delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
     // Dossier Vidéos (Feed) : Partage de vidéos par les utilisateurs
     match /videos/{userId}/{allPaths=**} {
-      allow write: if isAdmin() || isOwner(userId);
+      allow create, update, delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
-    // Dossier Tourisme : Accès pour l'admin partenaire
+    // Dossier Tourisme : Accès pour l'admin partenaire et l'admin global
     match /tourism/{allPaths=**} {
-      allow write: if isAdmin() || (isSignedIn() && request.auth.token.email == 'contact.congonamotema@gmail.com');
+      allow create, update, delete: if isAdmin() || (isSignedIn() && request.auth.token.email == 'contact.congonamotema@gmail.com');
     }
   }
 }

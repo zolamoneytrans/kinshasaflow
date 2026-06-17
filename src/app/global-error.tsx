@@ -14,21 +14,29 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Si c'est une erreur liée aux fichiers statiques (Chunks)
+    // Si c'est une erreur liée aux fichiers statiques (Chunks) ou un timeout
     const msg = error.message || "";
     if (msg.includes('Loading chunk') || msg.includes('ChunkLoadError') || msg.includes('timeout')) {
       console.warn("K-Flow Error Boundary: Tentative de récupération automatique...");
       
-      // Nettoyage radical du cache pour débloquer l'application
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          for (const registration of registrations) {
-            registration.unregister();
-          }
+      // Enregistrement de la tentative pour éviter les boucles
+      const lastRetry = sessionStorage.getItem('kflow-last-retry');
+      const now = Date.now();
+      
+      if (!lastRetry || (now - parseInt(lastRetry)) > 5000) {
+        sessionStorage.setItem('kflow-last-retry', now.toString());
+        
+        // Nettoyage radical du cache pour débloquer l'application
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (const registration of registrations) {
+              registration.unregister();
+            }
+            window.location.reload();
+          }).catch(() => window.location.reload());
+        } else {
           window.location.reload();
-        }).catch(() => window.location.reload());
-      } else {
-        window.location.reload();
+        }
       }
     }
   }, [error]);
@@ -59,10 +67,13 @@ export default function GlobalError({
             <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚡</div>
             <h2 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '16px', letterSpacing: '-0.025em' }}>Mise à jour requise</h2>
             <p style={{ color: '#64748b', marginBottom: '32px', lineHeight: '1.6', fontWeight: '500' }}>
-              Une nouvelle version de Kinshasa Flow est disponible ou votre connexion a été interrompue.
+              Une nouvelle version de Kinshasa Flow est disponible ou la connexion a expiré (Timeout).
             </p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                // Force un rechargement complet en ignorant le cache
+                window.location.href = window.location.origin + window.location.pathname + '?r=' + Date.now();
+              }}
               style={{
                 width: '100%',
                 padding: '18px',
@@ -77,10 +88,10 @@ export default function GlobalError({
                 transition: 'transform 0.2s'
               }}
             >
-              ACTUALISER L'APPLICATION
+              ACTUALISER MAINTENANT
             </button>
             <p style={{ marginTop: '20px', fontSize: '10px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>
-              Code d'erreur: {error.digest || 'CHUNK_ERR'}
+              Code d'erreur: {error.digest || 'RESOURCE_TIMEOUT'}
             </p>
           </div>
         </div>

@@ -11,6 +11,68 @@ import * as nodemailer from 'nodemailer';
 import { initializeFirebase } from "@/firebase";
 import { collection, getDocs } from "firebase/firestore";
 
+const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
+
+/**
+ * Récupère l'état du trafic en temps réel pour une liste d'axes routiers via Google Routes API.
+ */
+export async function getGoogleTrafficStatusAction(axes: any[]) {
+    try {
+        const results = await Promise.all(axes.map(async (axis) => {
+            try {
+                const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
+                const body = {
+                    origin: { location: { latLng: { latitude: axis.origin.lat, longitude: axis.origin.lng } } },
+                    destination: { location: { latLng: { latitude: axis.destination.lat, longitude: axis.destination.lng } } },
+                    travelMode: "DRIVE",
+                    routingPreference: "TRAFFIC_AWARE_OPTIMAL",
+                    languageCode: "fr-FR"
+                };
+
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Goog-Api-Key': GOOGLE_API_KEY,
+                        'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await res.json();
+                const route = data?.routes?.[0];
+                
+                if (!route) return { road: axis.name, status: "INCONNU", speed: 0, delay: 0 };
+
+                const dur = parseInt((route.duration ?? "0s").replace('s', '')) || 1;
+                const statDur = parseInt((route.staticDuration ?? route.duration ?? "0s").replace('s', '')) || 1;
+                const delay = Math.round(Math.max(0, dur - statDur) / 60);
+                const distKm = (route.distanceMeters / 1000) || 1;
+                const speed = Math.round(distKm / (dur / 3600));
+
+                let status = "FLUIDE";
+                if (delay > 10) status = "EMBOUTEILLAGE";
+                else if (delay > 4) status = "DENSE";
+                else if (delay > 1) status = "MODÉRÉ";
+
+                return {
+                    road: axis.name,
+                    status,
+                    speed,
+                    delay
+                };
+            } catch (e) {
+                return { road: axis.name, status: "INCONNU", speed: 0, delay: 0 };
+            }
+        }));
+        
+        return results;
+    } catch (globalError) {
+        console.error("Global Traffic Action Error:", globalError);
+        return axes.map(a => ({ road: a.name, status: "INCONNU", speed: 0, delay: 0 }));
+    }
+}
+
 export async function getTrafficTipsAction(input: TrafficTipsInput) {
     try {
         return await getTrafficTips(input);
@@ -86,12 +148,10 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
  * Envoie une notification d'alerte par email à TOUS les utilisateurs via SMTP Gmail.
  */
 export async function sendAlertEmailAction(params: { type: string, location: string, userName: string }) {
-  // Identifiants fournis par l'utilisateur
   const smtpUser = "kinshasaflow@gmail.com";
   const smtpPass = "jrgl kgjl qlqj vmfc";
 
-  // 1. Récupérer TOUS les emails des utilisateurs de l'application
-  let recipientList: string[] = ['drnduwa@gmail.com']; // Admin toujours inclus
+  let recipientList: string[] = ['drnduwa@gmail.com']; 
   
   try {
     const { firestore } = initializeFirebase();
@@ -115,8 +175,8 @@ export async function sendAlertEmailAction(params: { type: string, location: str
 
   const mailOptions = {
     from: `"Kinshasa Flow Alerts" <${smtpUser}>`,
-    to: smtpUser, // On s'envoie l'email à soi-même comme destinataire principal
-    bcc: recipientList, // Tout le monde en copie cachée pour la confidentialité et le volume
+    to: smtpUser, 
+    bcc: recipientList, 
     subject: `🚨 ALERTE K-FLOW : ${params.type.toUpperCase()} à ${params.location}`,
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc;">

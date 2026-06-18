@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   Zap,
   Info,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

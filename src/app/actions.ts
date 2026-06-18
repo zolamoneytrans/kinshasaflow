@@ -1,17 +1,133 @@
-
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
 import { askAssistant } from "@/ai/flows/assistant-flow";
 import { generateSpeech } from "@/ai/flows/tts-flow";
 import { getStrategicInsights } from "@/ai/flows/strategic-insights-flow";
-import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsInput, StrategicInsightsOutput } from "@/lib/types";
+import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsInput, StrategicInsightsOutput, RoadConditionReport } from "@/lib/types";
 import * as webpush from 'web-push';
 import * as nodemailer from 'nodemailer';
 import { initializeFirebase } from "@/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 
-const GOOGLE_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
+const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
+
+/**
+ * Cache simple pour éviter les appels API redondants (90 secondes)
+ */
+const trafficCache = new Map<string, { data: any, expires: number }>();
+
+export async function checkTrafficAction(input: { lat: number, lng: number, address?: string }) {
+    const cacheKey = `${input.lat.toFixed(4)}-${input.lng.toFixed(4)}`;
+    const now = Date.now();
+
+    if (trafficCache.has(cacheKey) && trafficCache.get(cacheKey)!.expires > now) {
+        return trafficCache.get(cacheKey)!.data;
+    }
+
+    try {
+        const { firestore } = initializeFirebase();
+        
+        // 1. Chercher les rapports communautaires récents (30 min) à proximité (env. 500m)
+        const thirtyMinsAgo = new Date(now - 30 * 60 * 1000);
+        const reportsQuery = query(
+            collection(firestore, 'road_condition_reports'),
+            where('createdAt', '>=', Timestamp.fromDate(thirtyMinsAgo)),
+            where('status', '==', 'active')
+        );
+        
+        const reportsSnap = await getDocs(reportsQuery);
+        const recentReports = reportsSnap.docs.map(d => d.data() as RoadConditionReport);
+        
+        // Filtrage par distance simple (lat/lng approx)
+        const localReport = recentReports.find(r => 
+            Math.abs(r.coords.lat - input.lat) < 0.005 && 
+            Math.abs(r.coords.lng - input.lng) < 0.005
+        );
+
+        // 2. Appel à Google Routes API pour obtenir le ratio de congestion
+        // On simule un petit trajet de 500m autour du point pour avoir des données de segment
+        const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
+        const body = {
+            origin: { location: { latLng: { latitude: input.lat, longitude: input.lng } } },
+            destination: { location: { latLng: { latitude: input.lat + 0.005, longitude: input.lng + 0.005 } } },
+            travelMode: "DRIVE",
+            routingPreference: "TRAFFIC_AWARE_OPTIMAL",
+            computeAlternativeRoutes: true,
+            languageCode: "fr-FR"
+        };
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': GOOGLE_API_KEY,
+                'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters,routes.description,routes.polyline'
+            },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        const route = data?.routes?.[0];
+        
+        let result: any = {
+            status: "INCONNU",
+            verdict: "Pas de données en temps réel pour cette rue — soyez le premier à la signaler.",
+            lingala: "Basango eza te — zala moto ya yambo ya koloba ndenge nzela eza.",
+            delay: 0,
+            ratio: 1,
+            alternatives: []
+        };
+
+        if (route) {
+            const dur = parseInt((route.duration ?? "0s").replace('s', '')) || 1;
+            const statDur = parseInt((route.staticDuration ?? route.duration ?? "0s").replace('s', '')) || 1;
+            const ratio = dur / statDur;
+            const delay = Math.round(Math.max(0, dur - statDur) / 60);
+
+            // Bucketing des ratios (tunable constants)
+            if (ratio > 2.5) result.status = "BLOQUÉ";
+            else if (ratio > 1.8) result.status = "EMBOUTEILLÉ";
+            else if (ratio > 1.3) result.status = "MODÉRÉ";
+            else if (ratio >= 0.9) result.status = "FLUIDE";
+
+            // Overide par rapport communautaire si conflit (Poids plus lourd au local)
+            if (localReport) {
+                if (localReport.type === 'blockage') result.status = "BLOQUÉ";
+                else if (localReport.type === 'pothole' || localReport.type === 'damaged_road') result.status = "MODÉRÉ";
+                result.verdict = `Signalé par la communauté : ${localReport.description}`;
+            } else if (result.status !== "INCONNU") {
+                if (result.status === "FLUIDE") {
+                    result.verdict = "Nzela eza fluide : Trafic fluide sur cet axe.";
+                    result.lingala = "Nzela eza kitoko, kotambola eza pasi te.";
+                } else {
+                    result.verdict = `${input.address || 'Cet axe'} est environ ${delay} min plus lent que la normale.`;
+                    result.lingala = "Nzela eza pasi mingi, kozela eza mingi.";
+                }
+            }
+
+            result.delay = delay;
+            result.ratio = ratio;
+            result.polyline = route.polyline;
+
+            // Ajouter les alternatives si c'est bouché
+            if (data.routes.length > 1 && ratio > 1.3) {
+                result.alternatives = data.routes.slice(1, 3).map((r: any) => ({
+                    description: r.description || "Itinéraire bis",
+                    duration: Math.round(parseInt(r.duration.replace('s', '')) / 60) + " min",
+                    polyline: r.polyline
+                }));
+            }
+        }
+
+        trafficCache.set(cacheKey, { data: result, expires: now + 90000 });
+        return result;
+
+    } catch (e) {
+        console.error("Traffic Check Error:", e);
+        return { status: "ERREUR", verdict: "Impossible de vérifier le trafic." };
+    }
+}
 
 /**
  * Récupère l'état du trafic en temps réel pour une liste d'axes routiers via Google Routes API.

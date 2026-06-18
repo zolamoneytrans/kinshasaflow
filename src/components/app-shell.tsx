@@ -10,7 +10,8 @@ import {
   BarChart3, Zap, Smartphone, Monitor, Radar, Construction, ShieldAlert as HazardIcon,
   MessagesSquare,
   MessageCircle,
-  Headphones
+  Headphones,
+  TrafficCone
 } from 'lucide-react';
 import {
   Sidebar,
@@ -212,6 +213,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       '/reports': 'Rapports de trafic',
       '/live-traffic': 'Temps Réel',
       '/local-traffic': 'Trafic Local',
+      '/verifier-trafic': 'Vérifier Trafic',
       '/k-flow-nav': 'K-Flow Nav',
       '/hazard-map': 'Carte des Dangers',
       '/insights': 'K-Flow Insights',
@@ -273,6 +275,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Headphones className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                     <span className="text-primary">Assistance WhatsApp</span>
                   </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/verifier-trafic'} className={cn(pathname === '/verifier-trafic' && "bg-white/10")}>
+                  <Link href="/verifier-trafic" className="font-bold flex items-center gap-3 h-11 px-4 rounded-xl">
+                    <TrafficCone className={cn("h-5 w-5", pathname === '/verifier-trafic' ? "text-accent" : "text-primary")} />
+                    <span>Vérifier Trafic</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 

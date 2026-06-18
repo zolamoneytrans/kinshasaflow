@@ -3,12 +3,15 @@
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
-import { APIProvider } from '@vis.gl/react-google-maps';
+import { APIProvider, Libraries } from '@vis.gl/react-google-maps';
 import { CONFIG } from '@/lib/config';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
 }
+
+// Liste des librairies Google Maps nécessaires à l'application
+const LIBRARIES: Libraries = ['places', 'marker', 'geometry', 'routes'];
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
@@ -16,17 +19,13 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     return initializeFirebase();
   }, []);
 
-  // On s'assure que la clé API est présente avant de rendre le provider
-  if (!CONFIG.GOOGLE_MAPS_API_KEY) {
-    console.error("CRITICAL: Google Maps API Key is missing. Check your environment variables.");
-  }
-
   return (
     <APIProvider 
       apiKey={CONFIG.GOOGLE_MAPS_API_KEY} 
+      libraries={LIBRARIES}
       language="fr"
       region="CD"
-      onLoad={() => console.log('Google Maps API loaded successfully')}
+      onLoad={() => console.log('Google Maps API initialized with key Kinshasaflow 3')}
     >
       <FirebaseProvider
         firebaseApp={firebaseServices.firebaseApp}

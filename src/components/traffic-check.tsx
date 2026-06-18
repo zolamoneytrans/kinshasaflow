@@ -44,6 +44,7 @@ export default function TrafficCheck() {
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const handleCheck = useCallback(async (coords: {lat: number, lng: number}, address?: string) => {
+    setResult(null); // Clear previous result
     setIsLoading(true);
     try {
       const data = await checkTrafficAction({ ...coords, address });

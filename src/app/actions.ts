@@ -8,7 +8,7 @@ import { TrafficTipsInput, AssistantInput, PushSubscription, StrategicInsightsIn
 import * as webpush from 'web-push';
 import * as nodemailer from 'nodemailer';
 import { initializeFirebase } from "@/firebase";
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, limit } from "firebase/firestore";
 import { CONFIG } from "@/lib/config";
 
 const GOOGLE_API_KEY = CONFIG.GOOGLE_MAPS_API_KEY;
@@ -29,30 +29,34 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
     try {
         const { firestore } = initializeFirebase();
         
-        // 1. Chercher les rapports communautaires récents (30 min) à proximité
+        // 1. Chercher les rapports communautaires récents (Fallback simple sans index complexe)
         const thirtyMinsAgo = new Date(now - 30 * 60 * 1000);
-        const reportsQuery = query(
-            collection(firestore, 'road_condition_reports'),
-            where('createdAt', '>=', Timestamp.fromDate(thirtyMinsAgo)),
-            where('status', '==', 'active')
-        );
+        let localReport = null;
         
-        const reportsSnap = await getDocs(reportsQuery);
-        const recentReports = reportsSnap.docs.map(d => d.data() as RoadConditionReport);
-        
-        const localReport = recentReports.find(r => 
-            Math.abs(r.coords.lat - input.lat) < 0.005 && 
-            Math.abs(r.coords.lng - input.lng) < 0.005
-        );
+        try {
+            const reportsQuery = query(
+                collection(firestore, 'road_condition_reports'),
+                where('status', '==', 'active'),
+                limit(20)
+            );
+            const reportsSnap = await getDocs(reportsQuery);
+            const recentReports = reportsSnap.docs.map(d => d.data() as RoadConditionReport);
+            localReport = recentReports.find(r => 
+                Math.abs(r.coords.lat - input.lat) < 0.008 && 
+                Math.abs(r.coords.lng - input.lng) < 0.008
+            );
+        } catch (dbError) {
+            console.warn("[TrafficCheck] Firestore bypass:", dbError);
+        }
 
-        // 2. Appel à Google Routes API
+        // 2. Appel à Google Routes API v2
         const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
         const body = {
             origin: { location: { latLng: { latitude: input.lat, longitude: input.lng } } },
-            destination: { location: { latLng: { latitude: input.lat + 0.005, longitude: input.lng + 0.005 } } },
+            destination: { location: { latLng: { latitude: input.lat + 0.004, longitude: input.lng + 0.004 } } },
             travelMode: "DRIVE",
             routingPreference: "TRAFFIC_AWARE_OPTIMAL",
-            computeAlternativeRoutes: true,
+            computeAlternativeRoutes: false,
             languageCode: "fr-FR"
         };
 
@@ -61,18 +65,24 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
             headers: {
                 'Content-Type': 'application/json',
                 'X-Goog-Api-Key': GOOGLE_API_KEY,
-                'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters,routes.description,routes.polyline'
+                'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters'
             },
             body: JSON.stringify(body)
         });
+
+        if (!res.ok) {
+            const errorBody = await res.text();
+            console.error("[Routes API Error]", res.status, errorBody);
+            throw new Error(`Google API returned ${res.status}`);
+        }
 
         const data = await res.json();
         const route = data?.routes?.[0];
         
         let result: any = {
             status: "INCONNU",
-            verdict: "Pas de données en temps réel pour cette rue — soyez le premier à la signaler.",
-            lingala: "Basango eza te — zala moto ya yambo ya koloba ndenge nzela eza.",
+            verdict: "Analyse en cours — soyez prudent sur cet axe.",
+            lingala: "Tozali kotala nzela — keba na tamboli na yo.",
             delay: 0,
             ratio: 1,
             alternatives: []
@@ -84,50 +94,41 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
             const ratio = dur / statDur;
             const delay = Math.round(Math.max(0, dur - statDur) / 60);
 
-            if (ratio > 2.5) result.status = "BLOQUÉ";
-            else if (ratio > 1.8) result.status = "EMBOUTEILLÉ";
-            else if (ratio > 1.3) result.status = "MODÉRÉ";
-            else if (ratio >= 0.9) result.status = "FLUIDE";
+            if (ratio > 2.2) result.status = "BLOQUÉ";
+            else if (ratio > 1.6) result.status = "EMBOUTEILLÉ";
+            else if (ratio > 1.25) result.status = "MODÉRÉ";
+            else result.status = "FLUIDE";
 
             if (localReport) {
-                if (localReport.type === 'blockage') result.status = "BLOQUÉ";
-                else if (localReport.type === 'pothole' || localReport.type === 'damaged_road') result.status = "MODÉRÉ";
-                result.verdict = `Signalé par la communauté : ${localReport.description}`;
-            } else if (result.status !== "INCONNU") {
+                result.verdict = `Signalement communautaire : ${localReport.description}`;
+                result.lingala = "Bato balobi nzela eza pasi, keba mingi.";
+            } else {
                 if (result.status === "FLUIDE") {
-                    result.verdict = "Nzela eza fluide : Trafic fluide sur cet axe.";
+                    result.verdict = "Nzela eza fluide : Trafic normal sur cet axe.";
                     result.lingala = "Nzela eza kitoko, kotambola eza pasi te.";
                 } else {
-                    result.verdict = `${input.address || 'Cet axe'} est environ ${delay} min plus lent que la normale.`;
-                    result.lingala = "Nzela eza pasi mingi, kozela eza mingi.";
+                    result.verdict = `${input.address || 'Cet axe'} semble ralenti par environ ${delay} min de trafic.`;
+                    result.lingala = "Nzela eza pasi moke, zela mwa moke.";
                 }
             }
 
             result.delay = delay;
             result.ratio = ratio;
-            result.polyline = route.polyline;
-
-            if (data.routes.length > 1 && ratio > 1.3) {
-                result.alternatives = data.routes.slice(1, 3).map((r: any) => ({
-                    description: r.description || "Itinéraire bis",
-                    duration: Math.round(parseInt(r.duration.replace('s', '')) / 60) + " min",
-                    polyline: r.polyline
-                }));
-            }
         }
 
         trafficCache.set(cacheKey, { data: result, expires: now + 90000 });
         return result;
 
     } catch (e) {
-        console.error("Traffic Check Error:", e);
-        return { status: "ERREUR", verdict: "Impossible de vérifier le trafic." };
+        console.error("Critical Traffic Check Error:", e);
+        return { 
+            status: "ERREUR", 
+            verdict: "L'analyseur K-Flow est momentanément indisponible.",
+            lingala: "Machine ezo sala te, zela mwa moke."
+        };
     }
 }
 
-/**
- * Récupère l'état du trafic Google pour une liste d'axes.
- */
 export async function getGoogleTrafficStatusAction(axes: any[]) {
     try {
         const results = await Promise.all(axes.map(async (axis) => {

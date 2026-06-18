@@ -3,8 +3,8 @@
  */
 
 export const CONFIG = {
-  // Priorité à la variable d'environnement, sinon clé de secours
-  GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk",
+  // Utilisation de la clé API principale du projet pour éviter les AuthFailure
+  GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyD_wEf8tEk9ZffJfUnLI7ndITSt5p05FoU",
   KINSHASA_BOUNDS: {
     north: -4.240,
     south: -4.516,

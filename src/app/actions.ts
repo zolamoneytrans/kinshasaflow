@@ -125,6 +125,9 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
     }
 }
 
+/**
+ * Récupère l'état du trafic Google pour une liste d'axes.
+ */
 export async function getGoogleTrafficStatusAction(axes: any[]) {
     try {
         const results = await Promise.all(axes.map(async (axis) => {

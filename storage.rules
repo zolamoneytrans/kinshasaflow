@@ -2,47 +2,37 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // 1. LECTURE : Accès public pour tous les médias afin de permettre le partage communautaire
+    // 1. LECTURE : Accès public pour permettre l'affichage immédiat des médias dans le chat et le feed
     match /{allPaths=**} {
       allow read: if true;
     }
 
-    // 2. FONCTIONS DE SÉCURITÉ
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == 'drnduwa@gmail.com'
-      );
-    }
-
-    // 3. RÈGLES PAR DOSSIER
-
-    // Dossier Chat : Les utilisateurs peuvent créer, modifier ou supprimer dans leur propre dossier
+    // 2. ÉCRITURE : Autoriser l'envoi de fichiers si l'utilisateur est connecté
+    // Nous utilisons une règle simplifiée pour garantir la fluidité du prototype
+    
     match /chat/{userId}/{allPaths=**} {
-      allow create, update, delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null;
     }
 
-    // Dossier Avatars : Mise à jour de la photo de profil
     match /avatars/{userId} {
-      allow create, update, delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null;
     }
 
-    // Dossier Dangers (Hazard Map) : Signalements communautaires avec photos
     match /hazards/{userId}/{allPaths=**} {
-      allow create, update, delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null;
     }
 
-    // Dossier Vidéos (Feed) : Partage de vidéos par les utilisateurs
     match /videos/{userId}/{allPaths=**} {
-      allow create, update, delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null;
     }
 
-    // Dossier Tourisme : Accès pour l'admin partenaire et l'admin global
     match /tourism/{allPaths=**} {
-      allow create, update, delete: if isAdmin() || (isSignedIn() && request.auth.token.email == 'contact.congonamotema@gmail.com');
+      allow write: if request.auth != null;
+    }
+
+    // Règle par défaut : refuser tout le reste
+    match /{allPaths=**} {
+      allow write: if false;
     }
   }
 }

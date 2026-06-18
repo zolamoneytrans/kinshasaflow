@@ -273,9 +273,11 @@ export default function CommunityChat() {
         const timestamp = Date.now();
         const safeName = params.mediaFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const fileName = `${timestamp}_${safeName}`;
+        
+        // Dossier de stockage explicite : chat/USER_ID/FILENAME
         const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
         
-        console.log(`[Chat] Tentative d'upload vers : ${fileRef.fullPath}`);
+        console.log(`[Chat] Tentative d'envoi vers : ${fileRef.fullPath}`);
         
         const snapshot = await uploadBytes(fileRef, params.mediaFile);
         mediaUrl = await getDownloadURL(snapshot.ref);
@@ -310,11 +312,13 @@ export default function CommunityChat() {
       setAlertLocation('');
       setAlertDialog({ ...alertDialog, open: false });
     } catch (e: any) {
-      console.error("[Chat] Erreur d'envoi multimédia:", e);
+      console.error("[Chat] Erreur fatale upload :", e);
       
       let errorMsg = "Une erreur est survenue lors de l'envoi.";
       if (e.code === 'storage/unauthorized') {
-        errorMsg = "Accès refusé au stockage. Vos permissions sont en cours de mise à jour.";
+        errorMsg = "Accès refusé au stockage. Vérifiez que votre profil est bien activé.";
+      } else if (e.code === 'storage/quota-exceeded') {
+        errorMsg = "Capacité de stockage atteinte. Réessayez plus tard.";
       }
 
       toast({ 
@@ -376,27 +380,24 @@ export default function CommunityChat() {
           </div>
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none max-w-[200px] md:max-w-none">
-            <Button 
+            <button 
               onClick={() => setAlertDialog({ open: true, type: 'embouteillage' })}
-              variant="outline" 
-              className="h-9 px-3 rounded-xl border-orange-200 text-orange-600 bg-orange-50 font-black text-[9px] uppercase gap-1.5 hover:bg-orange-100 shrink-0"
+              className="h-9 px-3 rounded-xl border border-orange-200 text-orange-600 bg-orange-50 font-black text-[9px] uppercase flex items-center gap-1.5 hover:bg-orange-100 shrink-0"
             >
               <Car className="h-3 w-3" /> Embouteillage
-            </Button>
-            <Button 
+            </button>
+            <button 
               onClick={() => setAlertDialog({ open: true, type: 'travaux' })}
-              variant="outline" 
-              className="h-9 px-3 rounded-xl border-amber-200 text-amber-600 bg-amber-50 font-black text-[9px] uppercase gap-1.5 hover:bg-amber-100 shrink-0"
+              className="h-9 px-3 rounded-xl border border-amber-200 text-amber-600 bg-amber-50 font-black text-[9px] uppercase flex items-center gap-1.5 hover:bg-amber-100 shrink-0"
             >
               <Construction className="h-3 w-3" /> Travaux
-            </Button>
-            <Button 
+            </button>
+            <button 
               onClick={() => setAlertDialog({ open: true, type: 'police' })}
-              variant="outline" 
-              className="h-9 px-3 rounded-xl border-red-200 text-red-600 bg-red-50 font-black text-[9px] uppercase gap-1.5 hover:bg-red-100 shrink-0"
+              className="h-9 px-3 rounded-xl border border-red-200 text-red-600 bg-red-50 font-black text-[9px] uppercase flex items-center gap-1.5 hover:bg-red-100 shrink-0"
             >
               <Siren className="h-3 w-3" /> Police
-            </Button>
+            </button>
         </div>
       </div>
 
@@ -413,7 +414,7 @@ export default function CommunityChat() {
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-40">
               <Loader2 className="h-8 w-8 text-primary animate-spin" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Initialisation du flux...</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">Mise à jour du flux...</p>
             </div>
           )}
         </div>

@@ -130,12 +130,12 @@ export default function RootLayout({
                     recoveryInProgress = true;
                     console.error("K-Flow Recovery: Échec de ressource détecté (" + msg + "). Réinitialisation du cache...");
                     
-                    var lastReload = sessionStorage.getItem("kflow-recovery-v3");
+                    var lastReload = sessionStorage.getItem("kflow-recovery-v4");
                     var now = Date.now();
                     
-                    // Empêcher les boucles de rechargement (limite à 1 tentative toutes les 15s)
-                    if (!lastReload || (now - parseInt(lastReload)) > 15000) {
-                      sessionStorage.setItem("kflow-recovery-v3", now);
+                    // Empêcher les boucles de rechargement (limite à 1 tentative toutes les 30s)
+                    if (!lastReload || (now - parseInt(lastReload)) > 30000) {
+                      sessionStorage.setItem("kflow-recovery-v4", now);
                       
                       // Purge des Service Workers et rechargement forcé (bypass cache)
                       if ('serviceWorker' in navigator) {
@@ -145,7 +145,7 @@ export default function RootLayout({
                             promises.push(registrations[i].unregister());
                           }
                           
-                          // Vider également le cache API si possible
+                          // Vider également tous les caches (Cache Storage)
                           if ('caches' in window) {
                             promises.push(caches.keys().then(function(keys) {
                               return Promise.all(keys.map(function(key) { return caches.delete(key); }));

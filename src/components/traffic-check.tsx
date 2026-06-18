@@ -44,7 +44,7 @@ export default function TrafficCheck() {
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const handleCheck = useCallback(async (coords: {lat: number, lng: number}, address?: string) => {
-    setResult(null); // Clear previous result
+    setResult(null); 
     setIsLoading(true);
     try {
       const data = await checkTrafficAction({ ...coords, address });
@@ -53,8 +53,16 @@ export default function TrafficCheck() {
         mapRef.current.panTo(coords);
         mapRef.current.setZoom(16);
       }
-    } catch (e) {
-      toast({ title: "Erreur", description: "Impossible d'analyser cet axe.", variant: "destructive" });
+      
+      if (data.status === "ERREUR") {
+          toast({ 
+              title: "Erreur d'analyse", 
+              description: data.verdict, 
+              variant: "destructive" 
+          });
+      }
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message || "Impossible d'analyser cet axe.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -171,6 +179,18 @@ export default function TrafficCheck() {
                     <p className="text-sm font-bold text-slate-800 leading-relaxed italic">"{result.verdict}"</p>
                     <p className="text-xs font-black text-primary uppercase tracking-widest">{result.lingala}</p>
                   </div>
+
+                  {result.status === "ERREUR" && (
+                      <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-start gap-3">
+                        <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                            <p className="text-xs font-black text-red-800 uppercase">Détail technique</p>
+                            <p className="text-[10px] text-red-600 font-medium leading-relaxed">
+                                Veuillez vérifier dans votre console Google Cloud que l'API "Routes API" est bien activée pour votre clé "Kinshasaflow 3".
+                            </p>
+                        </div>
+                      </div>
+                  )}
 
                   {result.alternatives && result.alternatives.length > 0 && (
                     <div className="space-y-4">

@@ -27,17 +27,14 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
     }
 
     try {
-        const { firestore } = initializeFirebase();
-        
-        // 1. Chercher les rapports communautaires récents (Fallback simple sans index complexe)
-        const thirtyMinsAgo = new Date(now - 30 * 60 * 1000);
+        // 1. Initialisation Firebase prudente sur le serveur
         let localReport = null;
-        
         try {
+            const { firestore } = initializeFirebase();
             const reportsQuery = query(
                 collection(firestore, 'road_condition_reports'),
                 where('status', '==', 'active'),
-                limit(20)
+                limit(10)
             );
             const reportsSnap = await getDocs(reportsQuery);
             const recentReports = reportsSnap.docs.map(d => d.data() as RoadConditionReport);
@@ -46,10 +43,10 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
                 Math.abs(r.coords.lng - input.lng) < 0.008
             );
         } catch (dbError) {
-            console.warn("[TrafficCheck] Firestore bypass:", dbError);
+            console.warn("[TrafficCheck] Firestore bypass (Index probable):", dbError);
         }
 
-        // 2. Appel à Google Routes API v2
+        // 2. Appel à Google Routes API v2 (Le nouveau moteur de calcul)
         const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
         const body = {
             origin: { location: { latLng: { latitude: input.lat, longitude: input.lng } } },
@@ -72,8 +69,14 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
 
         if (!res.ok) {
             const errorBody = await res.text();
+            let errorMessage = "Erreur API Google";
+            try {
+                const parsed = JSON.parse(errorBody);
+                errorMessage = parsed.error?.message || errorMessage;
+            } catch (e) {}
+            
             console.error("[Routes API Error]", res.status, errorBody);
-            throw new Error(`Google API returned ${res.status}`);
+            throw new Error(errorMessage);
         }
 
         const data = await res.json();
@@ -119,12 +122,12 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
         trafficCache.set(cacheKey, { data: result, expires: now + 90000 });
         return result;
 
-    } catch (e) {
+    } catch (e: any) {
         console.error("Critical Traffic Check Error:", e);
         return { 
             status: "ERREUR", 
-            verdict: "L'analyseur K-Flow est momentanément indisponible.",
-            lingala: "Machine ezo sala te, zela mwa moke."
+            verdict: `L'analyseur K-Flow rapporte : ${e.message || "Service momentanément indisponible."}`,
+            lingala: "Pasi mwa moke na machine, zela moke."
         };
     }
 }

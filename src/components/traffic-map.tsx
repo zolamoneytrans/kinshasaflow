@@ -167,7 +167,6 @@ export default function TrafficMap() {
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
                 className="w-full h-full"
-                mapId="kinshasa_traffic_map"
             >
                 <TrafficLayerComponent />
             </Map>

@@ -374,7 +374,6 @@ export default function LiveTrafficFeed() {
                     zoom={15}
                     gestureHandling={'greedy'}
                     disableDefaultUI={true}
-                    mapId="live_traffic_mini_map"
                     className="w-full h-full"
                 >
                     <TrafficLayerComponent refreshKey={refreshKey} />

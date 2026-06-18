@@ -311,7 +311,6 @@ export default function LocalTrafficSummary() {
                 zoom={14}
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
-                mapId="local_radar_live_v1"
                 className="w-full h-full"
                 onCameraChanged={(e) => {
                   mapInstanceRef.current = e.map;

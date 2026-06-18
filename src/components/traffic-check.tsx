@@ -122,7 +122,6 @@ export default function TrafficCheck() {
               defaultZoom={13}
               gestureHandling={'greedy'}
               disableDefaultUI={true}
-              mapId="traffic_check_map_v1"
               className="w-full h-full"
               onCameraChanged={(e) => { mapRef.current = e.map; }}
             >

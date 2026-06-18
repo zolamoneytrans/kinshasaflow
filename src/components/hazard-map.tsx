@@ -116,7 +116,6 @@ export default function HazardMap() {
             defaultZoom={13}
             gestureHandling={'greedy'}
             disableDefaultUI={true}
-            mapId="hazard_map_v1"
             className="w-full h-full"
         >
           {location && (

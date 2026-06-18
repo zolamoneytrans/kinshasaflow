@@ -2,37 +2,13 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // 1. LECTURE : Accès public pour permettre l'affichage immédiat des médias dans le chat et le feed
+    // Règle simplifiée pour le prototype : 
+    // - Tout le monde peut lire (pour afficher les images du chat immédiatement)
+    // - Tout utilisateur connecté peut écrire (pour envoyer des médias)
+    
     match /{allPaths=**} {
       allow read: if true;
-    }
-
-    // 2. ÉCRITURE : Autoriser l'envoi de fichiers si l'utilisateur est connecté
-    // Nous utilisons une règle simplifiée pour garantir la fluidité du prototype
-    
-    match /chat/{userId}/{allPaths=**} {
       allow write: if request.auth != null;
-    }
-
-    match /avatars/{userId} {
-      allow write: if request.auth != null;
-    }
-
-    match /hazards/{userId}/{allPaths=**} {
-      allow write: if request.auth != null;
-    }
-
-    match /videos/{userId}/{allPaths=**} {
-      allow write: if request.auth != null;
-    }
-
-    match /tourism/{allPaths=**} {
-      allow write: if request.auth != null;
-    }
-
-    // Règle par défaut : refuser tout le reste
-    match /{allPaths=**} {
-      allow write: if false;
     }
   }
 }

@@ -271,15 +271,19 @@ export default function CommunityChat() {
       if (params.mediaFile) {
         const storage = getStorage(firebaseApp);
         const timestamp = Date.now();
+        // Nom de fichier propre sans caractères spéciaux
         const safeName = params.mediaFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const fileName = `${timestamp}_${safeName}`;
         
-        // Dossier de stockage explicite : chat/USER_ID/FILENAME
+        // Dossier de stockage : chat/USER_ID/FILENAME
         const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
         
-        console.log(`[Chat] Tentative d'envoi vers : ${fileRef.fullPath}`);
-        
-        const snapshot = await uploadBytes(fileRef, params.mediaFile);
+        // Ajout explicite du Content-Type pour éviter les erreurs de lecture
+        const metadata = {
+          contentType: params.mediaFile.type
+        };
+
+        const snapshot = await uploadBytes(fileRef, params.mediaFile, metadata);
         mediaUrl = await getDownloadURL(snapshot.ref);
       }
 
@@ -316,7 +320,7 @@ export default function CommunityChat() {
       
       let errorMsg = "Une erreur est survenue lors de l'envoi.";
       if (e.code === 'storage/unauthorized') {
-        errorMsg = "Accès refusé au stockage. Vérifiez que votre profil est bien activé.";
+        errorMsg = "Accès refusé au stockage. Vérifiez votre connexion et votre profil.";
       } else if (e.code === 'storage/quota-exceeded') {
         errorMsg = "Capacité de stockage atteinte. Réessayez plus tard.";
       }

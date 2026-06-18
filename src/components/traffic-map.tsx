@@ -1,20 +1,18 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
+import { Map, useMap } from '@vis.gl/react-google-maps';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Lock, Star, Loader2, Map as MapIcon } from 'lucide-react';
+import { Search, Lock, Star, Loader2, Map as MapIcon, X } from 'lucide-react';
 import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
 import { STAR_COSTS, UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
-const initialCenter = { lat: -4.330, lng: 15.313 };
+import { CONFIG } from '@/lib/config';
 
 const TrafficLayerComponent = () => {
     const map = useMap();
@@ -31,7 +29,7 @@ const TrafficLayerComponent = () => {
 
 export default function TrafficMap() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [center, setCenter] = useState(initialCenter);
+    const [center, setCenter] = useState(CONFIG.KINSHASA_CENTER);
     const [zoom, setZoom] = useState(15);
     const [isUnlocked, setIsUnlocked] = useState(false);
     const [isUnlocking, setIsUnlocking] = useState(false);
@@ -91,7 +89,7 @@ export default function TrafficMap() {
         if (!searchQuery.trim() || !isUnlocked) return;
 
         try {
-            const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${GOOGLE_MAPS_API_KEY}&components=country:CD&bounds=-4.55,15.15|-4.1,15.6`);
+            const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${CONFIG.GOOGLE_MAPS_API_KEY}&components=country:CD&bounds=-4.55,15.15|-4.1,15.6`);
             const data = await response.json();
             if (data.status === 'OK' && data.results[0]) {
                 const location = data.results[0].geometry.location;
@@ -134,7 +132,7 @@ export default function TrafficMap() {
                                     disabled={isUnlocking}
                                     className="w-full h-16 rounded-xl text-xl font-black shadow-2xl shadow-primary/40 hover:scale-[1.02] transition-transform"
                                 >
-                                    {isUnlocking ? <Loader2 className="animate-spin mr-2" /> : <Lock className="mr-2" />}
+                                    {isUnlocking ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Lock className="mr-2" />}
                                     Déverrouiller la ville
                                 </Button>
                                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Votre solde : {profile?.currentStarsBalance || 0} stars</p>
@@ -144,37 +142,35 @@ export default function TrafficMap() {
                 )}
             </AnimatePresence>
 
-            <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                {isUnlocked && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4">
-                        <form onSubmit={handleSearch} className="flex w-full items-center gap-2">
-                            <Input 
-                                type="text"
-                                placeholder="Rechercher une avenue (ex: Nguma)..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="bg-white/90 backdrop-blur-md shadow-2xl rounded-xl h-12 border-none font-bold"
-                            />
-                            <Button type="submit" size="icon" className="h-12 w-12 shadow-2xl rounded-xl">
-                                <Search className="h-5 w-5" />
-                            </Button>
-                        </form>
-                    </div>
-                )}
+            {isUnlocked && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4">
+                    <form onSubmit={handleSearch} className="flex w-full items-center gap-2">
+                        <Input 
+                            type="text"
+                            placeholder="Rechercher une avenue (ex: Nguma)..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-white/90 backdrop-blur-md shadow-2xl rounded-xl h-12 border-none font-bold"
+                        />
+                        <Button type="submit" size="icon" className="h-12 w-12 shadow-2xl rounded-xl">
+                            <Search className="h-5 w-5" />
+                        </Button>
+                    </form>
+                </div>
+            )}
 
-                <Map
-                    zoom={zoom}
-                    center={center}
-                    onZoomChanged={(e) => setZoom(e.detail.zoom)}
-                    onCenterChanged={(e) => setCenter(e.detail.center)}
-                    gestureHandling={'greedy'}
-                    disableDefaultUI={true}
-                    className="w-full h-full"
-                    mapId="kinshasa_traffic_map"
-                >
-                    <TrafficLayerComponent />
-                </Map>
-            </APIProvider>
+            <Map
+                zoom={zoom}
+                center={center}
+                onZoomChanged={(e) => setZoom(e.detail.zoom)}
+                onCenterChanged={(e) => setCenter(e.detail.center)}
+                gestureHandling={'greedy'}
+                disableDefaultUI={true}
+                className="w-full h-full"
+                mapId="kinshasa_traffic_map"
+            >
+                <TrafficLayerComponent />
+            </Map>
         </div>
     );
 }

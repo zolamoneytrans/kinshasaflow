@@ -1,39 +1,28 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { APIProvider, Map, useMap, useMapsLibrary, Marker, Polyline } from '@vis.gl/react-google-maps';
+import { Map, useMap, useMapsLibrary, Marker } from '@vis.gl/react-google-maps';
 import { 
   TrafficCone, 
   Search, 
   LocateFixed, 
   Navigation, 
-  Star, 
   Loader2, 
-  MapPin, 
   CheckCircle2, 
-  AlertTriangle,
-  ArrowRight,
-  RefreshCw,
-  Clock,
-  ShieldCheck,
   Zap,
   Info,
   X
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { checkTrafficAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-
-const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
-const KINSHASA_BOUNDS = { north: -4.240, south: -4.516, west: 15.148, east: 15.565 };
-const KINSHASA_CENTER = { lat: -4.330, lng: 15.313 };
+import { CONFIG } from '@/lib/config';
 
 const STATUS_CONFIG = {
   BLOQUÉ: { color: "bg-purple-600", icon: "🔴", label: "Bloqué" },
@@ -89,7 +78,6 @@ export default function TrafficCheck() {
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-50 overflow-hidden">
-      <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="fr">
         {/* Header Bar */}
         <div className="bg-white border-b p-4 md:p-6 shadow-sm z-30">
           <div className="max-w-4xl mx-auto space-y-4">
@@ -129,7 +117,7 @@ export default function TrafficCheck() {
           {/* Main Map */}
           <div className="flex-1 relative">
             <Map
-              defaultCenter={KINSHASA_CENTER}
+              defaultCenter={CONFIG.KINSHASA_CENTER}
               center={location}
               defaultZoom={13}
               gestureHandling={'greedy'}
@@ -228,7 +216,6 @@ export default function TrafficCheck() {
             )}
           </AnimatePresence>
         </div>
-      </APIProvider>
     </div>
   );
 }
@@ -241,7 +228,7 @@ function AutocompleteInput({ value, onChange, onSelect }: { value: string, onCha
     if (!places || !inputRef.current) return;
     const autocomplete = new places.Autocomplete(inputRef.current, {
       componentRestrictions: { country: 'cd' },
-      bounds: KINSHASA_BOUNDS,
+      bounds: CONFIG.KINSHASA_BOUNDS,
       fields: ['formatted_address', 'geometry', 'name'],
       strictBounds: true,
     });

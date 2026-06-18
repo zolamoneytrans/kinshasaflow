@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -13,17 +12,16 @@ import {
   Search, 
   Navigation, 
   MapPin, 
-  Zap,
   Lock,
   RefreshCw,
   X
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
+import { Map, useMap } from '@vis.gl/react-google-maps';
 import {
   Select,
   SelectContent,
@@ -35,8 +33,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
-const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
+import { CONFIG } from '@/lib/config';
 
 const KINSHASA_AXES = [
   { id: "30juin", name: "Boulevard du 30 Juin", coords: { lat: -4.308, lng: 15.305 }, district: "Gombe" },
@@ -372,18 +369,16 @@ export default function LiveTrafficFeed() {
                         <Loader2 className="h-12 w-12 text-primary animate-spin" />
                     </div>
                 )}
-                <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                    <Map
-                        center={selectedAxis.coords}
-                        zoom={15}
-                        gestureHandling={'greedy'}
-                        disableDefaultUI={true}
-                        mapId="live_traffic_mini_map"
-                        className="w-full h-full"
-                    >
-                        <TrafficLayerComponent refreshKey={refreshKey} />
-                    </Map>
-                </APIProvider>
+                <Map
+                    center={selectedAxis.coords}
+                    zoom={15}
+                    gestureHandling={'greedy'}
+                    disableDefaultUI={true}
+                    mapId="live_traffic_mini_map"
+                    className="w-full h-full"
+                >
+                    <TrafficLayerComponent refreshKey={refreshKey} />
+                </Map>
             </div>
         </div>
 
@@ -407,7 +402,7 @@ export default function LiveTrafficFeed() {
                                 style={{ border: 0 }}
                                 loading="lazy"
                                 allowFullScreen
-                                src={`https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_API_KEY}&origin=-4.313,15.313&destination=${navTarget.lat},${navTarget.lng}&mode=driving`}
+                                src={`https://www.google.com/maps/embed/v1/directions?key=${CONFIG.GOOGLE_MAPS_API_KEY}&origin=-4.313,15.313&destination=${navTarget.lat},${navTarget.lng}&mode=driving`}
                             ></iframe>
                         )}
                     </div>

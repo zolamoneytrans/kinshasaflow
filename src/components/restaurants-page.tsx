@@ -20,12 +20,11 @@ import {
 import { Restaurant } from '@/lib/types';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { APIProvider, Map, useMap, useMapsLibrary, Marker } from '@vis.gl/react-google-maps';
+import { Map, useMap, useMapsLibrary, Marker } from '@vis.gl/react-google-maps';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { CONFIG } from '@/lib/config';
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
-const KINSHASA_CENTER = { lat: -4.330, lng: 15.313 };
 const COMMUNES = ["Gombe", "Ngaliema", "Limete", "Kalamu", "Kintambo", "Lingwala", "Bandalungwa", "Barumbu", "Kinshasa", "Lemba", "Matete"];
 
 export default function RestaurantsPage() {
@@ -42,21 +41,16 @@ export default function RestaurantsPage() {
   // Auto-fold logic for filters
   useEffect(() => {
     if (showFilters) {
-      // Clear existing timeout if any
       if (filterTimeoutRef.current) clearTimeout(filterTimeoutRef.current);
-      
-      // Set new timeout to fold back after 8 seconds
       filterTimeoutRef.current = setTimeout(() => {
         setShowFilters(false);
       }, 8000);
     }
-
     return () => {
       if (filterTimeoutRef.current) clearTimeout(filterTimeoutRef.current);
     };
-  }, [showFilters, activeCommune, minRating]); // Reset timer if user interacts with filters
+  }, [showFilters, activeCommune, minRating]);
 
-  // Demander la localisation au chargement
   useEffect(() => {
     if (typeof window !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -88,7 +82,6 @@ export default function RestaurantsPage() {
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-50/50 overflow-hidden">
-      <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['places']}>
         {/* Header & Search */}
         <div className="bg-white border-b p-4 md:p-6 shadow-sm z-30">
           <div className="max-w-6xl mx-auto space-y-4">
@@ -270,7 +263,7 @@ export default function RestaurantsPage() {
           {/* Map View */}
           <div className="hidden lg:block h-full relative">
             <Map
-              defaultCenter={KINSHASA_CENTER}
+              defaultCenter={CONFIG.KINSHASA_CENTER}
               defaultZoom={13}
               gestureHandling={'greedy'}
               disableDefaultUI={true}
@@ -315,7 +308,7 @@ export default function RestaurantsPage() {
                     style={{ border: 0 }}
                     loading="lazy"
                     allowFullScreen
-                    src={`https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_API_KEY}&origin=${userLocation ? `${userLocation.lat},${userLocation.lng}` : '-4.313,15.313'}&destination=${navTarget.coords.lat},${navTarget.coords.lng}&mode=driving`}
+                    src={`https://www.google.com/maps/embed/v1/directions?key=${CONFIG.GOOGLE_MAPS_API_KEY}&origin=${userLocation ? `${userLocation.lat},${userLocation.lng}` : '-4.313,15.313'}&destination=${navTarget.coords.lat},${navTarget.coords.lng}&mode=driving`}
                   ></iframe>
                 )}
               </div>
@@ -327,14 +320,10 @@ export default function RestaurantsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </APIProvider>
     </div>
   );
 }
 
-/**
- * Composant interne pour gérer la recherche via Google Places Library
- */
 function PlacesSearchHandler({ search, commune, minRating, setRestaurants, setIsLoading }: { 
   search: string, 
   commune: string, 
@@ -351,7 +340,6 @@ function PlacesSearchHandler({ search, commune, minRating, setRestaurants, setIs
     setIsLoading(true);
     const service = new placesLibrary.PlacesService(map);
     
-    // Construire la requête textuelle
     let queryParts = ['restaurant'];
     if (search) queryParts.push(search);
     if (commune !== 'Tous') queryParts.push(commune);
@@ -359,8 +347,8 @@ function PlacesSearchHandler({ search, commune, minRating, setRestaurants, setIs
 
     const request: google.maps.places.TextSearchRequest = {
       query: queryParts.join(' '),
-      location: new google.maps.LatLng(KINSHASA_CENTER.lat, KINSHASA_CENTER.lng),
-      radius: 15000, // 15km autour du centre
+      location: new google.maps.LatLng(CONFIG.KINSHASA_CENTER.lat, CONFIG.KINSHASA_CENTER.lng),
+      radius: 15000, 
       type: 'restaurant'
     };
 
@@ -379,8 +367,8 @@ function PlacesSearchHandler({ search, commune, minRating, setRestaurants, setIs
             priceRange: r.price_level === 0 ? '$' : r.price_level === 1 ? '$$' : r.price_level === 2 ? '$$$' : '$$$$',
             image: r.photos?.[0]?.getUrl({ maxWidth: 800 }) || `https://picsum.photos/seed/${r.place_id}/800/400`,
             coords: {
-              lat: r.geometry?.location?.lat() || KINSHASA_CENTER.lat,
-              lng: r.geometry?.location?.lng() || KINSHASA_CENTER.lng
+              lat: r.geometry?.location?.lat() || CONFIG.KINSHASA_CENTER.lat,
+              lng: r.geometry?.location?.lng() || CONFIG.KINSHASA_CENTER.lng
             }
           }));
         setRestaurants(formatted);
@@ -394,7 +382,7 @@ function PlacesSearchHandler({ search, commune, minRating, setRestaurants, setIs
   useEffect(() => {
     const timer = setTimeout(() => {
       performSearch();
-    }, 500); // Debounce de 500ms
+    }, 500); 
     return () => clearTimeout(timer);
   }, [performSearch]);
 

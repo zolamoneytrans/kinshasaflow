@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  APIProvider, 
   Map, 
   useMap, 
   Marker,
@@ -15,29 +14,22 @@ import {
   RefreshCw, 
   ChevronUp, 
   ChevronDown, 
-  Clock, 
-  AlertOctagon, 
   Car, 
   CheckCircle2, 
   ArrowRight,
   Volume2,
   VolumeX,
-  MapPin
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { useFirebase } from '@/firebase';
 import { generateSpeechAction, getGoogleTrafficStatusAction } from '@/app/actions';
 import { MAJOR_AXES } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-
-const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
-const KINSHASA_CENTER = { lat: -4.330, lng: 15.313 };
+import { CONFIG } from '@/lib/config';
 
 interface TrafficProbe {
   id: string;
@@ -194,8 +186,6 @@ export default function LocalTrafficSummary() {
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0b121e] overflow-hidden rounded-[2rem] border border-slate-800 shadow-2xl relative">
-      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-        
         <div className="absolute inset-0 z-10 pointer-events-none p-4 flex flex-col justify-between">
             <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-xl mx-auto pointer-events-auto">
                 <Card className="bg-white/95 backdrop-blur-md border-none shadow-2xl rounded-2xl overflow-hidden">
@@ -269,7 +259,7 @@ export default function LocalTrafficSummary() {
                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 h-[300px]">
                                     <div className="p-4 space-y-3 overflow-hidden flex flex-col">
                                         <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
-                                            <AlertOctagon className="h-3 w-3" /> Embouteillages
+                                            <Radar className="h-3 w-3" /> Embouteillages
                                         </h3>
                                         <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                                             {analysis.blocked.map((p, i) => (
@@ -316,7 +306,7 @@ export default function LocalTrafficSummary() {
 
         <div className="flex-1 relative">
             <Map
-                defaultCenter={KINSHASA_CENTER}
+                defaultCenter={CONFIG.KINSHASA_CENTER}
                 center={location}
                 zoom={14}
                 gestureHandling={'greedy'}
@@ -392,7 +382,6 @@ export default function LocalTrafficSummary() {
               )}
             </Map>
         </div>
-      </APIProvider>
     </div>
   );
 }

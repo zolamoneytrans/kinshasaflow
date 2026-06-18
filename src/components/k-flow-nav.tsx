@@ -1,61 +1,39 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  APIProvider, 
   Map, 
   useMap, 
   useMapsLibrary, 
   Marker,
 } from '@vis.gl/react-google-maps';
 import { 
-  Navigation2, 
   Search, 
-  AlertTriangle, 
   Loader2, 
   Star, 
   Zap, 
   X, 
   Navigation as NavigationIcon,
-  MapPin,
   CheckCircle2,
-  AlertOctagon,
-  Plus,
-  Minus,
   LocateFixed,
-  Box,
-  Layers,
-  Flag,
-  ArrowRightLeft,
-  Clock,
   ChevronRight,
-  Info,
   ShieldCheck,
-  TrendingUp,
-  Map as MapIcon,
-  Activity,
-  Bug,
-  Maximize2,
-  Minimize2,
   Volume2,
   VolumeX,
   Mic,
   Compass,
   ArrowUp,
   ArrowUpRight,
-  ArrowUpLeft,
   CornerUpRight,
   CornerUpLeft,
-  Spline,
-  Radar,
-  ShieldAlert
+  Radar
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection, query, orderBy, limit } from 'firebase/firestore';
-import { STAR_COSTS, UserProfile, EventReport, WithId } from '@/lib/types';
+import { STAR_COSTS, UserProfile, EventReport } from '@/lib/types';
 import { generateSpeechAction, getGoogleTrafficStatusAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -63,17 +41,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { MAJOR_AXES } from '@/lib/constants';
-
-const GOOGLE_MAPS_API_KEY = "AIzaSyAATKzCB1cHlHHcef9WaiWREIs5Whe7uKk";
-
-const KINSHASA_BOUNDS = {
-  north: -4.240,
-  south: -4.516,
-  west: 15.148,
-  east: 15.565,
-};
-
-const KINSHASA_CENTER = { lat: -4.330, lng: 15.313 };
+import { CONFIG } from '@/lib/config';
 
 interface RouteSummary {
     index: number;
@@ -265,9 +233,6 @@ export default function KFlowNav() {
     const [isScanning, setIsScanning] = useState(false);
     const [scanResults, setScanResults] = useState<any[] | null>(null);
     
-    const lastSpokenStep = useRef<string | null>(null);
-    const lastAlertTimestamp = useRef<number>(0);
-    
     const userRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
     const { data: profile } = useDoc<UserProfile>(userRef);
 
@@ -317,7 +282,7 @@ export default function KFlowNav() {
 
             const service = new g.maps.DirectionsService();
             const result = await service.route({
-                origin: smoothLocation || KINSHASA_CENTER,
+                origin: smoothLocation || CONFIG.KINSHASA_CENTER,
                 destination: destination,
                 travelMode: g.maps.TravelMode.DRIVING,
                 provideRouteAlternatives: true,
@@ -503,8 +468,6 @@ export default function KFlowNav() {
 
     return (
         <div className="w-full h-full rounded-[2rem] overflow-hidden relative shadow-2xl bg-[#0b121e] flex flex-col border border-slate-800">
-            <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="fr">
-                
                 {/* ── Instructions Banner (Google Style) ── */}
                 <AnimatePresence>
                     {isNavigating && (
@@ -763,7 +726,7 @@ export default function KFlowNav() {
                 {/* ── Map Canvas ── */}
                 <div className="flex-1 relative">
                     <Map
-                        defaultCenter={KINSHASA_CENTER}
+                        defaultCenter={CONFIG.KINSHASA_CENTER}
                         defaultZoom={13}
                         gestureHandling={'greedy'}
                         disableDefaultUI={true}
@@ -809,13 +772,12 @@ export default function KFlowNav() {
                         {incidents?.map((incident) => (
                             <Marker 
                                 key={incident.id} 
-                                position={(incident as any).coords || KINSHASA_CENTER} 
+                                position={(incident as any).coords || CONFIG.KINSHASA_CENTER} 
                                 label={incident.severity === 'high' ? "🚨" : "⚠️"}
                             />
                         ))}
                     </Map>
                 </div>
-            </APIProvider>
         </div>
     );
 }
@@ -828,7 +790,7 @@ function AutocompleteInput({ value, onChange, onSearch, isLoading }: { value: st
         if (!places || !inputRef.current) return;
         const autocomplete = new places.Autocomplete(inputRef.current, {
             componentRestrictions: { country: 'cd' },
-            bounds: KINSHASA_BOUNDS,
+            bounds: CONFIG.KINSHASA_BOUNDS,
             fields: ['formatted_address', 'geometry', 'name'],
             strictBounds: true,
         });

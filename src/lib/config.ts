@@ -3,8 +3,8 @@
  */
 
 export const CONFIG = {
-  // Clé API synchronisée avec le projet studio-874039458-d0447
-  GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyD_wEf8tEk9ZffJfUnLI7ndITSt5p05FoU",
+  // Nouvelle clé API "Kinshasaflow 3" configurée par l'utilisateur
+  GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBgpYk0GoVsX24X5Bq1oKud0NfQUurRPFM",
   KINSHASA_BOUNDS: {
     north: -4.240,
     south: -4.516,

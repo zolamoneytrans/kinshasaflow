@@ -198,7 +198,7 @@ export default function RestaurantsPage() {
                             src={res.image} 
                             alt={res.name} 
                             fill 
-                            className="object-cover group-hover:scale-105 transition-transform duration-700" 
+                            className="object-cover group-hover:scale-105 transition-transform duration-700 group-hover:cursor-zoom-in" 
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
@@ -267,7 +267,6 @@ export default function RestaurantsPage() {
               defaultZoom={13}
               gestureHandling={'greedy'}
               disableDefaultUI={true}
-              mapId="kinshasa_restaurants_live_map"
               className="w-full h-full"
             >
               {restaurants.map(res => (

@@ -20,11 +20,11 @@ export default function GlobalError({
       console.warn("K-Flow Error Boundary: Tentative de récupération automatique...");
       
       // Enregistrement de la tentative pour éviter les boucles
-      const lastRetry = sessionStorage.getItem('kflow-last-retry');
+      const lastRetry = sessionStorage.getItem('kflow-last-retry-v3');
       const now = Date.now();
       
-      if (!lastRetry || (now - parseInt(lastRetry)) > 5000) {
-        sessionStorage.setItem('kflow-last-retry', now.toString());
+      if (!lastRetry || (now - parseInt(lastRetry)) > 10000) {
+        sessionStorage.setItem('kflow-last-retry-v3', now.toString());
         
         // Nettoyage radical du cache pour débloquer l'application
         if ('serviceWorker' in navigator) {
@@ -67,12 +67,13 @@ export default function GlobalError({
             <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚡</div>
             <h2 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '16px', letterSpacing: '-0.025em' }}>Mise à jour requise</h2>
             <p style={{ color: '#64748b', marginBottom: '32px', lineHeight: '1.6', fontWeight: '500' }}>
-              Une nouvelle version de Kinshasa Flow est disponible ou la connexion a expiré (Timeout).
+              Une nouvelle version de Kinshasa Flow est disponible ou la connexion a été interrompue (Timeout).
             </p>
             <button
               onClick={() => {
-                // Force un rechargement complet en ignorant le cache
-                window.location.href = window.location.origin + window.location.pathname + '?r=' + Date.now();
+                // Force un rechargement complet en ignorant le cache avec un paramètre unique
+                const cleanUrl = window.location.origin + window.location.pathname + '?v=' + Date.now();
+                window.location.href = cleanUrl;
               }}
               style={{
                 width: '100%',

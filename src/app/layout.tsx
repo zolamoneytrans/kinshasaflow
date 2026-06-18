@@ -106,7 +106,6 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
 
-        {/* Script de récupération critique (Head) - V2 avec gestion de timeout */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -131,24 +130,28 @@ export default function RootLayout({
                     recoveryInProgress = true;
                     console.error("K-Flow Recovery: Échec de ressource détecté (" + msg + "). Réinitialisation du cache...");
                     
-                    var lastReload = sessionStorage.getItem("kflow-recovery-v2");
+                    var lastReload = sessionStorage.getItem("kflow-recovery-v3");
                     var now = Date.now();
                     
-                    // Empêcher les boucles de rechargement (limite à 1 tentative toutes les 10s)
-                    if (!lastReload || (now - parseInt(lastReload)) > 10000) {
-                      sessionStorage.setItem("kflow-recovery-v2", now);
+                    // Empêcher les boucles de rechargement (limite à 1 tentative toutes les 15s)
+                    if (!lastReload || (now - parseInt(lastReload)) > 15000) {
+                      sessionStorage.setItem("kflow-recovery-v3", now);
                       
                       // Purge des Service Workers et rechargement forcé (bypass cache)
                       if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                          if (registrations.length === 0) {
-                             window.location.reload(true);
-                             return;
-                          }
                           var promises = [];
                           for(var i = 0; i < registrations.length; i++) {
                             promises.push(registrations[i].unregister());
                           }
+                          
+                          // Vider également le cache API si possible
+                          if ('caches' in window) {
+                            promises.push(caches.keys().then(function(keys) {
+                              return Promise.all(keys.map(function(key) { return caches.delete(key); }));
+                            }));
+                          }
+
                           Promise.all(promises).finally(function() {
                             window.location.reload(true);
                           });

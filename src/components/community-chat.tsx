@@ -44,7 +44,7 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
-import { sendAlertEmailAction } from '@/app/actions';
+import { broadcastEmailAction } from '@/app/actions';
 
 const MessageBubble = ({ message, isOwn }: { message: WithId<CommunityMessage>, isOwn: boolean }) => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -226,31 +226,6 @@ export default function CommunityChat() {
     });
   };
 
-  const triggerEmailNotification = async (params: { 
-    type: string, 
-    location: string, 
-    userName: string 
-  }) => {
-    try {
-      const result = await sendAlertEmailAction(params);
-      
-      const mailRef = collection(firestore, 'mail');
-      await addDoc(mailRef, {
-        to: ['drnduwa@gmail.com'],
-        message: {
-          subject: `🚨 ALERTE K-FLOW : ${params.type.toUpperCase()} à ${params.location}`,
-          text: `Alerte K-Flow : ${params.type} signalé à ${params.location} par ${params.userName}.`
-        }
-      });
-
-      if (!result.success) {
-        console.warn("[Email] Échec de l'envoi direct SMTP:", result.error);
-      }
-    } catch (e) {
-      console.warn("[Email] Échec de la notification:", e);
-    }
-  };
-
   const handleSend = async (params: { 
     text?: string, 
     mediaFile?: File, 
@@ -271,18 +246,11 @@ export default function CommunityChat() {
       if (params.mediaFile) {
         const storage = getStorage(firebaseApp);
         const timestamp = Date.now();
-        // Nom de fichier propre sans caractères spéciaux
         const safeName = params.mediaFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const fileName = `${timestamp}_${safeName}`;
-        
-        // Dossier de stockage : chat/USER_ID/FILENAME
         const fileRef = storageRef(storage, `chat/${user.uid}/${fileName}`);
         
-        // Ajout explicite du Content-Type pour éviter les erreurs de lecture
-        const metadata = {
-          contentType: params.mediaFile.type
-        };
-
+        const metadata = { contentType: params.mediaFile.type };
         const snapshot = await uploadBytes(fileRef, params.mediaFile, metadata);
         mediaUrl = await getDownloadURL(snapshot.ref);
       }
@@ -304,32 +272,21 @@ export default function CommunityChat() {
 
       await addDoc(collection(firestore, 'community_chat'), messageData);
 
-      if (params.alertType && params.locationName) {
-        triggerEmailNotification({
-          type: params.alertType,
-          location: params.locationName,
-          userName: messageData.userName
-        });
-      }
+      // Notification BROADCAST par e-mail
+      broadcastEmailAction({
+          title: params.alertType ? `ALERTE : ${params.alertType.toUpperCase()}` : "Nouveau message Chat",
+          message: params.text || `Média partagé (${params.mediaType})`,
+          userName: messageData.userName,
+          type: params.alertType ? 'alert' : 'chat',
+          location: params.locationName
+      });
 
       setInputText('');
       setAlertLocation('');
       setAlertDialog({ ...alertDialog, open: false });
     } catch (e: any) {
       console.error("[Chat] Erreur fatale upload :", e);
-      
-      let errorMsg = "Une erreur est survenue lors de l'envoi.";
-      if (e.code === 'storage/unauthorized') {
-        errorMsg = "Accès refusé au stockage. Vérifiez votre connexion et votre profil.";
-      } else if (e.code === 'storage/quota-exceeded') {
-        errorMsg = "Capacité de stockage atteinte. Réessayez plus tard.";
-      }
-
-      toast({ 
-        title: "Échec de l'envoi", 
-        description: errorMsg, 
-        variant: "destructive" 
-      });
+      toast({ title: "Échec de l'envoi", description: "Une erreur est survenue lors de l'envoi.", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }

@@ -244,7 +244,16 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
   }
 }
 
-export async function sendAlertEmailAction(params: { type: string, location: string, userName: string }) {
+/**
+ * Diffuse une notification par e-mail à TOUS les utilisateurs inscrits.
+ */
+export async function broadcastEmailAction(params: { 
+  title: string, 
+  message: string, 
+  userName: string,
+  type: 'chat' | 'alert' | 'hazard' | 'report',
+  location?: string
+}) {
   const smtpUser = "kinshasaflow@gmail.com";
   const smtpPass = "jrgl kgjl qlqj vmfc";
 
@@ -257,9 +266,9 @@ export async function sendAlertEmailAction(params: { type: string, location: str
       .map(doc => doc.data().email)
       .filter(email => email && email.includes('@') && email !== 'drnduwa@gmail.com');
     
-    recipientList = [...recipientList, ...userEmails];
+    recipientList = Array.from(new Set([...recipientList, ...userEmails]));
   } catch (e) {
-    console.warn("[Email Broadcast] Erreur liste utilisateurs.");
+    console.warn("[Email Broadcast] Erreur liste utilisateurs. Envoi admin seul.");
   }
 
   const transporter = nodemailer.createTransport({
@@ -267,25 +276,35 @@ export async function sendAlertEmailAction(params: { type: string, location: str
     auth: { user: smtpUser, pass: smtpPass },
   });
 
+  const subjectPrefix = params.type === 'chat' ? '💬 K-FLOW CHAT' : '🚨 ALERTE K-FLOW';
+  const locationStr = params.location ? ` à ${params.location}` : '';
+
   const mailOptions = {
-    from: `"Kinshasa Flow Alerts" <${smtpUser}>`,
+    from: `"Kinshasa Flow Notifications" <${smtpUser}>`,
     to: smtpUser, 
     bcc: recipientList, 
-    subject: `🚨 ALERTE K-FLOW : ${params.type.toUpperCase()} à ${params.location}`,
+    subject: `${subjectPrefix} : ${params.title}${locationStr}`,
     html: `
       <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
           <div style="background-color: #248eeb; padding: 30px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0;">Kinshasa Flow</h1>
+            <h1 style="color: #ffffff; margin: 0; letter-spacing: -1px;">Kinshasa Flow</h1>
+            <p style="color: #e0f2fe; margin: 5px 0 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Info Trafic & Mobilité</p>
           </div>
           <div style="padding: 40px;">
-            <h2>Signalement en direct</h2>
-            <p><strong>Type :</strong> ${params.type}</p>
-            <p><strong>Lieu :</strong> ${params.location}</p>
-            <p><strong>Par :</strong> ${params.userName}</p>
-            <div style="text-align: center; margin-top: 30px;">
-              <a href="https://kinshasaflow.online/community-chat" style="background-color: #248eeb; color: #ffffff; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold;">VOIR LE CHAT</a>
+            <h2 style="color: ${params.type === 'chat' ? '#248eeb' : '#ef4444'}; margin-top: 0; font-size: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">${params.title}</h2>
+            <div style="margin: 25px 0; background-color: #f8fafc; padding: 20px; border-radius: 12px; border-left: 4px solid #248eeb;">
+                <p style="margin: 0; font-size: 16px; color: #334155; font-style: italic; line-height: 1.6;">"${params.message}"</p>
             </div>
+            <p style="margin-bottom: 5px;"><strong>Par :</strong> ${params.userName}</p>
+            ${params.location ? `<p><strong>Lieu :</strong> ${params.location}</p>` : ''}
+            <div style="text-align: center; margin-top: 40px;">
+              <a href="https://kinshasaflow.online" style="background-color: #248eeb; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 14px; font-weight: 900; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(36, 142, 235, 0.3);">OUVRIR K-FLOW</a>
+            </div>
+          </div>
+          <div style="padding: 20px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; background-color: #fafafa;">
+            Vous recevez cette notification car vous êtes membre de la communauté Kinshasa Flow.<br/>
+            <em>Ceci est un message automatique, merci de ne pas y répondre.</em>
           </div>
         </div>
       </div>
@@ -299,6 +318,17 @@ export async function sendAlertEmailAction(params: { type: string, location: str
     console.error('SMTP Error:', error);
     return { success: false, error: error.message };
   }
+}
+
+export async function sendAlertEmailAction(params: { type: string, location: string, userName: string }) {
+  // Redirection vers l'action broadcast pour plus de cohérence
+  return broadcastEmailAction({
+      title: params.type.toUpperCase(),
+      message: `${params.type} signalé par ${params.userName}`,
+      userName: params.userName,
+      type: 'alert',
+      location: params.location
+  });
 }
 
 export async function initiateMbiyoPaymentAction(data: {

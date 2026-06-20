@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/select';
 import { Camera, Loader2, MapPin, Plus, CheckCircle2, Send } from 'lucide-react';
 import Image from 'next/image';
+import { broadcastEmailAction } from '@/app/actions';
 
 export function ReportHazardDialog({ location }: { location: {lat: number, lng: number} | null }) {
   const [open, setOpen] = useState(false);
@@ -118,6 +119,15 @@ export function ReportHazardDialog({ location }: { location: {lat: number, lng: 
 
         const reportRef = doc(collection(firestore, 'road_condition_reports'));
         transaction.set(reportRef, reportData);
+      });
+
+      // Notification BROADCAST par e-mail
+      broadcastEmailAction({
+          title: `NOUVEAU DANGER : ${data.type.toUpperCase()}`,
+          message: data.description,
+          userName: user.displayName || "Un citoyen",
+          type: 'hazard',
+          location: "Signalement Carte des Dangers"
       });
 
       toast({ 

@@ -29,6 +29,7 @@ import { useRouter } from 'next/navigation';
 import { reportFormSchema, ReportFormValues, UserProfile } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
 import { collection, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
+import { broadcastEmailAction } from '@/app/actions';
 
 
 export default function ReportTrafficForm() {
@@ -89,6 +90,16 @@ export default function ReportTrafficForm() {
                 transaction.update(userRef, { currentStarsBalance: newBalance, totalStarsEarned: (profile?.totalStarsEarned || 0) + 5 });
                 transaction.set(doc(eventsCollection), eventData);
             });
+
+            // Notification BROADCAST par e-mail
+            broadcastEmailAction({
+                title: `ALERTE TRAFIC (${data.severity.toUpperCase()})`,
+                message: data.description,
+                userName: user.displayName || "Un utilisateur",
+                type: 'report',
+                location: data.location
+            });
+
             toast({ title: 'Rapport envoyé +5 ⭐!' });
             router.push('/reports');
         } catch (error) {

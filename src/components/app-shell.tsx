@@ -538,25 +538,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         {isProtectedPage ? <ProtectedContent>{children}</ProtectedContent> : children}
                     </div>
                 </main>
-
-                {/* --- Bouton d'assistance WhatsApp flottant --- */}
-                <motion.div 
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="fixed bottom-6 right-6 z-[100]"
-                >
-                  <Button 
-                    asChild
-                    className="h-14 w-14 rounded-full p-0 bg-emerald-500 hover:bg-emerald-600 shadow-2xl ring-4 ring-emerald-500/20 border-none"
-                    title="Assistance WhatsApp"
-                  >
-                    <a href={whatsappBusinessUrl} target="_blank" rel="noopener noreferrer">
-                      <MessageCircle className="h-8 w-8 text-white" />
-                    </a>
-                  </Button>
-                </motion.div>
             </div>
         </SidebarInset>
       </SidebarProvider>

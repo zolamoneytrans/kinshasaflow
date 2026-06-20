@@ -3,7 +3,7 @@
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
-import { APIProvider, Libraries } from '@vis.gl/react-google-maps';
+import { APIProvider } from '@vis.gl/react-google-maps';
 import { CONFIG } from '@/lib/config';
 
 interface FirebaseClientProviderProps {
@@ -11,7 +11,7 @@ interface FirebaseClientProviderProps {
 }
 
 // Liste des librairies Google Maps nécessaires à l'application
-const LIBRARIES: Libraries = ['places', 'marker', 'geometry', 'routes'];
+const LIBRARIES = ['places', 'marker', 'geometry', 'routes'];
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
@@ -22,7 +22,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   return (
     <APIProvider 
       apiKey={CONFIG.GOOGLE_MAPS_API_KEY} 
-      libraries={LIBRARIES}
+      libraries={LIBRARIES as any}
       language="fr"
       region="CD"
       onLoad={() => console.log('Google Maps API initialized with key Kinshasaflow 3')}

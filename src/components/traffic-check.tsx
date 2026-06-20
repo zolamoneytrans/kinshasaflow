@@ -28,7 +28,7 @@ import { CONFIG } from '@/lib/config';
 
 const STATUS_CONFIG = {
   BLOQUÉ: { color: "bg-purple-600", icon: "🔴", label: "Bloqué" },
-  EMBOUTEILLÉ: { color: "bg-red-600", icon: "🔴", label: "Embouteillé" },
+  EMBOUTEILLAGE: { color: "bg-red-600", icon: "🔴", label: "Embouteillé" },
   MODÉRÉ: { color: "bg-amber-500", icon: "🟡", label: "Modéré" },
   FLUIDE: { color: "bg-emerald-500", icon: "🟢", label: "Fluide" },
   INCONNU: { color: "bg-slate-400", icon: "⚪", label: "Pas de données" },

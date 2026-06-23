@@ -46,10 +46,13 @@ service cloud.firestore {
     }
 
     /** Rules for user profiles and balances */
+    // Explicit rule for the collection itself to allow listing emails for broadcast
+    match /users {
+      allow list: if true;
+    }
+
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      // Allow list for the broadcast action to fetch recipient emails
-      allow list: if true; 
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();

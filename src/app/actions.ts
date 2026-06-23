@@ -1,3 +1,4 @@
+
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -261,14 +262,23 @@ export async function broadcastEmailAction(params: {
   
   try {
     const { firestore } = initializeFirebase();
+    // Utilisation d'un query sans filtre complexe pour s'assurer de récupérer TOUT le monde
     const usersSnap = await getDocs(collection(firestore, 'users'));
-    const userEmails = usersSnap.docs
-      .map(doc => doc.data().email)
-      .filter(email => email && email.includes('@') && email !== 'drnduwa@gmail.com');
     
-    recipientList = Array.from(new Set([...recipientList, ...userEmails]));
+    if (!usersSnap.empty) {
+        const userEmails = usersSnap.docs
+          .map(doc => doc.data().email)
+          .filter(email => {
+              const isValid = email && email.includes('@');
+              const isNotAdmin = email !== 'drnduwa@gmail.com';
+              return isValid && isNotAdmin;
+          });
+        
+        recipientList = Array.from(new Set([...recipientList, ...userEmails]));
+    }
+    console.log(`[Email Broadcast] Cibles identifiées : ${recipientList.length}`);
   } catch (e) {
-    console.warn("[Email Broadcast] Erreur liste utilisateurs. Envoi admin seul.");
+    console.error("[Email Broadcast] Erreur lors de la récupération des destinataires:", e);
   }
 
   const transporter = nodemailer.createTransport({
@@ -280,16 +290,16 @@ export async function broadcastEmailAction(params: {
   const locationStr = params.location ? ` à ${params.location}` : '';
 
   const mailOptions = {
-    from: `"Kinshasa Flow Notifications" <${smtpUser}>`,
-    to: smtpUser, 
-    bcc: recipientList, 
+    from: `"Kinshasa Flow" <${smtpUser}>`,
+    to: smtpUser, // L'admin reçoit l'e-mail en direct
+    bcc: recipientList, // Tous les autres en copie cachée
     subject: `${subjectPrefix} : ${params.title}${locationStr}`,
     html: `
       <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
           <div style="background-color: #248eeb; padding: 30px; text-align: center;">
             <h1 style="color: #ffffff; margin: 0; letter-spacing: -1px;">Kinshasa Flow</h1>
-            <p style="color: #e0f2fe; margin: 5px 0 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Info Trafic & Mobilité</p>
+            <p style="color: #e0f2fe; margin: 5px 0 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Alerte Communautaire</p>
           </div>
           <div style="padding: 40px;">
             <h2 style="color: ${params.type === 'chat' ? '#248eeb' : '#ef4444'}; margin-top: 0; font-size: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">${params.title}</h2>
@@ -299,7 +309,7 @@ export async function broadcastEmailAction(params: {
             <p style="margin-bottom: 5px;"><strong>Par :</strong> ${params.userName}</p>
             ${params.location ? `<p><strong>Lieu :</strong> ${params.location}</p>` : ''}
             <div style="text-align: center; margin-top: 40px;">
-              <a href="https://kinshasaflow.online" style="background-color: #248eeb; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 14px; font-weight: 900; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(36, 142, 235, 0.3);">OUVRIR K-FLOW</a>
+              <a href="https://kinshasaflow.online" style="background-color: #248eeb; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 14px; font-weight: 900; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(36, 142, 235, 0.3);">VOIR SUR L'APP</a>
             </div>
           </div>
           <div style="padding: 20px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; background-color: #fafafa;">
@@ -312,16 +322,16 @@ export async function broadcastEmailAction(params: {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[Email Broadcast] Envoi réussi : ${info.messageId}`);
     return { success: true };
   } catch (error: any) {
-    console.error('SMTP Error:', error);
+    console.error('[Email Broadcast] SMTP Error:', error);
     return { success: false, error: error.message };
   }
 }
 
 export async function sendAlertEmailAction(params: { type: string, location: string, userName: string }) {
-  // Redirection vers l'action broadcast pour plus de cohérence
   return broadcastEmailAction({
       title: params.type.toUpperCase(),
       message: `${params.type} signalé par ${params.userName}`,

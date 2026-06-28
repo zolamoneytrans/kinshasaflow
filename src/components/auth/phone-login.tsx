@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Phone, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Loader2, Phone, CheckCircle2 } from 'lucide-react';
 import { doc, getDoc, runTransaction, collection, serverTimestamp, addDoc } from 'firebase/firestore';
 import { STAR_COSTS, UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -64,6 +64,8 @@ export function PhoneLogin() {
           createdAt: serverTimestamp() as any,
         };
 
+        const transRef = doc(collection(userRef, 'star_transactions'));
+
         transaction.set(userRef, userData, { merge: true });
 
         transaction.set(transRef, {
@@ -93,8 +95,6 @@ export function PhoneLogin() {
       });
     }
   }
-
-  const transRef = collection(firestore, 'placeholder'); // Just for type check inside transaction closure helper
 
   const handleSendCode = async () => {
     if (!phoneNumber || !recaptchaVerifier) return;

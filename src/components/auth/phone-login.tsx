@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Phone, CheckCircle2, ArrowRight } from 'lucide-react';
-import { doc, getDoc, runTransaction, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, runTransaction, collection, serverTimestamp, addDoc } from 'firebase/firestore';
 import { STAR_COSTS, UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { sendWelcomeEmailAction } from '@/app/actions';
 
 export function PhoneLogin() {
   const { auth, firestore } = useFirebase();
@@ -41,9 +42,9 @@ export function PhoneLogin() {
   async function initializeUserProfile(user: FirebaseUser) {
     const userRef = doc(firestore, 'users', user.uid);
     const userSnap = await getDoc(userRef);
+    const isNewUser = !userSnap.exists();
     
-    if (!userSnap.exists()) {
-      const transRef = doc(collection(userRef, 'star_transactions'));
+    if (isNewUser) {
       await runTransaction(firestore, async (transaction) => {
         const userData: UserProfile = {
           id: user.uid,
@@ -73,9 +74,27 @@ export function PhoneLogin() {
           description: "Bonus de bienvenue - Connexion Téléphone",
           timestamp: serverTimestamp(),
         });
+
+        // Global Notif
+        const notifRef = collection(firestore, 'notifications');
+        addDoc(notifRef, {
+            type: 'user_joined',
+            title: 'Nouveau Kinois !',
+            message: `${userData.name} vient de rejoindre la communauté via SMS.`,
+            timestamp: serverTimestamp(),
+            userId: user.uid
+        });
+      });
+
+      // Email welcome if it's a real email or fallback
+      sendWelcomeEmailAction({
+          email: user.email || `${user.phoneNumber}@kinshasaflow.online`,
+          userName: user.displayName || `Kinois ${user.phoneNumber?.slice(-4)}`
       });
     }
   }
+
+  const transRef = collection(firestore, 'placeholder'); // Just for type check inside transaction closure helper
 
   const handleSendCode = async () => {
     if (!phoneNumber || !recaptchaVerifier) return;

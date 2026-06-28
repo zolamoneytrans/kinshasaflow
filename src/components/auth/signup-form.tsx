@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,9 +20,10 @@ import { useState, useEffect } from 'react';
 import { SignupValues, signupSchema, STAR_COSTS } from '@/lib/types';
 import { useFirebase, useUser } from '@/firebase';
 import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup, updateProfile, User as FirebaseUser, sendEmailVerification } from 'firebase/auth';
-import { doc, setDoc, runTransaction, collection, serverTimestamp, addDoc } from 'firebase/firestore';
+import { doc, setDoc, runTransaction, collection, serverTimestamp, addDoc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { sendWelcomeEmailAction } from '@/app/actions';
 
 const GoogleIcon = () => (
     <svg className="h-4 w-4" viewBox="0 0 48 48">
@@ -115,6 +117,12 @@ export function SignupForm() {
             await sendEmailVerification(firebaseUser);
             await initializeUserProfile(firebaseUser, data);
 
+            // Envoi de l'email de bienvenue
+            sendWelcomeEmailAction({ 
+                email: data.email, 
+                userName: data.name 
+            });
+
             toast({
                 title: 'Compte créé !',
                 description: "Veuillez vérifier votre e-mail pour activer votre compte. 25 stars offertes !",
@@ -143,10 +151,21 @@ export function SignupForm() {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
             
+            const userRef = doc(firestore, 'users', result.user.uid);
+            const userSnap = await getDoc(userRef);
+            const isNewUser = !userSnap.exists();
+
             await initializeUserProfile(result.user, {
                 name: result.user.displayName || '',
                 phone: result.user.phoneNumber || '',
             });
+
+            if (isNewUser) {
+                sendWelcomeEmailAction({ 
+                    email: result.user.email!, 
+                    userName: result.user.displayName || "Nouvel utilisateur" 
+                });
+            }
 
             toast({
                 title: 'Bienvenue!',
@@ -283,7 +302,7 @@ export function SignupForm() {
                                     <CheckCircle2 className="h-4 w-4" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">Bonus Inscription</p>
+                                    <p className="text-[10px] font-black text-amber-800 uppercase leading-none mb-1">Bonus Inscription</p>
                                     <p className="text-[9px] text-amber-600 font-bold italic">Crédité après validation email</p>
                                 </div>
                             </div>

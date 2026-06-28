@@ -256,13 +256,12 @@ export async function broadcastEmailAction(params: {
   location?: string
 }) {
   const smtpUser = "kinshasaflow@gmail.com";
-  const smtpPass = "jrgl kgjl qlqj vmfc";
+  const smtpPass = "mqlt yrzr xnjv tkvb"; // Mot de passe d'application mis à jour
 
   let recipientList: string[] = ['drnduwa@gmail.com']; 
   
   try {
     const { firestore } = initializeFirebase();
-    // Utilisation d'un query sans filtre complexe pour s'assurer de récupérer TOUT le monde
     const usersSnap = await getDocs(collection(firestore, 'users'));
     
     if (!usersSnap.empty) {
@@ -276,7 +275,6 @@ export async function broadcastEmailAction(params: {
         
         recipientList = Array.from(new Set([...recipientList, ...userEmails]));
     }
-    console.log(`[Email Broadcast] Cibles identifiées : ${recipientList.length}`);
   } catch (e) {
     console.error("[Email Broadcast] Erreur lors de la récupération des destinataires:", e);
   }
@@ -291,8 +289,8 @@ export async function broadcastEmailAction(params: {
 
   const mailOptions = {
     from: `"Kinshasa Flow" <${smtpUser}>`,
-    to: smtpUser, // L'admin reçoit l'e-mail en direct
-    bcc: recipientList, // Tous les autres en copie cachée
+    to: smtpUser, 
+    bcc: recipientList, 
     subject: `${subjectPrefix} : ${params.title}${locationStr}`,
     html: `
       <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc;">
@@ -322,11 +320,65 @@ export async function broadcastEmailAction(params: {
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[Email Broadcast] Envoi réussi : ${info.messageId}`);
+    await transporter.sendMail(mailOptions);
     return { success: true };
   } catch (error: any) {
     console.error('[Email Broadcast] SMTP Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Envoie un e-mail de bienvenue aux nouveaux utilisateurs.
+ */
+export async function sendWelcomeEmailAction(params: { email: string, userName: string }) {
+  const smtpUser = "kinshasaflow@gmail.com";
+  const smtpPass = "mqlt yrzr xnjv tkvb"; 
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: smtpUser, pass: smtpPass },
+  });
+
+  const mailOptions = {
+    from: `"Kinshasa Flow" <${smtpUser}>`,
+    to: params.email,
+    subject: `Bienvenue sur Kinshasa Flow, ${params.userName} ! 🌟`,
+    html: `
+      <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+          <div style="background-color: #248eeb; padding: 40px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; letter-spacing: -1px;">Bienvenue !</h1>
+          </div>
+          <div style="padding: 40px; text-align: center;">
+            <h2 style="color: #1e293b; margin-top: 0;">Merci de nous rejoindre, ${params.userName}</h2>
+            <p style="font-size: 16px; color: #64748b; line-height: 1.6;">
+              Nous sommes ravis de vous compter parmi les membres de <strong>Kinshasa Flow</strong>. 
+              Ensemble, nous allons rendre la circulation à Kinshasa plus fluide et moins stressante.
+            </p>
+            <div style="margin: 30px 0; padding: 20px; background-color: #f0f9ff; border-radius: 16px;">
+                <p style="margin: 0; font-weight: bold; color: #248eeb;">Cadeau de bienvenue : +25 Stars ⭐</p>
+                <p style="margin: 5px 0 0; font-size: 12px; color: #64748b;">Utilisez-les pour consulter le trafic premium ou poser des questions à l'IA.</p>
+            </div>
+            <p style="color: #64748b; font-size: 14px; margin-bottom: 30px;">
+                Installez l'application sur votre écran d'accueil pour recevoir nos alertes "Pop-up" en temps réel !
+            </p>
+            <a href="https://kinshasaflow.online" style="background-color: #248eeb; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 14px; font-weight: 900; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(36, 142, 235, 0.3);">DÉCOUVRIR L'APPLICATION</a>
+          </div>
+          <div style="padding: 20px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; background-color: #fafafa;">
+            Kinshasa Flow - Swazi Appli Lab sarl.<br/>
+            <em>Ceci est un message de bienvenue automatique.</em>
+          </div>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error: any) {
+    console.error('[Welcome Email] Error:', error);
     return { success: false, error: error.message };
   }
 }

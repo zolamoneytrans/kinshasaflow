@@ -256,7 +256,7 @@ export async function broadcastEmailAction(params: {
   location?: string
 }) {
   const smtpUser = "kinshasaflow@gmail.com";
-  const smtpPass = "mqlt yrzr xnjv tkvb"; // Mot de passe d'application mis à jour
+  const smtpPass = "mqlt yrzr xnjv tkvb"; // Mot de passe d'application activé
 
   let recipientList: string[] = ['drnduwa@gmail.com']; 
   
@@ -284,7 +284,8 @@ export async function broadcastEmailAction(params: {
     auth: { user: smtpUser, pass: smtpPass },
   });
 
-  const subjectPrefix = params.type === 'chat' ? '💬 K-FLOW CHAT' : '🚨 ALERTE K-FLOW';
+  const isAlert = ['alert', 'hazard', 'report'].includes(params.type);
+  const subjectPrefix = isAlert ? '🚨 ALERTE K-FLOW' : '💬 K-FLOW CHAT';
   const locationStr = params.location ? ` à ${params.location}` : '';
 
   const mailOptions = {
@@ -295,24 +296,26 @@ export async function broadcastEmailAction(params: {
     html: `
       <div style="font-family: sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-          <div style="background-color: #248eeb; padding: 30px; text-align: center;">
+          <div style="background-color: ${isAlert ? '#ef4444' : '#248eeb'}; padding: 30px; text-align: center;">
             <h1 style="color: #ffffff; margin: 0; letter-spacing: -1px;">Kinshasa Flow</h1>
-            <p style="color: #e0f2fe; margin: 5px 0 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Alerte Communautaire</p>
+            <p style="color: #ffffff; opacity: 0.8; margin: 5px 0 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+              ${isAlert ? 'Alerte Prioritaire' : 'Nouveau Message Chat'}
+            </p>
           </div>
           <div style="padding: 40px;">
-            <h2 style="color: ${params.type === 'chat' ? '#248eeb' : '#ef4444'}; margin-top: 0; font-size: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">${params.title}</h2>
-            <div style="margin: 25px 0; background-color: #f8fafc; padding: 20px; border-radius: 12px; border-left: 4px solid #248eeb;">
+            <h2 style="color: #1e293b; margin-top: 0; font-size: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">${params.title}</h2>
+            <div style="margin: 25px 0; background-color: #f8fafc; padding: 20px; border-radius: 12px; border-left: 4px solid ${isAlert ? '#ef4444' : '#248eeb'};">
                 <p style="margin: 0; font-size: 16px; color: #334155; font-style: italic; line-height: 1.6;">"${params.message}"</p>
             </div>
-            <p style="margin-bottom: 5px;"><strong>Par :</strong> ${params.userName}</p>
-            ${params.location ? `<p><strong>Lieu :</strong> ${params.location}</p>` : ''}
+            <p style="margin-bottom: 5px; font-size: 14px; color: #64748b;"><strong>Auteur :</strong> ${params.userName}</p>
+            ${params.location ? `<p style="font-size: 14px; color: #64748b;"><strong>Localisation :</strong> ${params.location}</p>` : ''}
             <div style="text-align: center; margin-top: 40px;">
-              <a href="https://kinshasaflow.online" style="background-color: #248eeb; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 14px; font-weight: 900; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(36, 142, 235, 0.3);">VOIR SUR L'APP</a>
+              <a href="https://kinshasaflow.online" style="background-color: ${isAlert ? '#ef4444' : '#248eeb'}; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 14px; font-weight: 900; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Ouvrir l'application</a>
             </div>
           </div>
           <div style="padding: 20px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; background-color: #fafafa;">
-            Vous recevez cette notification car vous êtes membre de la communauté Kinshasa Flow.<br/>
-            <em>Ceci est un message automatique, merci de ne pas y répondre.</em>
+            Communauté Kinshasa Flow - Radio Trottoir Live.<br/>
+            <em>Ceci est une notification automatique, merci de ne pas y répondre.</em>
           </div>
         </div>
       </div>

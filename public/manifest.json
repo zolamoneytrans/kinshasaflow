@@ -1,17 +1,79 @@
 {
   "name": "Kinshasa Flow",
   "short_name": "K-Flow",
-  "description": "Navigation et Trafic en Temps Réel à Kinshasa",
+  "description": "Votre copilote intelligent sur les routes de Kinshasa. Évitez les embouteillages et échangez en direct avec la communauté.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#248eeb",
+  "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://picsum.photos/seed/kflow-screen1/1080/1920",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Navigation intelligente dans Kinshasa"
+    },
+    {
+      "src": "https://picsum.photos/seed/kflow-screen2/1920/1080",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Tableau de bord du trafic"
+    }
+  ],
+  "categories": [
+    "navigation",
+    "travel"
+  ],
+  "shortcuts": [
+    {
+      "name": "Chat Communautaire",
+      "url": "/community-chat",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Vérifier le Trafic",
+      "url": "/verifier-trafic",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

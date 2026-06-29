@@ -1,7 +1,7 @@
 {
   "name": "Kinshasa Flow",
   "short_name": "K-Flow",
-  "description": "Votre copilote intelligent sur les routes de Kinshasa. Évitez les embouteillages et échangez en direct avec la communauté.",
+  "description": "Trafic en temps réel et navigation intelligente à Kinshasa. Évitez les embouteillages grâce à la communauté.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -14,12 +14,6 @@
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
     },
     {
       "src": "/icon-512x512.png",
@@ -36,44 +30,31 @@
   ],
   "screenshots": [
     {
-      "src": "https://picsum.photos/seed/kflow-screen1/1080/1920",
+      "src": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1080",
       "sizes": "1080x1920",
-      "type": "image/png",
+      "type": "image/jpeg",
       "form_factor": "narrow",
-      "label": "Navigation intelligente dans Kinshasa"
+      "label": "Navigation en temps réel"
     },
     {
-      "src": "https://picsum.photos/seed/kflow-screen2/1920/1080",
+      "src": "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&q=80&w=1920",
       "sizes": "1920x1080",
-      "type": "image/png",
+      "type": "image/jpeg",
       "form_factor": "wide",
-      "label": "Tableau de bord du trafic"
+      "label": "Tableau de bord analytique"
     }
   ],
-  "categories": [
-    "navigation",
-    "travel"
-  ],
+  "categories": ["travel", "navigation", "transportation"],
   "shortcuts": [
     {
       "name": "Chat Communautaire",
       "url": "/community-chat",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Vérifier le Trafic",
+      "name": "Vérifier Trafic",
       "url": "/verifier-trafic",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

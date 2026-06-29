@@ -1,16 +1,25 @@
-
 {
   "name": "Kinshasa Flow",
   "short_name": "K-Flow",
-  "description": "Trafic en temps réel et navigation intelligente à Kinshasa. Évitez les embouteillages grâce à la communauté.",
-  "id": "/",
+  "description": "Trafic en temps réel et navigation intelligente à Kinshasa.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#248eeb",
+  "background_color": "#ffffff",
   "theme_color": "#248eeb",
   "orientation": "portrait",
-  "categories": ["travel", "navigation"],
   "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/maskable-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",
@@ -21,49 +30,39 @@
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Radio Trottoir",
-      "url": "/community-chat",
-      "description": "Accéder au chat communautaire en direct",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "GPS K-Flow",
-      "url": "/k-flow-nav",
-      "description": "Lancer la navigation intelligente",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
+      "purpose": "any"
     }
   ],
   "screenshots": [
     {
-      "src": "https://picsum.photos/seed/kflow-mobile/1080/1920",
+      "src": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1080",
       "sizes": "1080x1920",
-      "type": "image/png",
+      "type": "image/jpeg",
       "form_factor": "narrow",
-      "label": "Interface Mobile de Kinshasa Flow"
+      "label": "Trafic en temps réel"
     },
     {
-      "src": "https://picsum.photos/seed/kflow-desktop/1920/1080",
+      "src": "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&q=80&w=1920",
       "sizes": "1920x1080",
-      "type": "image/png",
+      "type": "image/jpeg",
       "form_factor": "wide",
-      "label": "Vue Tableau de Bord Kinshasa Flow"
+      "label": "Tableau de bord"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Chat Direct",
+      "url": "/community-chat",
+      "description": "Ouvrir Radio Trottoir",
+      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Navigation GPS",
+      "url": "/k-flow-nav",
+      "description": "Lancer le guidage",
+      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ],
+  "categories": ["travel", "navigation"],
+  "lang": "fr-FR"
 }

@@ -11,7 +11,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-        BUNDLE_ID: "online.kinshasaflow.app"
+        BUNDLE_ID: "app.kinshasaflow.online"
     integrations:
       app_store_connect: "App Store Connect" # Doit correspondre au nom de votre intégration dans Codemagic
     triggering:

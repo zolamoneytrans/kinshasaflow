@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'online.kinshasaflow.app',
+  appId: 'app.kinshasaflow.online',
   appName: 'Kinshasa Flow',
   webDir: 'out',
   server: {

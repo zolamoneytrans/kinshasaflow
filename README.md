@@ -4,7 +4,7 @@ Cette application est configurée pour être déployée sur l'App Store via **Co
 
 ## 📱 Informations de l'Application
 - **Nom officiel :** Kinshasa Flow
-- **ID de l'application (Bundle ID / Package Name) :** `online.kinshasaflow.app`
+- **ID de l'application (Bundle ID / Package Name) :** `app.kinshasaflow.online`
 - **Version actuelle :** 2.1.0
 
 ## 🚀 Synchronisation GitHub (Ligne de commande)
@@ -37,14 +37,14 @@ Pour envoyer votre code sur votre dépôt `zolamoneytrans/kinshasaflow`, ouvrez 
 Le fichier `codemagic.yaml` à la racine est configuré pour construire l'IPA et l'envoyer sur **TestFlight**.
 
 1. Connectez-vous sur [Codemagic.io](https://codemagic.io).
-2. Utilisez le Bundle ID : `online.kinshasaflow.app`.
+2. Utilisez le Bundle ID : `app.kinshasaflow.online`.
 3. Dans les **Environment variables**, créez un groupe nommé `app_store_credentials` et ajoutez vos clés Apple (Issuer ID, Key ID, Private Key).
 4. Lancez le build.
 
 ## 🤖 Déploiement Android via PWABuilder
 1. Allez sur [pwabuilder.com](https://www.pwabuilder.com).
 2. Entrez l'URL : `https://kinshasaflow.online`.
-3. Utilisez le Package Name : `online.kinshasaflow.app`.
+3. Utilisez le Package Name : `app.kinshasaflow.online`.
 4. Générez le fichier `.aab` pour la Google Play Console.
 
 ---

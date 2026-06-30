@@ -21,10 +21,10 @@ Pour envoyer votre code sur votre dépôt `zolamoneytrans/kinshasaflow`, ouvrez 
    git remote add origin https://github.com/zolamoneytrans/kinshasaflow.git
    ```
 
-3. **Ajouter les fichiers et créer le premier commit** :
+3. **Ajouter les fichiers et créer un commit** :
    ```bash
    git add .
-   git commit -m "Initial commit - Kinshasa Flow avec identifiants Store"
+   git commit -m "Update: Bundle ID app.kinshasaflow.online et config Codemagic"
    ```
 
 4. **Pousser les mises à jour** :
@@ -38,8 +38,8 @@ Le fichier `codemagic.yaml` à la racine est configuré pour construire l'IPA et
 
 1. Connectez-vous sur [Codemagic.io](https://codemagic.io).
 2. Utilisez le Bundle ID : `app.kinshasaflow.online`.
-3. Dans les **Environment variables**, créez un groupe nommé `app_store_credentials` et ajoutez vos clés Apple (Issuer ID, Key ID, Private Key).
-4. Lancez le build.
+3. Assurez-vous que l'intégration Apple Developer Portal (Clé: `XCJDQ99S53`) est active.
+4. Lancez le build depuis la branche `main`.
 
 ## 🤖 Déploiement Android via PWABuilder
 1. Allez sur [pwabuilder.com](https://www.pwabuilder.com).

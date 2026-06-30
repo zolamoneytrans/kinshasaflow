@@ -35,14 +35,17 @@ workflows:
           cd ios/App && pod install
       - name: Build and Sign IPA
         script: |
-          # Préparation de l'environnement de signature
+          # Initialisation du trousseau de clés
           keychain initialize
-          # Récupération des fichiers de signature (Syntaxe corrigée pour les versions récentes du CLI)
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP
+          # Récupération (ou création si absent) du profil de signature App Store
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           # Application des profils au projet Xcode
           xcode-project use-profiles
-          # Construction de l'archive et de l'IPA
-          xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+          # Construction de l'IPA en forçant la méthode App Store
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --export-method app-store
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:

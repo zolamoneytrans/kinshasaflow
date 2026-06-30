@@ -13,7 +13,7 @@ workflows:
         XCODE_SCHEME: "App"
         BUNDLE_ID: "app.kinshasaflow.online"
     integrations:
-      app_store_connect: "app_store" # Correspond au nom de l'intégration dans votre capture d'écran
+      app_store_connect: "app_store"
     triggering:
       events:
         - push
@@ -35,9 +35,13 @@ workflows:
           cd ios/App && pod install
       - name: Build and Sign IPA
         script: |
-          # Récupération automatique des certificats via l'API Apple (clé XCJDQ99S53)
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --project-type ios_app --auth
+          # Initialisation du keychain Codemagic
+          keychain initialize
+          # Récupération des certificats et profils (syntaxe corrigée)
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP
+          # Configuration du projet pour utiliser les profils téléchargés
           xcode-project use-profiles
+          # Construction de l'IPA
           xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa

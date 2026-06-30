@@ -35,13 +35,13 @@ workflows:
           cd ios/App && pod install
       - name: Build and Sign IPA
         script: |
-          # Initialisation du trousseau de clés sur la VM
+          # Initialisation du trousseau de clés
           keychain initialize
-          # Récupération (ou création) du profil de provisionnement App Store
+          # Récupération des fichiers de signature (Certificat + Profil)
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-          # Application des profils téléchargés au projet Xcode
+          # Application forcée du profil pour l'export App Store
           xcode-project use-profiles
-          # Construction de l'IPA (l'export_options.plist est généré automatiquement par use-profiles)
+          # Construction de l'IPA
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"

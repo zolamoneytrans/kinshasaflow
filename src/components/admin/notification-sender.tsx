@@ -1,10 +1,9 @@
-
 'use client';
 
 import React, { useState } from 'react';
 import { useFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,13 +15,15 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, Send, Loader2, Info } from 'lucide-react';
+import { Bell, Send, Loader2, Info, Mail, Zap } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { sendTestEmailAction } from '@/app/actions';
 
 export function NotificationSender() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -62,23 +63,61 @@ export function NotificationSender() {
     }
   };
 
+  const handleTestEmail = async () => {
+    setIsTestingEmail(true);
+    try {
+      const result = await sendTestEmailAction();
+      if (result.success) {
+        toast({ title: "E-mail envoyé !", description: "Vérifiez la boîte drnduwa@gmail.com." });
+      } else {
+        toast({ title: "Échec SMTP", description: result.error || "Erreur inconnue.", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Erreur technique", description: "L'action serveur n'a pas répondu.", variant: "destructive" });
+    } finally {
+      setIsTestingEmail(false);
+    }
+  };
+
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-black flex items-center gap-3">
-          <Bell className="text-primary h-8 w-8" />
-          Centre de Diffusion
-        </h1>
-        <p className="text-muted-foreground font-medium">Envoyez des alertes en temps réel à tous les Kinois.</p>
+    <div className="max-w-2xl mx-auto space-y-8 pb-20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black flex items-center gap-3">
+            <Bell className="text-primary h-8 w-8" />
+            Centre de Diffusion
+          </h1>
+          <p className="text-muted-foreground font-medium">Envoyez des alertes en temps réel à tous les Kinois.</p>
+        </div>
+        
+        <Button 
+          variant="outline" 
+          onClick={handleTestEmail} 
+          disabled={isTestingEmail}
+          className="rounded-xl border-2 font-bold h-11 px-6 gap-2"
+        >
+          {isTestingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 text-emerald-600" />}
+          Diagnostiquer SMTP
+        </Button>
       </div>
 
-      <Alert variant="default" className="bg-blue-50 border-blue-200">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-800 font-bold">Information</AlertTitle>
-        <AlertDescription className="text-blue-700 text-xs">
-          Ces notifications apparaîtront dans la section "Notifications" de tous les utilisateurs et déclencheront un badge visuel.
-        </AlertDescription>
-      </Alert>
+      <div className="grid md:grid-cols-2 gap-4">
+        <Alert variant="default" className="bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-800 font-bold">In-App</AlertTitle>
+          <AlertDescription className="text-blue-700 text-xs">
+            Le formulaire ci-dessous publie dans le flux de notifications de l'application.
+          </AlertDescription>
+        </Alert>
+
+        <Alert variant="default" className="bg-emerald-50 border-emerald-200">
+          <Zap className="h-4 w-4 text-emerald-600" />
+          <AlertTitle className="text-emerald-800 font-bold">E-mail</AlertTitle>
+          <AlertDescription className="text-emerald-700 text-xs">
+            Utilisez le diagnostic ci-dessus pour vérifier que Gmail autorise l'envoi d'alertes.
+          </AlertDescription>
+        </Alert>
+      </div>
 
       <Card className="border-none shadow-xl rounded-[2rem] overflow-hidden">
         <CardHeader className="bg-primary p-8 text-white">

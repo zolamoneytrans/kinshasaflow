@@ -1,4 +1,3 @@
-
 "use server";
 
 import { getTrafficTips } from "@/ai/flows/traffic-tips-flow";
@@ -241,6 +240,42 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
     return { success: true };
   } catch (error: any) {
     console.error("Push Notification Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Envoie un e-mail de test au compte administrateur pour vérifier le tunnel SMTP.
+ */
+export async function sendTestEmailAction() {
+  const smtpUser = "kinshasaflow@gmail.com";
+  const smtpPass = "mqlt yrzr xnjv tkvb"; 
+
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user: smtpUser, pass: smtpPass },
+  });
+
+  const mailOptions = {
+    from: `"Kinshasa Flow Admin" <${smtpUser}>`,
+    to: "drnduwa@gmail.com",
+    subject: "🧪 Test de Notification E-mail K-Flow",
+    html: `
+      <div style="font-family: sans-serif; padding: 20px;">
+        <h1 style="color: #248eeb;">Test SMTP Réussi !</h1>
+        <p>Si vous recevez ce message, c'est que votre tunnel e-mail est parfaitement configuré pour Kinshasa Flow.</p>
+        <p>Horodatage : ${new Date().toLocaleString()}</p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error: any) {
+    console.error('[SMTP Test] Error:', error);
     return { success: false, error: error.message };
   }
 }

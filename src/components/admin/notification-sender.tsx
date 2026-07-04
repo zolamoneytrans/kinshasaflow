@@ -15,15 +15,16 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, Send, Loader2, Info, Mail, Zap } from 'lucide-react';
+import { Bell, Send, Loader2, Info, Mail, Zap, Users } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { sendTestEmailAction } from '@/app/actions';
+import { sendTestEmailAction, broadcastEmailAction } from '@/app/actions';
 
 export function NotificationSender() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [isBroadcastingEmail, setIsBroadcastingEmail] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -32,7 +33,7 @@ export function NotificationSender() {
     link: ''
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmitInApp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.message) {
       toast({ title: "Champs requis", description: "Veuillez remplir au moins le titre et le message.", variant: "destructive" });
@@ -48,7 +49,7 @@ export function NotificationSender() {
         userId: user?.uid || 'admin'
       });
 
-      toast({ title: "Notification envoyée !", description: "Le message est désormais visible sur le flux communautaire." });
+      toast({ title: "Notification In-App envoyée !", description: "Le message est désormais visible sur le flux communautaire." });
       setFormData({
         title: '',
         message: '',
@@ -63,12 +64,40 @@ export function NotificationSender() {
     }
   };
 
+  const handleBroadcastEmail = async () => {
+    if (!formData.title || !formData.message) {
+      toast({ title: "Champs requis", description: "Veuillez remplir le titre et le message avant de diffuser.", variant: "destructive" });
+      return;
+    }
+
+    setIsBroadcastingEmail(true);
+    try {
+      const result = await broadcastEmailAction({
+        title: formData.title,
+        message: formData.message,
+        userName: user?.displayName || "Administrateur K-Flow",
+        type: 'alert'
+      });
+
+      if (result.success) {
+        toast({ title: "E-mail diffusé !", description: "Le message a été envoyé à tous les membres de la communauté." });
+      } else {
+        toast({ title: "Échec de diffusion", description: result.error || "Une erreur est survenue lors de l'envoi groupé.", variant: "destructive" });
+      }
+    } catch (error) {
+      console.error("Email broadcast error:", error);
+      toast({ title: "Erreur technique", description: "Impossible de lancer la diffusion e-mail.", variant: "destructive" });
+    } finally {
+      setIsBroadcastingEmail(false);
+    }
+  };
+
   const handleTestEmail = async () => {
     setIsTestingEmail(true);
     try {
       const result = await sendTestEmailAction();
       if (result.success) {
-        toast({ title: "E-mail envoyé !", description: "Vérifiez la boîte drnduwa@gmail.com." });
+        toast({ title: "E-mail de test envoyé !", description: "Vérifiez la boîte drnduwa@gmail.com." });
       } else {
         toast({ title: "Échec SMTP", description: result.error || "Erreur inconnue.", variant: "destructive" });
       }
@@ -97,7 +126,7 @@ export function NotificationSender() {
           className="rounded-xl border-2 font-bold h-11 px-6 gap-2"
         >
           {isTestingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 text-emerald-600" />}
-          Diagnostiquer SMTP
+          Test SMTP
         </Button>
       </div>
 
@@ -106,15 +135,15 @@ export function NotificationSender() {
           <Info className="h-4 w-4 text-blue-600" />
           <AlertTitle className="text-blue-800 font-bold">In-App</AlertTitle>
           <AlertDescription className="text-blue-700 text-xs">
-            Le formulaire ci-dessous publie dans le flux de notifications de l'application.
+            Publie un message dans le flux "Radio Trottoir" visible par tous les utilisateurs connectés.
           </AlertDescription>
         </Alert>
 
         <Alert variant="default" className="bg-emerald-50 border-emerald-200">
           <Zap className="h-4 w-4 text-emerald-600" />
-          <AlertTitle className="text-emerald-800 font-bold">E-mail</AlertTitle>
+          <AlertTitle className="text-emerald-800 font-bold">E-mail Global</AlertTitle>
           <AlertDescription className="text-emerald-700 text-xs">
-            Utilisez le diagnostic ci-dessus pour vérifier que Gmail autorise l'envoi d'alertes.
+            Envoie une notification e-mail à tous les membres inscrits dans la base de données.
           </AlertDescription>
         </Alert>
       </div>
@@ -122,10 +151,10 @@ export function NotificationSender() {
       <Card className="border-none shadow-xl rounded-[2rem] overflow-hidden">
         <CardHeader className="bg-primary p-8 text-white">
           <CardTitle className="text-xl">Rédiger une alerte</CardTitle>
-          <CardDescription className="text-primary-foreground/80">Soyez concis et percutant.</CardDescription>
+          <CardDescription className="text-primary-foreground/80">Remplissez les informations ci-dessous pour diffuser.</CardDescription>
         </CardHeader>
         <CardContent className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmitInApp} className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-black uppercase tracking-widest text-slate-400">Titre de l'alerte</label>
               <Input 
@@ -174,13 +203,34 @@ export function NotificationSender() {
               />
             </div>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full h-14 rounded-2xl text-lg font-black shadow-lg shadow-primary/20">
-              {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Send className="mr-2 h-5 w-5" />}
-              Diffuser l'alerte
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+              <Button type="submit" disabled={isSubmitting || isBroadcastingEmail} className="h-14 rounded-2xl text-sm font-black shadow-lg shadow-primary/20">
+                {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Send className="mr-2 h-5 w-5" />}
+                Diffuser In-App
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={handleBroadcastEmail}
+                disabled={isSubmitting || isBroadcastingEmail} 
+                className="h-14 rounded-2xl text-sm font-black border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 shadow-lg shadow-emerald-100"
+              >
+                {isBroadcastingEmail ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Users className="mr-2 h-5 w-5" />}
+                Diffuser par E-mail
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
+
+      <div className="p-6 bg-slate-100/50 rounded-[2rem] border-2 border-dashed border-slate-200">
+        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Aide Technique</p>
+        <ul className="space-y-3 text-[11px] font-bold text-slate-500 leading-relaxed">
+          <li className="flex gap-3"><span className="text-primary">1.</span> La diffusion <strong>In-App</strong> écrit directement dans Firestore et notifie les utilisateurs en ligne.</li>
+          <li className="flex gap-3"><span className="text-primary">2.</span> La diffusion <strong>E-mail</strong> parcourt tous les profils utilisateurs pour envoyer une version HTML du message.</li>
+          <li className="flex gap-3"><span className="text-primary">3.</span> Assurez-vous d'avoir testé le SMTP avant de lancer une diffusion globale à des centaines d'utilisateurs.</li>
+        </ul>
+      </div>
     </div>
   );
 }

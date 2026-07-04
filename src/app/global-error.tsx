@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 /**
  * Gestionnaire d'erreurs global robuste pour Next.js.
- * Capable de forcer un rechargement propre en cas d'échec de chargement des ressources.
+ * Capable de forcer un rechargement propre en cas d'échec de chargement des ressources (Chunks).
  */
 export default function GlobalError({
   error,
@@ -14,26 +14,31 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Si c'est une erreur liée aux fichiers statiques (Chunks) ou un timeout
-    const msg = error.message || "";
-    if (msg.includes('Loading chunk') || msg.includes('ChunkLoadError') || msg.includes('timeout')) {
-      console.warn("K-Flow Error Boundary: Tentative de récupération automatique...");
+    // Si c'est une erreur liée aux fichiers statiques (Chunks), un timeout ou un échec réseau
+    const msg = (error.message || "").toLowerCase();
+    const isChunkError = 
+      msg.includes('loading chunk') || 
+      msg.includes('chunkloaderror') || 
+      msg.includes('timeout') || 
+      msg.includes('failed to fetch');
+
+    if (isChunkError) {
+      console.warn("K-Flow Recovery: Échec de chargement détecté. Tentative de rechargement forcé...");
       
-      // Enregistrement de la tentative pour éviter les boucles
-      const lastRetry = sessionStorage.getItem('kflow-last-retry-v4');
+      // Enregistrement de la tentative pour éviter les boucles infinies (max 1 fois par 15s)
+      const lastRetry = sessionStorage.getItem('kflow-last-retry-v5');
       const now = Date.now();
       
       if (!lastRetry || (now - parseInt(lastRetry)) > 15000) {
-        sessionStorage.setItem('kflow-last-retry-v4', now.toString());
+        sessionStorage.setItem('kflow-last-retry-v5', now.toString());
         
-        // Nettoyage radical du cache pour débloquer l'application
+        // Nettoyage des caches et rechargement
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(registrations => {
             for (const registration of registrations) {
               registration.unregister();
             }
             
-            // Nettoyage des caches storage
             if ('caches' in window) {
               caches.keys().then(keys => {
                 keys.forEach(key => caches.delete(key));
@@ -51,7 +56,7 @@ export default function GlobalError({
 
   return (
     <html lang="fr">
-      <body>
+      <body className="bg-slate-50">
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -61,8 +66,6 @@ export default function GlobalError({
           fontFamily: 'sans-serif',
           textAlign: 'center',
           padding: '20px',
-          backgroundColor: '#f8fafc',
-          color: '#0f172a'
         }}>
           <div style={{
             backgroundColor: '#fff',
@@ -79,15 +82,8 @@ export default function GlobalError({
             </p>
             <button
               onClick={() => {
-                // Nettoyage des Service Workers avant rechargement manuel
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.getRegistrations().then(regs => {
-                    regs.forEach(r => r.unregister());
-                    window.location.href = window.location.origin + '?v=' + Date.now();
-                  });
-                } else {
-                  window.location.href = window.location.origin + '?v=' + Date.now();
-                }
+                // Forcer le rechargement en ignorant le cache navigateur
+                window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
               }}
               style={{
                 width: '100%',
@@ -100,14 +96,10 @@ export default function GlobalError({
                 cursor: 'pointer',
                 fontSize: '16px',
                 boxShadow: '0 10px 15px -3px rgba(36, 142, 235, 0.3)',
-                transition: 'transform 0.2s'
               }}
             >
               ACTUALISER MAINTENANT
             </button>
-            <p style={{ marginTop: '20px', fontSize: '10px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>
-              Code d'erreur: {error.digest || 'RESOURCE_TIMEOUT'}
-            </p>
           </div>
         </div>
       </body>

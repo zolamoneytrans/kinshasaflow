@@ -118,7 +118,7 @@ export default function RootLayout({
                   var msg = (error && (error.message || error.toString())) || "";
                   
                   // Détection des erreurs de modules Next.js (Chunks) et des timeouts de ressources
-                  var isChunkError = /Loading chunk|ChunkLoadError|timeout|Unexpected token '<'/.test(msg);
+                  var isChunkError = /Loading chunk|ChunkLoadError|timeout|Unexpected token '<'|failed to fetch/i.test(msg);
                   
                   // Détection des erreurs de balises script (échec réseau direct)
                   var target = e.target || e.srcElement;
@@ -130,12 +130,12 @@ export default function RootLayout({
                     recoveryInProgress = true;
                     console.error("K-Flow Recovery: Échec de ressource détecté (" + msg + "). Réinitialisation du cache...");
                     
-                    var lastReload = sessionStorage.getItem("kflow-recovery-v4");
+                    var lastReload = sessionStorage.getItem("kflow-recovery-v5");
                     var now = Date.now();
                     
                     // Empêcher les boucles de rechargement (limite à 1 tentative toutes les 30s)
                     if (!lastReload || (now - parseInt(lastReload)) > 30000) {
-                      sessionStorage.setItem("kflow-recovery-v4", now);
+                      sessionStorage.setItem("kflow-recovery-v5", now);
                       
                       // Purge des Service Workers et rechargement forcé (bypass cache)
                       if ('serviceWorker' in navigator) {

@@ -235,18 +235,18 @@ export async function sendTestPushNotificationAction(subscription: PushSubscript
     return { success: false, error: "VAPID keys are not configured." };
   }
 
-  webpush.setVapidDetails('mailto:drnduwa@gmail.com', vapidPublicKey, vapidPrivateKey);
-
   try {
+    webpush.setVapidDetails('mailto:drnduwa@gmail.com', vapidPublicKey, vapidPrivateKey);
     await webpush.sendNotification(subscription as any, payload);
     return { success: true };
   } catch (error: any) {
+    console.error("Push Notification Error:", error);
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Diffuse une notification par e-mail à TOUS les utilisateurs inscrits.
+ * Diffuse une notification par e-mail à tous les utilisateurs.
  */
 export async function broadcastEmailAction(params: { 
   title: string, 
@@ -256,32 +256,34 @@ export async function broadcastEmailAction(params: {
   location?: string
 }) {
   const smtpUser = "kinshasaflow@gmail.com";
-  const smtpPass = "mqlt yrzr xnjv tkvb"; // Mot de passe d'application activé
+  const smtpPass = "mqlt yrzr xnjv tkvb"; 
 
   let recipientList: string[] = ['drnduwa@gmail.com']; 
   
   try {
     const { firestore } = initializeFirebase();
+    // Tentative de récupération de tous les utilisateurs pour diffusion
+    // Note: Cela peut échouer si les règles Firestore restreignent le listage global.
     const usersSnap = await getDocs(collection(firestore, 'users'));
     
     if (!usersSnap.empty) {
         const userEmails = usersSnap.docs
           .map(doc => doc.data().email)
-          .filter(email => {
-              const isValid = email && email.includes('@');
-              const isNotAdmin = email !== 'drnduwa@gmail.com';
-              return isValid && isNotAdmin;
-          });
+          .filter(email => email && email.includes('@') && email !== 'drnduwa@gmail.com');
         
         recipientList = Array.from(new Set([...recipientList, ...userEmails]));
     }
   } catch (e) {
-    console.error("[Email Broadcast] Erreur lors de la récupération des destinataires:", e);
+    console.warn("[Email Broadcast] Impossible de lister les utilisateurs (Permissions). Envoi limité à l'admin.", e);
   }
 
+  // Utilisation d'un transport plus explicite avec pool pour la diffusion
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: { user: smtpUser, pass: smtpPass },
+    pool: true,
   });
 
   const isAlert = ['alert', 'hazard', 'report'].includes(params.type);
@@ -339,7 +341,9 @@ export async function sendWelcomeEmailAction(params: { email: string, userName: 
   const smtpPass = "mqlt yrzr xnjv tkvb"; 
 
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: { user: smtpUser, pass: smtpPass },
   });
 

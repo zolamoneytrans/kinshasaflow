@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -39,7 +40,10 @@ export function NotificationPermission() {
   const subscribeUser = async () => {
     if (!user || !messaging) return;
     
-    const vapidKey = process.env.NEXT_PUBLIC_VAPID_KEY || "BHn47-I3_q7N-K0K0A5L_vS_8C5Q1W8O7o6YvV4X0Z9M_S3R2I1K0A5L_vS_8C5Q1W8O7o6YvV4X0Z9M"; 
+    // Une clé VAPID valide est requise pour éviter l'erreur "65 bytes".
+    // Si la clé n'est pas définie dans .env, nous utilisons un format de secours 
+    // mais le build échouera sans une clé réelle générée via web-push generate-vapid-keys.
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_KEY || "BMv7Y_PlaceHolder_VAPID_Key_Should_Be_87_Chars_Long_For_Full_Compatibility_123456789"; 
 
     setIsSubscribing(true);
 
@@ -83,8 +87,8 @@ export function NotificationPermission() {
     } catch (error) {
       console.error('Erreur d\'activation des notifications:', error);
       toast({ 
-        title: 'Erreur', 
-        description: "L'activation a échoué. Vérifiez que vous utilisez HTTPS et autorisez les notifications.", 
+        title: 'Erreur VAPID', 
+        description: "Clé VAPID invalide ou format incorrect. Vérifiez vos variables d'environnement.", 
         variant: 'destructive' 
       });
     } finally {

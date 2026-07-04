@@ -38,6 +38,7 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
             );
             const reportsSnap = await getDocs(reportsQuery);
             const recentReports = reportsSnap.docs.map(d => d.data() as RoadConditionReport);
+            // Recherche de rapports dans un rayon de ~800m
             localReport = recentReports.find(r => 
                 Math.abs(r.coords.lat - input.lat) < 0.008 && 
                 Math.abs(r.coords.lng - input.lng) < 0.008
@@ -46,11 +47,12 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
             console.warn("[TrafficCheck] Firestore bypass (Index probable):", dbError);
         }
 
-        // 2. Appel à Google Routes API v2 (Le nouveau moteur de calcul)
+        // 2. Appel à Google Routes API v2
+        // On augmente la distance du sondage (+0.008 soit env. 900m) pour capturer plus de données de trafic
         const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
         const body = {
             origin: { location: { latLng: { latitude: input.lat, longitude: input.lng } } },
-            destination: { location: { latLng: { latitude: input.lat + 0.004, longitude: input.lng + 0.004 } } },
+            destination: { location: { latLng: { latitude: input.lat + 0.008, longitude: input.lng + 0.008 } } },
             travelMode: "DRIVE",
             routingPreference: "TRAFFIC_AWARE_OPTIMAL",
             computeAlternativeRoutes: false,
@@ -69,14 +71,7 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
 
         if (!res.ok) {
             const errorBody = await res.text();
-            let errorMessage = "Erreur API Google";
-            try {
-                const parsed = JSON.parse(errorBody);
-                errorMessage = parsed.error?.message || errorMessage;
-            } catch (e) {}
-            
-            console.error("[Routes API Error]", res.status, errorBody);
-            throw new Error(errorMessage);
+            throw new Error(`Google API Error: ${res.status}`);
         }
 
         const data = await res.json();
@@ -97,9 +92,11 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
             const ratio = dur / statDur;
             const delay = Math.round(Math.max(0, dur - statDur) / 60);
 
-            if (ratio > 2.2) result.status = "BLOQUÉ";
-            else if (ratio > 1.6) result.status = "EMBOUTEILLÉ";
-            else if (ratio > 1.25) result.status = "MODÉRÉ";
+            // Ajustement des seuils de sensibilité pour Kinshasa
+            // Sur de courts segments, un ratio de 1.4 est déjà un bouchon important
+            if (ratio > 2.0 || delay >= 8) result.status = "BLOQUÉ";
+            else if (ratio > 1.4 || delay >= 3) result.status = "EMBOUTEILLÉ";
+            else if (ratio > 1.15 || delay >= 1) result.status = "MODÉRÉ";
             else result.status = "FLUIDE";
 
             if (localReport) {
@@ -109,9 +106,12 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
                 if (result.status === "FLUIDE") {
                     result.verdict = "Nzela eza fluide : Trafic normal sur cet axe.";
                     result.lingala = "Nzela eza kitoko, kotambola eza pasi te.";
-                } else {
-                    result.verdict = `${input.address || 'Cet axe'} semble ralenti par environ ${delay} min de trafic.`;
+                } else if (result.status === "MODÉRÉ") {
+                    result.verdict = `Trafic modéré : Prévoyez environ ${delay || 1} min de ralentissement.`;
                     result.lingala = "Nzela eza pasi moke, zela mwa moke.";
+                } else {
+                    result.verdict = `${input.address || 'Cet axe'} est actuellement ${result.status.toLowerCase()} avec un retard de ${delay} min.`;
+                    result.lingala = "Nzela eza bloqué, luka nzela mosusu soki likoki eza.";
                 }
             }
 
@@ -126,7 +126,7 @@ export async function checkTrafficAction(input: { lat: number, lng: number, addr
         console.error("Critical Traffic Check Error:", e);
         return { 
             status: "ERREUR", 
-            verdict: `L'analyseur K-Flow rapporte : ${e.message || "Service momentanément indisponible."}`,
+            verdict: `Erreur d'analyse : ${e.message || "Service indisponible."}`,
             lingala: "Pasi mwa moke na machine, zela moke."
         };
     }
@@ -162,14 +162,15 @@ export async function getGoogleTrafficStatusAction(axes: any[]) {
 
                 const dur = parseInt((route.duration ?? "0s").replace('s', '')) || 1;
                 const statDur = parseInt((route.staticDuration ?? route.duration ?? "0s").replace('s', '')) || 1;
+                const ratio = dur / statDur;
                 const delay = Math.round(Math.max(0, dur - statDur) / 60);
                 const distKm = (route.distanceMeters / 1000) || 1;
                 const speed = Math.round(distKm / (dur / 3600));
 
                 let status = "FLUIDE";
-                if (delay > 10) status = "EMBOUTEILLAGE";
-                else if (delay > 4) status = "DENSE";
-                else if (delay > 1) status = "MODÉRÉ";
+                if (ratio > 1.8 || delay > 10) status = "EMBOUTEILLAGE";
+                else if (ratio > 1.3 || delay > 4) status = "DENSE";
+                else if (ratio > 1.1 || delay > 1) status = "MODÉRÉ";
 
                 return { road: axis.name, status, speed, delay };
             } catch (e) {
@@ -297,8 +298,6 @@ export async function broadcastEmailAction(params: {
   
   try {
     const { firestore } = initializeFirebase();
-    // Tentative de récupération de tous les utilisateurs pour diffusion
-    // Note: Cela peut échouer si les règles Firestore restreignent le listage global.
     const usersSnap = await getDocs(collection(firestore, 'users'));
     
     if (!usersSnap.empty) {
@@ -312,7 +311,6 @@ export async function broadcastEmailAction(params: {
     console.warn("[Email Broadcast] Impossible de lister les utilisateurs (Permissions). Envoi limité à l'admin.", e);
   }
 
-  // Utilisation d'un transport plus explicite avec pool pour la diffusion
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,

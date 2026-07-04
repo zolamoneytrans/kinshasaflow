@@ -15,7 +15,25 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email == 'drnduwa@gmail.com';
+      return isSignedIn() && (
+        request.auth.token.email == 'drnduwa@gmail.com' || 
+        request.auth.token.email == 'contact.congonamotema@gmail.com'
+      );
+    }
+
+    // --- COLLECTION GROUP RULES ---
+    // Autorise l'admin à lister ces collections partout dans la base (Dashboard Admin)
+    
+    match /{path=**}/transport_subscriptions/{id} {
+      allow read: if isAdmin();
+    }
+    
+    match /{path=**}/pushSubscriptions/{id} {
+      allow read: if isAdmin();
+    }
+
+    match /{path=**}/fcmTokens/{id} {
+      allow read: if isAdmin();
     }
 
     // --- COLLECTION RULES ---
@@ -46,9 +64,9 @@ service cloud.firestore {
     }
 
     /** Rules for user profiles and balances */
-    // Explicit rule for the collection itself to allow listing emails for broadcast
     match /users {
-      allow list: if true;
+      // Autorise l'admin à lister tous les utilisateurs
+      allow list: if isAdmin();
     }
 
     match /users/{userId} {
@@ -68,11 +86,11 @@ service cloud.firestore {
       }
 
       match /pushSubscriptions/{id} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) || isAdmin();
       }
 
       match /fcmTokens/{id} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) || isAdmin();
       }
     }
     
@@ -113,8 +131,8 @@ service cloud.firestore {
     /** Business Services */
     match /logements/{id} { allow read: if true; allow write: if isAdmin(); }
     match /logement_applications/{id} { allow read: if isAdmin(); allow create: if isSignedIn(); }
-    match /tourism_events/{id} { allow read: if true; allow write: if isAdmin() || request.auth.token.email == 'contact.congonamotema@gmail.com'; }
-    match /tourism_bookings/{id} { allow read: if isAdmin() || request.auth.token.email == 'contact.congonamotema@gmail.com'; allow create: if isSignedIn(); }
+    match /tourism_events/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /tourism_bookings/{id} { allow read: if isAdmin(); allow create: if isSignedIn(); }
     match /car_bookings/{id} { allow read: if isAdmin(); allow create: if isSignedIn(); }
     match /inquiries/{id} { allow read: if isAdmin(); allow create: if isSignedIn(); }
     match /police_reports/{id} { allow read: if true; allow create: if isSignedIn(); allow delete: if isAdmin(); }

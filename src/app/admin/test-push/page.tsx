@@ -4,15 +4,14 @@ import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirebase, useCollection, useMemoFirebase } from "@/firebase";
-import { collectionGroup, collection, query, limit } from "firebase/firestore";
+import { collectionGroup } from "firebase/firestore";
 import { sendTestPushNotificationAction } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Bell, Loader2, Send, AlertCircle, Smartphone, ShieldCheck, Zap } from "lucide-react";
 import { useState } from "react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { PushSubscription } from "@/lib/types";
 
 export default function TestPushPage() {
   const { user } = useUser();
@@ -29,7 +28,7 @@ export default function TestPushPage() {
     return collectionGroup(firestore, 'pushSubscriptions');
   }, [firestore, isAdmin]);
 
-  const { data: subs, isLoading } = useCollection(subsQuery);
+  const { data: subs, isLoading } = useCollection<PushSubscription>(subsQuery);
 
   // Récupérer les tokens FCM (Firebase Console)
   const tokensQuery = useMemoFirebase(() => {
@@ -54,14 +53,28 @@ export default function TestPushPage() {
 
     // Envoi via Web Push direct (nécessite VAPID_PRIVATE_KEY)
     for (const sub of subs) {
-      const result = await sendTestPushNotificationAction(sub as any, testMessage);
-      if (result.success) successCount++;
+      try {
+        // CRITICAL FIX: Extract only serializable fields (endpoint and keys)
+        // to avoid passing Firestore Timestamps to Server Actions.
+        const cleanSubscription: PushSubscription = {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.keys.p256dh,
+            auth: sub.keys.auth
+          }
+        };
+
+        const result = await sendTestPushNotificationAction(cleanSubscription, testMessage);
+        if (result.success) successCount++;
+      } catch (e) {
+        console.error("Failed to send to sub:", e);
+      }
     }
 
     if (successCount === 0 && subs.length > 0) {
         toast({ 
-            title: "Erreur serveur", 
-            description: "La clé VAPID_PRIVATE_KEY n'est pas configurée dans les variables d'environnement.",
+            title: "Erreur d'envoi", 
+            description: "Les notifications n'ont pas pu être délivrées. Vérifiez la configuration VAPID.",
             variant: "destructive"
         });
     } else {

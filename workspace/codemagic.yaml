@@ -33,25 +33,16 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios/App && pod install
-      - name: Disable Automatic Signing
+      - name: Configure Project Signing
         script: |
-          # Force Xcode à utiliser le mode manuel
           sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*;/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" ios/App/App.xcodeproj/project.pbxproj
       - name: Build and Sign IPA
         script: |
-          # 1. Initialisation du trousseau sur la machine de build
           keychain initialize
-          
-          # 2. Importation du certificat .p12 uploadé
           keychain add-certificates
-          
-          # 3. Récupération ET création des profils de provisionnement
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-          
-          # 4. Configuration automatique du projet Xcode
           xcode-project use-profiles
-          
-          # 5. Construction de l'IPA final
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"

@@ -1,28 +1,25 @@
-# Kinshasa Flow - Guide de Déploiement
+# Kinshasa Flow - Guide de Déploiement iOS
 
 Cette application est configurée pour être déployée sur l'App Store via **Codemagic**.
 
-## 📱 Informations de l'Application
-- **Nom officiel :** Kinshasa Flow
-- **ID de l'application (Bundle ID) :** `app.kinshasaflow.online`
+## ✅ CONFIGURATION REQUISE (Codemagic UI)
 
-## ✅ CHECKLIST DE SUCCÈS (Codemagic)
+Si le build échoue à l'étape "Build and Sign IPA", effectuez ces **3 actions** dans l'interface Codemagic :
 
-Si le build échoue à l'étape de signature, vérifiez ces points :
+### 1. Variables d'Environnement (Crucial)
+Allez dans **Teams > [Votre Team] > Environment variables** :
+- Ajoutez au groupe `app_store_credentials` :
+    - `CM_CERTIFICATE` : Cliquez sur le bouton "File" et uploadez votre fichier `.p12`.
+    - `CM_CERTIFICATE_PASSWORD` : Le mot de passe de votre certificat.
 
-1.  **Certificats (P12) :**
-    - Dans Codemagic, allez dans **Distribution > iOS code signing**.
-    - Votre certificat doit être lié au groupe `app_store_credentials`.
-    - Le statut doit afficher une date d'expiration (vert).
+### 2. Apple Store Connect API
+Dans **Teams > Personal Team > Integrations** :
+- Vérifiez que l'intégration **App Store Connect** est active.
+- La clé API doit être liée au groupe `app_store_credentials`.
 
-2.  **App Store Connect (API Keys) :**
-    - Dans Codemagic, allez dans **Teams > Personal Team > Integrations**.
-    - Vérifiez que l'intégration **App Store Connect** est active.
-    - Votre clé API doit avoir les permissions "Admin" ou "App Manager" pour créer des profils automatiquement.
-
-3.  **Identifiant Apple :**
-    - Connectez-vous sur [developer.apple.com](https://developer.apple.com/account/resources/identifiers/list).
-    - Vérifiez que l'identifiant `app.kinshasaflow.online` existe bien. Si ce n'est pas le cas, le script de build tentera de le créer (nécessite les droits Admin).
+### 3. Sélection du Groupe
+Dans les paramètres de votre **Workflow** iOS :
+- Sous **Build > Environment variables**, assurez-vous que le groupe `app_store_credentials` est bien coché.
 
 ## 🚀 DÉPLOIEMENT
 
@@ -31,12 +28,12 @@ Pour lancer une nouvelle version sur TestFlight :
 1. **Envoyer les modifications :**
 ```bash
 git add .
-git commit -m "Build: Ajout de l'argument --create pour forcer la génération des profils"
+git commit -m "Build: Fix signing logic and force Bundle ID"
 git push origin main
 ```
 
 2. **Suivre le build :**
-Rendez-vous sur votre tableau de bord **Codemagic** pour voir la progression.
+Rendez-vous sur votre tableau de bord **Codemagic**. Le script va maintenant automatiquement aligner le projet Xcode avec vos certificats Apple.
 
 ---
 Développé par Swazi Appli Lab sarl.

@@ -6,12 +6,12 @@ workflows:
     environment:
       node: 20
       xcode: latest
-      groups:
-        - app_store_credentials
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "app.kinshasaflow.online"
+      groups:
+        - app_store_credentials
     integrations:
       app_store_connect: "app_store"
     triggering:

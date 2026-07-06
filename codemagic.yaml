@@ -35,27 +35,24 @@ workflows:
           cd ios/App && pod install
       - name: Disable Automatic Signing
         script: |
-          # Force Xcode à utiliser le mode manuel pour éviter les erreurs de profil
+          # Force Xcode à utiliser le mode manuel pour que Codemagic puisse injecter les profils
           sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/App/App.xcodeproj/project.pbxproj
       - name: Build and Sign IPA
         script: |
-          # 1. Préparation du trousseau
+          # 1. Initialisation du trousseau de clés
           keychain initialize
           
-          # 2. Récupération forcée des certificats uploadés dans Codemagic
-          # Note: Assurez-vous que le .p12 est bien dans le groupe "app_store_credentials"
-          keychain add-certificates
-          
-          # 3. Récupération des profils de provisionnement depuis Apple
+          # 2. Récupération automatique des certificats et profils depuis Apple
+          # Utilise les variables APP_STORE_CONNECT_* du groupe app_store_credentials
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           
-          # 4. Debug: Lister ce qui a été trouvé (visible dans les logs)
-          ls ~/Library/MobileDevice/Provisioning\ Profiles/
+          # 3. Importation des certificats dans le trousseau de la machine de build
+          keychain add-certificates
           
-          # 5. Application des profils au projet
+          # 4. Application des profils au projet Xcode
           xcode-project use-profiles
           
-          # 6. Build final
+          # 5. Build final de l'IPA
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \

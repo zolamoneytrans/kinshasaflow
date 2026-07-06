@@ -10,17 +10,19 @@ Cette application est configurée pour être déployée sur l'App Store via **Co
 
 Si le build échoue à l'étape "Build and Sign IPA", vérifiez ces points dans l'interface Codemagic :
 
-1.  **Association au Groupe :**
+1.  **Certificats (P12) :**
     - Allez dans **Distribution > iOS code signing**.
-    - Regardez votre certificat `.p12`.
-    - **IMPORTANT :** Vérifiez qu'il est bien assigné au groupe nommé `app_store_credentials`. S'il n'y a pas de groupe, créez-en un et modifiez le `codemagic.yaml` pour qu'il corresponde.
+    - Vérifiez que votre certificat `.p12` est bien présent et qu'il affiche une date d'expiration (pas de message "Private key missing").
 
-2.  **Identité du Certificat :**
-    - Votre certificat doit être de type **"Apple Distribution"** ou **"iPhone Distribution"**.
-    - Il doit afficher une date d'expiration en vert.
+2.  **Variables d'environnement :**
+    - Dans l'onglet **Environment variables**, le groupe `app_store_credentials` doit contenir :
+        - `APP_STORE_CONNECT_PRIVATE_KEY` (Le contenu du fichier .p8)
+        - `APP_STORE_CONNECT_KEY_IDENTIFIER`
+        - `APP_STORE_CONNECT_ISSUER_ID`
+        - `APP_STORE_CONNECT_TEAM_ID`
 
 3.  **App Store Connect :**
-    - Vérifiez dans **App Store Connect > Users and Access > Keys** que votre clé API a bien accès au Bundle ID `app.kinshasaflow.online`.
+    - Vérifiez dans votre console Apple Developer que l'identifiant `app.kinshasaflow.online` existe bien.
 
 ## 🚀 DÉPLOIEMENT
 
@@ -29,7 +31,7 @@ Pour lancer une nouvelle version sur TestFlight :
 1. **Envoyer les modifications :**
 ```bash
 git add .
-git commit -m "Build: Disable automatic signing and force profile fetch"
+git commit -m "Build: Configuration finalisée avec groupe de credentials"
 git push origin main
 ```
 

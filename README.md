@@ -2,30 +2,30 @@
 
 Cette application est configurée pour être déployée sur l'App Store via **Codemagic**.
 
-## ✅ CERTIFICATS CONFIGURÉS
+## ✅ DERNIÈRE ÉTAPE CRITIQUE (Interface Codemagic)
 
-Le certificat `CM_CERTIFICATE` (Emmanuel nduwa) est bien présent dans Codemagic.
+Le script de build a besoin d'accéder physiquement à votre certificat. Suivez ces étapes :
 
-## 🚀 DERNIÈRES ÉTAPES (Codemagic UI)
+1. Allez dans votre projet sur **Codemagic**.
+2. Cliquez sur l'onglet **Environment variables**.
+3. Dans le groupe `app_store_credentials`, ajoutez ces deux variables :
+   - `CM_CERTIFICATE` : Cliquez sur **Select file** et uploadez votre fichier `.p12`.
+   - `CM_CERTIFICATE_PASSWORD` : Saisissez le mot de passe de votre certificat (type **Password**).
+4. **IMPORTANT** : Assurez-vous que la case "Secure" est cochée pour les deux.
 
-Assurez-vous que ces **2 variables** sont présentes dans votre groupe `app_store_credentials` (onglet **Environment variables**) :
-
-1. `CM_CERTIFICATE` : Le fichier `.p12` (type **File**).
-2. `CM_CERTIFICATE_PASSWORD` : Le mot de passe de votre certificat (type **Password**).
-
-*Note : Même si vous avez uploadé le certificat dans l'onglet "iOS code signing", le script de build nécessite qu'il soit aussi présent comme variable de type "File" pour être injecté dans le trousseau de clés.*
+*Note : Le build échouait car même si le certificat était dans l'onglet "Code signing", il n'était pas disponible pour les scripts de ligne de commande sans ces variables.*
 
 ## 🚀 LANCER LE DÉPLOIEMENT
 
 1. **Envoyer les modifications :**
 ```bash
 git add .
-git commit -m "Build: Utilisation de la configuration clean avec certificat CM_CERTIFICATE"
+git commit -m "Build: Importation explicite du certificat .p12"
 git push origin main
 ```
 
 2. **Suivre le build :**
-Rendez-vous sur votre tableau de bord **Codemagic**. Le build va maintenant s'exécuter, signer l'IPA et l'envoyer sur TestFlight.
+Rendez-vous sur votre tableau de bord **Codemagic**. Le script va maintenant extraire le `.p12`, créer le profil chez Apple et générer l'IPA.
 
 ---
 Développé par Swazi Appli Lab sarl.

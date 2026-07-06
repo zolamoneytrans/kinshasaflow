@@ -39,9 +39,17 @@ workflows:
       - name: Build and Sign IPA
         script: |
           keychain initialize
-          keychain add-certificates
+          
+          if [ -n "$CM_CERTIFICATE" ]; then
+            keychain add-certificates --certificate "$CM_CERTIFICATE" --certificate-password "$CM_CERTIFICATE_PASSWORD"
+          else
+            keychain add-certificates
+          fi
+
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          
           xcode-project use-profiles
+          
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"

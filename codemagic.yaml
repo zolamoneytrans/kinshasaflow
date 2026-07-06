@@ -39,20 +39,20 @@ workflows:
           sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/App/App.xcodeproj/project.pbxproj
       - name: Build and Sign IPA
         script: |
-          # 1. Initialisation du trousseau de clés sécurisé
+          # 1. Initialisation du trousseau sur la machine de build
           keychain initialize
           
           # 2. Importation du certificat .p12 (uploadé dans l'interface Codemagic)
           keychain add-certificates
           
-          # 3. Récupération des profils de provisionnement depuis Apple
-          # Utilise les variables APP_STORE_CONNECT_* du groupe app_store_credentials
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE
+          # 3. Récupération ET création des profils de provisionnement depuis Apple
+          # L'argument --create permet à Codemagic de générer le profil s'il n'existe pas encore sur votre portail Apple
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           
-          # 4. Application des profils au projet Xcode
+          # 4. Configuration automatique du projet Xcode pour utiliser les fichiers téléchargés
           xcode-project use-profiles
           
-          # 5. Build final de l'IPA (Correction : suppression de --bundle-id non supporté ici)
+          # 5. Construction de l'IPA final pour l'App Store
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"

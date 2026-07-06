@@ -8,21 +8,21 @@ Cette application est configurée pour être déployée sur l'App Store via **Co
 
 ## ✅ CHECKLIST DE SUCCÈS (Codemagic)
 
-Si le build échoue, vérifiez ces points dans l'interface Codemagic :
+Si le build échoue à l'étape de signature, vérifiez ces points :
 
 1.  **Certificats (P12) :**
-    - Allez dans **Distribution > iOS code signing**.
-    - Vérifiez que votre certificat `.p12` est bien présent, lié au groupe `app_store_credentials` et qu'il affiche une date d'expiration (statut vert).
+    - Dans Codemagic, allez dans **Distribution > iOS code signing**.
+    - Votre certificat doit être lié au groupe `app_store_credentials`.
+    - Le statut doit afficher une date d'expiration (vert).
 
-2.  **Variables d'environnement (App Store Connect) :**
-    - Dans l'onglet **Environment variables**, le groupe `app_store_credentials` doit contenir :
-        - `APP_STORE_CONNECT_PRIVATE_KEY` (Contenu du fichier .p8)
-        - `APP_STORE_CONNECT_KEY_IDENTIFIER`
-        - `APP_STORE_CONNECT_ISSUER_ID`
-        - `APP_STORE_CONNECT_TEAM_ID`
+2.  **App Store Connect (API Keys) :**
+    - Dans Codemagic, allez dans **Teams > Personal Team > Integrations**.
+    - Vérifiez que l'intégration **App Store Connect** est active.
+    - Votre clé API doit avoir les permissions "Admin" ou "App Manager" pour créer des profils automatiquement.
 
-3.  **App Store Connect :**
-    - Vérifiez dans votre console Apple Developer que l'identifiant `app.kinshasaflow.online` existe bien et que les profils de provisionnement "App Store" sont créés.
+3.  **Identifiant Apple :**
+    - Connectez-vous sur [developer.apple.com](https://developer.apple.com/account/resources/identifiers/list).
+    - Vérifiez que l'identifiant `app.kinshasaflow.online` existe bien. Si ce n'est pas le cas, le script de build tentera de le créer (nécessite les droits Admin).
 
 ## 🚀 DÉPLOIEMENT
 
@@ -31,7 +31,7 @@ Pour lancer une nouvelle version sur TestFlight :
 1. **Envoyer les modifications :**
 ```bash
 git add .
-git commit -m "Build: Correction syntaxe build-ipa et optimisation signature"
+git commit -m "Build: Ajout de l'argument --create pour forcer la génération des profils"
 git push origin main
 ```
 

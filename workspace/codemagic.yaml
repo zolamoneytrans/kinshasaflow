@@ -37,10 +37,16 @@ workflows:
         script: |
           # Préparation de l'environnement de signature
           keychain initialize
-          # Récupération des fichiers de signature avec le type correct pour l'App Store
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE
+          
+          # Récupération des fichiers de signature
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          
+          # Ajout des certificats (nécessite l'upload du .p12 dans Codemagic)
+          keychain add-certificates
+          
           # Application des profils au projet Xcode
           xcode-project use-profiles
+          
           # Construction de l'archive et de l'IPA
           xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
     artifacts:

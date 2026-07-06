@@ -39,26 +39,13 @@ workflows:
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*;/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" ios/App/App.xcodeproj/project.pbxproj
       - name: Build and Sign IPA
         script: |
-          # Initialisation du trousseau de clés
-          keychain initialize
-          
-          # IMPORTATION CRITIQUE : Ajout du certificat .p12 pour fournir la clé privée
-          if [ -n "$CM_CERTIFICATE" ]; then
-            echo "Importation du certificat P12..."
-            keychain add-certificates --certificate "$CM_CERTIFICATE" --certificate-password "$CM_CERTIFICATE_PASSWORD"
-          else
-            echo "ERREUR: CM_CERTIFICATE n'est pas défini dans les variables d'environnement."
-            exit 1
-          fi
-
-          # SYNCHRONISATION AUTOMATIQUE : Récupération des profils depuis Apple Store Connect
-          echo "Récupération des profils de provisionnement..."
+          # 1. Fetch signing files from App Store Connect (creates if missing)
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           
-          # Application des profils au projet
+          # 2. Apply the profiles to the project
           xcode-project use-profiles
           
-          # Construction de l'archive et de l'IPA
+          # 3. Build final IPA
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"

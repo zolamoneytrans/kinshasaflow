@@ -46,7 +46,7 @@ workflows:
             keychain add-certificates --certificate "$CM_CERTIFICATE" --certificate-password "$CM_CERTIFICATE_PASSWORD"
           fi
 
-          # Synchronisation automatique avec App Store Connect
+          # Synchronisation automatique avec App Store Connect (Création/Récupération des profils)
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           
           xcode-project use-profiles

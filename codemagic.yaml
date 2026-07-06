@@ -35,21 +35,23 @@ workflows:
           cd ios/App && pod install
       - name: Build and Sign IPA
         script: |
-          # 1. Initialisation du trousseau de clés sécurisé
+          # 1. Initialisation du trousseau
           keychain initialize
           
-          # 2. Récupération des certificats et profils
-          # Note: Cette commande nécessite que le fichier .p12 soit uploadé dans l'UI Codemagic
+          # 2. Récupération des certificats et profils depuis Apple
+          # NOTE: Cette commande échouera si le fichier .p12 n'est pas dans Codemagic UI
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           
-          # 3. Injection des profils dans le projet Xcode
+          # 3. Importation des certificats (si présents dans les variables Codemagic)
+          keychain add-certificates
+          
+          # 4. Injection des profils dans Xcode
           xcode-project use-profiles
           
-          # 4. Construction de l'IPA avec spécification explicite du Bundle ID
+          # 5. Construction de l'IPA
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            --bundle-id "$BUNDLE_ID"
+            --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:

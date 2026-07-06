@@ -34,23 +34,31 @@ workflows:
           cd ios/App && pod install
       - name: Configure Project Signing
         script: |
-          # Forcer le mode de signature Manuel et injecter le Bundle ID
+          # Forcer le mode de signature Manuel et injecter le Bundle ID dans le projet Xcode
           sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/App/App.xcodeproj/project.pbxproj
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*;/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" ios/App/App.xcodeproj/project.pbxproj
       - name: Build and Sign IPA
         script: |
+          # Initialisation du trousseau de clés
           keychain initialize
           
-          # Importation de la clé privée pour débloquer la signature
+          # IMPORTATION CRITIQUE : Ajout du certificat .p12 pour fournir la clé privée
           if [ -n "$CM_CERTIFICATE" ]; then
+            echo "Importation du certificat P12..."
             keychain add-certificates --certificate "$CM_CERTIFICATE" --certificate-password "$CM_CERTIFICATE_PASSWORD"
+          else
+            echo "ERREUR: CM_CERTIFICATE n'est pas défini dans les variables d'environnement."
+            exit 1
           fi
 
-          # Synchronisation automatique avec App Store Connect (Création/Récupération des profils)
+          # SYNCHRONISATION AUTOMATIQUE : Récupération des profils depuis Apple Store Connect
+          echo "Récupération des profils de provisionnement..."
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           
+          # Application des profils au projet
           xcode-project use-profiles
           
+          # Construction de l'archive et de l'IPA
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"

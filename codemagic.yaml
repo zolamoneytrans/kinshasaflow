@@ -33,25 +33,33 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios/App && pod install
+      - name: Disable Automatic Signing
+        script: |
+          # Force Xcode à utiliser le mode manuel pour éviter les erreurs de profil
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/App/App.xcodeproj/project.pbxproj
       - name: Build and Sign IPA
         script: |
-          # 1. Initialisation du trousseau
+          # 1. Préparation du trousseau
           keychain initialize
           
-          # 2. Importation des certificats .p12 uploadés dans l'UI Codemagic
+          # 2. Récupération forcée des certificats uploadés dans Codemagic
+          # Note: Assurez-vous que le .p12 est bien dans le groupe "app_store_credentials"
           keychain add-certificates
           
           # 3. Récupération des profils de provisionnement depuis Apple
-          # On tente de récupérer uniquement les profils, les certificats étant déjà dans le trousseau via le .p12
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           
-          # 4. Injection des profils dans Xcode
+          # 4. Debug: Lister ce qui a été trouvé (visible dans les logs)
+          ls ~/Library/MobileDevice/Provisioning\ Profiles/
+          
+          # 5. Application des profils au projet
           xcode-project use-profiles
           
-          # 5. Construction de l'IPA
+          # 6. Build final
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --bundle-id "$BUNDLE_ID"
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:

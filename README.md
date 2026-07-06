@@ -1,31 +1,24 @@
-# Kinshasa Flow - Guide de Déploiement iOS
+# Kinshasa Flow - Guide de Déploiement iOS (Signature Automatique)
 
-Cette application est configurée pour être déployée sur l'App Store via **Codemagic**.
+L'application est configurée pour utiliser la signature automatique de **Codemagic** via l'API App Store Connect.
 
-## ✅ DERNIÈRE ÉTAPE CRITIQUE (Interface Codemagic)
+## 🚀 CONFIGURATION FINALE
 
-Le script de build a besoin d'accéder physiquement à votre certificat. Suivez ces étapes :
+Pour que le build réussisse, vérifiez ces deux points dans votre projet **Codemagic** :
 
-1. Allez dans votre projet sur **Codemagic**.
-2. Cliquez sur l'onglet **Environment variables**.
-3. Dans le groupe `app_store_credentials`, ajoutez ces deux variables :
-   - `CM_CERTIFICATE` : Cliquez sur **Select file** et uploadez votre fichier `.p12`.
-   - `CM_CERTIFICATE_PASSWORD` : Saisissez le mot de passe de votre certificat (type **Password**).
-4. **IMPORTANT** : Assurez-vous que la case "Secure" est cochée pour les deux.
+1.  **Environment Variables** :
+    *   Dans le groupe `app_store_credentials`, assurez-vous d'avoir :
+        *   `CM_CERTIFICATE` : Votre fichier `.p12` uploadé via le bouton **Select file**.
+        *   `CM_CERTIFICATE_PASSWORD` : Le mot de passe du certificat (type **Password**).
+        *   Les clés API Apple (`APP_STORE_CONNECT_KEY_ID`, etc.) si elles ne sont pas déjà liées via l'intégration globale.
 
-*Note : Le build échouait car même si le certificat était dans l'onglet "Code signing", il n'était pas disponible pour les scripts de ligne de commande sans ces variables.*
+2.  **Lancer le build** :
+    *   Faites un `git push origin main`.
+    *   Le script va automatiquement synchroniser les profils de provisionnement avec Apple, signer l'IPA et l'envoyer sur TestFlight.
 
-## 🚀 LANCER LE DÉPLOIEMENT
+## ✅ POURQUOI CETTE CONFIGURATION ?
 
-1. **Envoyer les modifications :**
-```bash
-git add .
-git commit -m "Build: Importation explicite du certificat .p12"
-git push origin main
-```
-
-2. **Suivre le build :**
-Rendez-vous sur votre tableau de bord **Codemagic**. Le script va maintenant extraire le `.p12`, créer le profil chez Apple et générer l'IPA.
+La commande `fetch-signing-files --create` permet de récupérer automatiquement les profils depuis Apple. L'importation du certificat `CM_CERTIFICATE` est indispensable pour fournir la **clé privée** nécessaire au décryptage de ces profils sur les serveurs de build.
 
 ---
 Développé par Swazi Appli Lab sarl.

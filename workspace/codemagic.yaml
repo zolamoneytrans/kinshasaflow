@@ -38,13 +38,13 @@ workflows:
           # 1. Initialisation du trousseau sur la machine de build
           keychain initialize
           
-          # 2. Récupération du profil de provisionnement depuis Apple
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-          
-          # 3. Importation du certificat .p12 que vous venez d'uploader
+          # 2. Importation du certificat .p12 uploadé
           keychain add-certificates
           
-          # 4. Configuration automatique du projet Xcode pour utiliser ces fichiers
+          # 3. Récupération du profil de provisionnement depuis Apple
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          
+          # 4. Configuration automatique du projet Xcode
           xcode-project use-profiles
           
           # 5. Construction de l'IPA final pour l'App Store

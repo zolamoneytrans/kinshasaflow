@@ -38,12 +38,12 @@ workflows:
           # 1. Initialisation du trousseau
           keychain initialize
           
-          # 2. Récupération des certificats et profils depuis Apple
-          # NOTE: Cette commande échouera si le fichier .p12 n'est pas dans Codemagic UI
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-          
-          # 3. Importation des certificats (si présents dans les variables Codemagic)
+          # 2. Importation des certificats .p12 uploadés dans l'UI Codemagic
           keychain add-certificates
+          
+          # 3. Récupération des profils de provisionnement depuis Apple
+          # On tente de récupérer uniquement les profils, les certificats étant déjà dans le trousseau via le .p12
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           
           # 4. Injection des profils dans Xcode
           xcode-project use-profiles

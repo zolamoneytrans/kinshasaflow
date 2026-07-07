@@ -1,22 +1,24 @@
 # Kinshasa Flow - Guide de Déploiement iOS (Signature Automatique Intégrale)
 
-L'application est configurée pour utiliser la signature automatique de **Codemagic** via l'API App Store Connect. Codemagic gérera lui-même la création des certificats et des profils nécessaires.
+L'application est désormais configurée pour utiliser la **Signature Automatique de Codemagic**. Vous n'avez plus besoin d'importer manuellement de fichiers `.p12` ou `.mobileprovision`.
 
 ## 🚀 CONFIGURATION DANS CODEMAGIC
 
-Pour que le build réussisse sans action manuelle :
+Pour que le build réussisse :
 
-1.  **Vérification de l'intégration** :
-    *   Assurez-vous que votre clé API App Store Connect est connectée globalement dans Codemagic.
-    *   Le groupe de variables `app_store_credentials` doit être lié à votre workflow.
+1.  **Intégration Apple Store Connect** :
+    *   Allez dans **User Settings** (en bas à gauche) > **Integrations**.
+    *   Connectez votre clé API Apple Store Connect (Issuer ID, Key ID, API Key).
+    *   Nommez cette intégration `app_store`.
 
-2.  **Fonctionnement du script** :
-    *   La commande `app-store-connect fetch-signing-files` se connecte à Apple et crée les profils manquants pour le Bundle ID `app.kinshasaflow.online`.
-    *   Le projet Xcode est automatiquement forcé en mode "Manual Signing" pour permettre l'injection des profils sur le serveur.
+2.  **Configuration du Workflow** :
+    *   Dans votre projet Codemagic, allez dans l'onglet **Environment Variables**.
+    *   Créez un groupe nommé `app_store_credentials`.
+    *   Assurez-vous que l'intégration Apple Store Connect est bien activée pour ce workflow.
 
 3.  **Lancer le build** :
     *   Faites un `git push origin main`.
-    *   Codemagic téléchargera tout le nécessaire depuis Apple Store Connect, signera l'IPA et l'enverra sur TestFlight.
+    *   Le script `app-store-connect fetch-signing-files --create` va automatiquement générer le certificat de distribution et le profil de provisionnement sur votre compte Apple et signer l'application.
 
 ---
 Développé par Swazi Appli Lab sarl.

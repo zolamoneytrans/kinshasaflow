@@ -32,20 +32,22 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios/App && pod install
-      - name: Configure Project Signing
+      - name: Set Bundle ID
         script: |
-          # Forcer le mode de signature Manuel pour permettre à Codemagic d'injecter les profils
-          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/App/App.xcodeproj/project.pbxproj
+          # S'assurer que le Bundle ID du projet correspond bien à celui d'Apple
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*;/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" ios/App/App.xcodeproj/project.pbxproj
-      - name: Build and Sign IPA
+      - name: Fetch signing files and build
         script: |
-          # 1. Fetch signing files from App Store Connect (creates if missing)
+          # 1. Récupérer ou créer les certificats/profils depuis Apple (Signature Automatique)
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           
-          # 2. Apply the profiles to the project
+          # 2. Initialiser le trousseau pour stocker les certificats récupérés
+          keychain initialize
+          
+          # 3. Appliquer les profils au projet Xcode
           xcode-project use-profiles
           
-          # 3. Build final IPA
+          # 4. Construire l'IPA final
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"

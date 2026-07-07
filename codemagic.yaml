@@ -34,7 +34,7 @@ workflows:
           cd ios/App && pod install
       - name: Configure Project Signing
         script: |
-          # Forcer le mode de signature Manuel et injecter le Bundle ID dans le projet Xcode
+          # Forcer le mode de signature Manuel pour permettre à Codemagic d'injecter les profils
           sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/App/App.xcodeproj/project.pbxproj
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*;/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" ios/App/App.xcodeproj/project.pbxproj
       - name: Build and Sign IPA

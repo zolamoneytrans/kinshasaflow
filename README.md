@@ -1,24 +1,25 @@
 # Kinshasa Flow - Guide de Déploiement iOS (Signature Automatique Intégrale)
 
-L'application est désormais configurée pour utiliser la **Signature Automatique de Codemagic**. Vous n'avez plus besoin d'importer manuellement de fichiers `.p12` ou `.mobileprovision`.
+L'application est configurée pour utiliser la **Signature Automatique de Codemagic**.
 
 ## 🚀 CONFIGURATION DANS CODEMAGIC
 
-Pour que le build réussisse :
+Pour que le build réussisse, assurez-vous que les éléments suivants sont configurés :
 
-1.  **Intégration Apple Store Connect** :
+1.  **Intégration App Store Connect** :
     *   Allez dans **User Settings** (en bas à gauche) > **Integrations**.
-    *   Connectez votre clé API Apple Store Connect (Issuer ID, Key ID, API Key).
+    *   Connectez votre clé API App Store Connect (Issuer ID, Key ID, API Key).
     *   Nommez cette intégration `app_store`.
 
-2.  **Configuration du Workflow** :
-    *   Dans votre projet Codemagic, allez dans l'onglet **Environment Variables**.
-    *   Créez un groupe nommé `app_store_credentials`.
-    *   Assurez-vous que l'intégration Apple Store Connect est bien activée pour ce workflow.
+2.  **Groupe de variables** :
+    *   Créez un groupe nommé `app_store_credentials` dans votre projet.
+    *   Vérifiez que l'intégration Apple Store Connect est active pour ce workflow.
 
-3.  **Lancer le build** :
-    *   Faites un `git push origin main`.
-    *   Le script `app-store-connect fetch-signing-files --create` va automatiquement générer le certificat de distribution et le profil de provisionnement sur votre compte Apple et signer l'application.
+3.  **Processus de build** :
+    *   Le script utilise `app-store-connect fetch-signing-files --create` pour générer automatiquement le certificat de distribution et le profil de provisionnement sur votre compte Apple.
+    *   L'argument `--archive-flags="-destination generic/platform=iOS"` est utilisé pour garantir la compatibilité App Store.
+
+Faites un `git push origin main` pour déclencher le build automatique.
 
 ---
 Développé par Swazi Appli Lab sarl.

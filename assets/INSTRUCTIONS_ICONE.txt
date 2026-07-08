@@ -1,0 +1,8 @@
+IMPORTANT : POUR LES ICÔNES DE L'APPLICATION
+------------------------------------------
+1. Placez une image nommée 'icon.png' dans ce dossier.
+2. L'image doit être au format PNG, carrée, et mesurer idéalement 1024x1024 pixels.
+3. Ne pas supprimer ce dossier.
+
+Une fois le fichier 'icon.png' présent, le script Codemagic générera automatiquement 
+tous les formats requis pour iOS lors du prochain build.

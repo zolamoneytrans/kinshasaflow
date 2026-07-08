@@ -25,13 +25,24 @@ workflows:
         script: npm install
       - name: Next.js Build (Web Assets)
         script: npm run build
-      - name: Capacitor Sync
+      - name: Capacitor Sync and Assets
         script: |
           npx cap add ios || true
+          # Génération des icônes si le dossier assets contient icon.png
+          if [ -f "assets/icon.png" ]; then
+            npx @capacitor/assets generate --ios
+          fi
           npx cap sync ios
       - name: Install CocoaPods
         script: |
           cd ios/App && pod install
+      - name: Set Version and Build Number
+        script: |
+          VERSION=$(node -p "require('./package.json').version")
+          # Mise à jour de la version marketing (ex: 2.2.1)
+          sed -i '' "s/MARKETING_VERSION = .*;/MARKETING_VERSION = $VERSION;/g" ios/App/App.xcodeproj/project.pbxproj
+          # Mise à jour du numéro de build (incrémental via Codemagic)
+          sed -i '' "s/CURRENT_PROJECT_VERSION = .*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" ios/App/App.xcodeproj/project.pbxproj
       - name: Set Bundle ID
         script: |
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*;/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" ios/App/App.xcodeproj/project.pbxproj

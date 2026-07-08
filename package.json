@@ -12,12 +12,14 @@
     "typecheck": "tsc --noEmit",
     "ios:sync": "npx cap sync ios",
     "ios:open": "npx cap open ios",
-    "static:export": "next build && npx cap sync"
+    "static:export": "next build && npx cap sync",
+    "assets:generate": "npx @capacitor/assets generate --ios"
   },
   "engines": {
     "node": "20"
   },
   "dependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor/ios": "^6.0.0",

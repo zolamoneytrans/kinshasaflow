@@ -25,9 +25,13 @@ workflows:
         script: npm install
       - name: Next.js Build (Web Assets)
         script: npm run build
-      - name: Capacitor Sync
+      - name: Capacitor Sync and Assets
         script: |
           npx cap add ios || true
+          # Generate icons if assets folder exists with icon.png
+          if [ -d "assets" ] && [ -f "assets/icon.png" ]; then
+            npx @capacitor/assets generate --ios
+          fi
           npx cap sync ios
       - name: Install CocoaPods
         script: |

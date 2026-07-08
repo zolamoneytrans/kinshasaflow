@@ -1,6 +1,6 @@
-# Kinshasa Flow - Guide de Déploiement iOS (Signature Automatique Intégrale)
+# Kinshasa Flow - Guide de Déploiement iOS (Signature Automatique Native)
 
-L'application est configurée pour utiliser la **Signature Automatique de Codemagic**.
+L'application est configurée pour utiliser la **Signature Automatique de Codemagic** via l'intégration App Store Connect.
 
 ## 🚀 CONFIGURATION DANS CODEMAGIC
 
@@ -13,13 +13,13 @@ Pour que le build réussisse, assurez-vous que les éléments suivants sont conf
 
 2.  **Groupe de variables** :
     *   Créez un groupe nommé `app_store_credentials` dans votre projet.
-    *   Vérifiez que l'intégration Apple Store Connect est active pour ce workflow.
+    *   Assurez-vous que l'intégration Apple Store Connect est active pour ce workflow.
 
-3.  **Processus de build** :
-    *   Le script utilise `app-store-connect fetch-signing-files --create` pour générer automatiquement le certificat de distribution et le profil de provisionnement sur votre compte Apple.
-    *   L'argument `--archive-flags="-destination generic/platform=iOS"` est utilisé pour garantir la compatibilité App Store.
+3.  **Signature Automatique** :
+    *   Le fichier `codemagic.yaml` utilise maintenant la section `ios_signing` pour gérer automatiquement les certificats et les profils.
+    *   Aucun script de signature manuel n'est requis dans la section `scripts`.
 
-Faites un `git push origin main` pour déclencher le build automatique.
+Faites un `git push origin main` pour déclencher le build automatique. Codemagic créera les certificats et profils nécessaires sur votre compte Apple et publiera l'IPA sur TestFlight.
 
 ---
 Développé par Swazi Appli Lab sarl.

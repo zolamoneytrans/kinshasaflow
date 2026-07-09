@@ -110,57 +110,19 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                var recoveryInProgress = false;
                 var handleError = function(e) {
-                  if (recoveryInProgress) return;
-                  
                   var error = e.error || e.reason || e;
                   var msg = (error && (error.message || error.toString())) || "";
-                  
-                  // Détection des erreurs de modules Next.js (Chunks) et des timeouts de ressources
                   var isChunkError = /Loading chunk|ChunkLoadError|timeout|Unexpected token '<'|failed to fetch/i.test(msg);
                   
-                  // Détection des erreurs de balises script (échec réseau direct)
-                  var target = e.target || e.srcElement;
-                  if (!isChunkError && target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
-                    isChunkError = true;
-                  }
-                  
                   if (isChunkError) {
-                    recoveryInProgress = true;
-                    console.error("K-Flow Recovery: Échec de ressource détecté (" + msg + "). Réinitialisation du cache...");
-                    
-                    var lastReload = sessionStorage.getItem("kflow-recovery-v5");
+                    console.error("K-Flow Resource Failure: " + msg);
+                    var lastReload = sessionStorage.getItem("kflow-recovery-v6");
                     var now = Date.now();
                     
-                    // Empêcher les boucles de rechargement (limite à 1 tentative toutes les 30s)
-                    if (!lastReload || (now - parseInt(lastReload)) > 30000) {
-                      sessionStorage.setItem("kflow-recovery-v5", now);
-                      
-                      // Purge des Service Workers et rechargement forcé (bypass cache)
-                      if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                          var promises = [];
-                          for(var i = 0; i < registrations.length; i++) {
-                            promises.push(registrations[i].unregister());
-                          }
-                          
-                          // Vider également tous les caches (Cache Storage)
-                          if ('caches' in window) {
-                            promises.push(caches.keys().then(function(keys) {
-                              return Promise.all(keys.map(function(key) { return caches.delete(key); }));
-                            }));
-                          }
-
-                          Promise.all(promises).finally(function() {
-                            window.location.reload(true);
-                          });
-                        }).catch(function() {
-                          window.location.reload(true);
-                        });
-                      } else {
-                        window.location.reload(true);
-                      }
+                    if (!lastReload || (now - parseInt(lastReload)) > 60000) {
+                      sessionStorage.setItem("kflow-recovery-v6", now);
+                      window.location.reload(true);
                     }
                   }
                 };

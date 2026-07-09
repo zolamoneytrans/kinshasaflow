@@ -19,7 +19,7 @@ export default function PrivacyPage() {
               Cadre Légal & <span className="text-primary">Confidentialité</span>
             </h1>
             <p className="text-muted-foreground font-medium italic">
-              Dernière mise à jour : 1 avril 2026 • Version 2.0 • Conforme RDC 23/010
+              Dernière mise à jour : 1 avril 2026 • Version 2.2.2 • Conforme RDC 23/010
             </p>
           </motion.div>
 

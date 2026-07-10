@@ -105,33 +105,6 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                var handleError = function(e) {
-                  var error = e.error || e.reason || e;
-                  var msg = (error && (error.message || error.toString())) || "";
-                  var isChunkError = /Loading chunk|ChunkLoadError|timeout|Unexpected token '<'|failed to fetch/i.test(msg);
-                  
-                  if (isChunkError) {
-                    console.error("K-Flow Resource Failure: " + msg);
-                    var lastReload = sessionStorage.getItem("kflow-recovery-v6");
-                    var now = Date.now();
-                    
-                    if (!lastReload || (now - parseInt(lastReload)) > 60000) {
-                      sessionStorage.setItem("kflow-recovery-v6", now);
-                      window.location.reload(true);
-                    }
-                  }
-                };
-                window.addEventListener("error", handleError, true);
-                window.addEventListener("unhandledrejection", handleError);
-              })();
-            `,
-          }}
-        />
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>

@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 
 /**
  * Point d'entrée de l'application.
- * Redirige vers le Chat Communautaire si l'utilisateur est connecté pour en faire la landing feature.
+ * Redirige vers le Chat Communautaire si l'utilisateur est connecté.
  */
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
@@ -16,38 +16,49 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
+    // Garantit que le code ne s'exécute que côté client
     setIsMounted(true);
   }, []);
 
   // Redirection automatique vers le Chat pour les utilisateurs connectés
   useEffect(() => {
     if (isMounted && !isUserLoading && user) {
-      router.push('/community-chat');
+      // Utilisation d'un timeout léger pour éviter les conflits d'hydratation au démarrage
+      const timer = setTimeout(() => {
+        router.push('/community-chat');
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [isMounted, isUserLoading, user, router]);
 
-  // Affiche un squelette de chargement pendant que le code côté client s'hydrate ou que l'auth se vérifie
+  // Si non monté, on rend un fond neutre pour éviter les flashs d'hydratation
   if (!isMounted) {
-    return null;
+    return <div className="min-h-screen bg-background" />;
   }
 
   if (isUserLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 w-full bg-background">
-        <Skeleton className="h-10 w-48 mb-12" />
-        <Skeleton className="h-16 w-3/4 max-w-2xl mb-6" />
-        <Skeleton className="h-6 w-full max-w-xl mb-10" />
-        <Skeleton className="h-14 w-56" />
+        <div className="space-y-8 w-full max-w-md flex flex-col items-center">
+            <Skeleton className="h-12 w-48 rounded-2xl" />
+            <div className="w-full space-y-4">
+                <Skeleton className="h-20 w-full rounded-3xl" />
+                <Skeleton className="h-6 w-3/4 mx-auto rounded-full" />
+            </div>
+            <Skeleton className="h-16 w-56 rounded-2xl mt-8" />
+        </div>
       </div>
     );
   }
 
-  // Si l'utilisateur est déjà connecté, on ne rend rien car le useEffect va rediriger
+  // Si l'utilisateur est déjà connecté, on affiche un loader propre pendant la redirection
   if (user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 w-full bg-background">
-        <div className="h-12 w-12 rounded-full animate-spin border-4 border-primary border-t-transparent" />
-        <p className="mt-4 font-black text-xs uppercase tracking-widest text-slate-400">Ouverture de Radio Trottoir...</p>
+        <div className="h-12 w-12 rounded-full animate-spin border-4 border-primary border-t-transparent shadow-xl shadow-primary/20" />
+        <p className="mt-6 font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 animate-pulse">
+            Ouverture de Radio Trottoir...
+        </p>
       </div>
     );
   }
